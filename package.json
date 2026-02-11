@@ -1,0 +1,57 @@
+{
+  "name": "gitchorus",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "pnpm@10.9.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@nestjs/core",
+      "electron",
+      "esbuild"
+    ]
+  },
+  "scripts": {
+    "dev": "pnpm --filter @gitchorus/shared build && concurrently -k -n web,desktop -c cyan,yellow \"pnpm dev:web\" \"wait-on http://localhost:5173 && pnpm --filter @gitchorus/desktop dev\"",
+    "dev:debug": "LOG_LEVEL=debug pnpm dev",
+    "dev:web": "pnpm --filter @gitchorus/web dev",
+    "build": "pnpm --filter @gitchorus/shared build && pnpm --filter @gitchorus/web build && pnpm --filter @gitchorus/desktop build",
+    "build:packages": "pnpm --filter @gitchorus/shared build",
+    "package": "pnpm build && pnpm --filter @gitchorus/desktop package",
+    "package:win": "pnpm build && pnpm --filter @gitchorus/desktop package:win",
+    "package:mac": "pnpm build && pnpm --filter @gitchorus/desktop package:mac",
+    "package:linux": "pnpm build && pnpm --filter @gitchorus/desktop package:linux",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test": "pnpm build:packages && pnpm --filter @gitchorus/shared test && pnpm --filter @gitchorus/desktop test && pnpm --filter @gitchorus/web test",
+    "test:cov": "pnpm build:packages && pnpm --filter @gitchorus/shared test:cov && pnpm --filter @gitchorus/desktop test:cov && pnpm --filter @gitchorus/web test:cov",
+    "typecheck": "pnpm build:packages && pnpm --filter @gitchorus/web typecheck && pnpm --filter @gitchorus/desktop typecheck",
+    "prepare": "husky"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx}": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.0.0",
+    "concurrently": "^9.2.1",
+    "eslint": "^9.0.0",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.3.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.2.7",
+    "prettier": "^3.2.0",
+    "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
+    "wait-on": "^9.0.3"
+  }
+}

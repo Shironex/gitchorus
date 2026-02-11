@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.gitchorus.desktop",
+  "productName": "GitChorus",
+  "directories": {
+    "output": "release",
+    "buildResources": "resources"
+  },
+  "files": ["dist/**/*", "package.json", "!**/*.map", "!**/*.d.ts", "!dist/**/*.d.ts"],
+  "artifactName": "${productName}-${version}-${arch}.${ext}",
+  "nodeGypRebuild": false,
+  "npmRebuild": false,
+  "publish": {
+    "provider": "github",
+    "owner": "Shironex",
+    "repo": "gitchorus"
+  },
+  "mac": {
+    "category": "public.app-category.developer-tools",
+    "icon": "resources/icon.png",
+    "target": ["dmg", "zip"]
+  },
+  "win": {
+    "icon": "resources/icon.ico",
+    "target": ["nsis"]
+  },
+  "linux": {
+    "icon": "resources/icon.png",
+    "target": ["AppImage", "deb"],
+    "category": "Development",
+    "executableName": "gitchorus"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true
+  },
+  "electronFuses": {
+    "runAsNode": false,
+    "enableNodeCliInspectArguments": false,
+    "enableNodeOptionsEnvironmentVariable": false,
+    "onlyLoadAppFromAsar": true
+  }
+}

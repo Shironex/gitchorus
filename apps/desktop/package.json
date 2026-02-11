@@ -1,0 +1,61 @@
+{
+  "name": "@gitchorus/desktop",
+  "version": "0.1.0",
+  "description": "GitChorus - AI-powered GitHub issue validation and PR review desktop app",
+  "author": {
+    "name": "Shironex",
+    "email": "support@taketach.pl"
+  },
+  "homepage": "https://github.com/Shironex/gitchorus",
+  "private": true,
+  "main": "dist/main/index.js",
+  "scripts": {
+    "dev": "tsc -p tsconfig.build.json && cross-env NODE_ENV=development electron .",
+    "build:dev": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node scripts/copy-renderer.mjs",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "test": "jest",
+    "test:cov": "jest --coverage",
+    "test:watch": "jest --watch",
+    "test:integration": "jest --config jest.integration.config.js --forceExit --detectOpenHandles",
+    "test:e2e": "npx playwright test --config=e2e/playwright.config.ts",
+    "package": "pnpm build && electron-builder",
+    "package:win": "pnpm build && electron-builder --win",
+    "package:mac": "pnpm build && electron-builder --mac",
+    "package:linux": "pnpm build && electron-builder --linux",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "@nestjs/common": "^10.4.0",
+    "@nestjs/core": "^10.4.0",
+    "@nestjs/event-emitter": "^2.1.0",
+    "@nestjs/platform-express": "^10.4.0",
+    "@nestjs/platform-socket.io": "^10.4.0",
+    "@nestjs/throttler": "^6.5.0",
+    "@nestjs/websockets": "^10.4.0",
+    "@gitchorus/shared": "workspace:*",
+    "async-mutex": "^0.5.0",
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.7.3",
+    "reflect-metadata": "^0.2.2",
+    "rxjs": "^7.8.2",
+    "semver": "^7.7.4",
+    "socket.io": "^4.8.0"
+  },
+  "devDependencies": {
+    "@golevelup/ts-jest": "^1.2.1",
+    "@nestjs/testing": "^10.4.0",
+    "@types/jest": "^30.0.0",
+    "@types/node": "^25.2.1",
+    "@types/semver": "^7.7.0",
+    "cross-env": "^10.1.0",
+    "electron": "^40.2.1",
+    "electron-builder": "^26.0.0",
+    "esbuild": "^0.27.2",
+    "jest": "^30.0.0",
+    "playwright": "^1.58.2",
+    "socket.io-client": "^4.8.3",
+    "ts-jest": "^29.4.0",
+    "xvfb-maybe": "^0.2.1"
+  }
+}

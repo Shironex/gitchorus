@@ -1,0 +1,41 @@
+import { Module } from '@nestjs/common';
+import { GitBaseService } from './git-base.service';
+import { GitBranchService } from './git-branch.service';
+import { GitStatusService } from './git-status.service';
+import { GitCommitService } from './git-commit.service';
+import { GitRemoteService } from './git-remote.service';
+import { GitRepoService } from './git-repo.service';
+import { GitService } from './git.service';
+import { GithubService } from './github.service';
+import { GitGateway } from './git.gateway';
+import { GitHubCliGuard } from '../../common/guards';
+
+@Module({
+  providers: [
+    // Base service (shared dependency)
+    GitBaseService,
+    // Domain services
+    GitBranchService,
+    GitStatusService,
+    GitCommitService,
+    GitRemoteService,
+    GitRepoService,
+    // Facade service
+    GitService,
+    // Other services
+    GithubService,
+    GitGateway,
+    GitHubCliGuard,
+  ],
+  exports: [
+    GitBaseService,
+    GitBranchService,
+    GitStatusService,
+    GitCommitService,
+    GitRemoteService,
+    GitRepoService,
+    GitService,
+    GithubService,
+  ],
+})
+export class GitModule {}
