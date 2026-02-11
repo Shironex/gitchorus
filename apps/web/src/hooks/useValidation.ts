@@ -24,6 +24,9 @@ import {
   type ValidationHistoryListPayload,
   type ValidationHistoryListResponse,
   type ValidationHistoryDeletePayload,
+  type ValidationLogEntriesPayload,
+  type ValidationLogEntriesResponse,
+  type LogEntry,
 } from '@gitchorus/shared';
 
 const logger = createLogger('useValidation');
@@ -42,19 +45,17 @@ export function useValidation() {
   const githubInfo = useRepositoryStore((state) => state.githubInfo);
   const repositoryFullName = githubInfo?.fullName || null;
 
-  const {
-    updateQueue,
-    addStep,
-    setResult,
-    setError,
-    clearSteps,
-    setPushStatus,
-    setPostedCommentUrl,
-    setPostedCommentId,
-    setHistory,
-    setHistoryLoading,
-    removeHistoryEntry,
-  } = useValidationStore();
+  const updateQueue = useValidationStore((state) => state.updateQueue);
+  const addStep = useValidationStore((state) => state.addStep);
+  const setResult = useValidationStore((state) => state.setResult);
+  const setError = useValidationStore((state) => state.setError);
+  const clearSteps = useValidationStore((state) => state.clearSteps);
+  const setPushStatus = useValidationStore((state) => state.setPushStatus);
+  const setPostedCommentUrl = useValidationStore((state) => state.setPostedCommentUrl);
+  const setPostedCommentId = useValidationStore((state) => state.setPostedCommentId);
+  const setHistory = useValidationStore((state) => state.setHistory);
+  const setHistoryLoading = useValidationStore((state) => state.setHistoryLoading);
+  const removeHistoryEntry = useValidationStore((state) => state.removeHistoryEntry);
   const setValidationStatus = useIssueStore((state) => state.setValidationStatus);
 
   // Track previous repositoryFullName to detect changes
@@ -344,6 +345,34 @@ export function useValidation() {
   );
 
   /**
+   * Fetch recent backend log entries for the validation log panel.
+   * Returns an array of LogEntry objects (future use — plumbing ready).
+   */
+  const fetchLogEntries = useCallback(
+    async (limit: number = 100): Promise<LogEntry[]> => {
+      try {
+        const response = await emitAsync<
+          ValidationLogEntriesPayload,
+          ValidationLogEntriesResponse
+        >(ValidationEvents.LOG_ENTRIES, { limit });
+
+        if (response.error) {
+          logger.warn('Error fetching log entries:', response.error);
+          return [];
+        }
+
+        return response.entries;
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to fetch log entries';
+        logger.error('Failed to fetch log entries:', message);
+        return [];
+      }
+    },
+    []
+  );
+
+  /**
    * Check if a validation result is stale compared to the issue's updatedAt.
    * Returns true if the issue was updated after the validation completed.
    */
@@ -364,6 +393,7 @@ export function useValidation() {
     listComments,
     fetchHistory,
     deleteHistoryEntry,
+    fetchLogEntries,
     isStale,
   };
 }

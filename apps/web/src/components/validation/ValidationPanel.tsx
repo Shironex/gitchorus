@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   Play,
   X,
@@ -5,12 +6,14 @@ import {
   AlertCircle,
   AlertTriangle,
   Loader2,
+  ChevronDown,
+  ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { useIssueStore, selectSelectedIssue } from '@/stores/useIssueStore';
-import { useValidationStore, selectLatestValidationForIssue } from '@/stores/useValidationStore';
+import { useIssueStore } from '@/stores/useIssueStore';
+import { useValidationStore } from '@/stores/useValidationStore';
 import { useValidation } from '@/hooks/useValidation';
 import { ValidationStepLog } from './ValidationStepLog';
 import { ValidationResults } from './ValidationResults';
@@ -23,6 +26,7 @@ import type { ValidationStatus } from '@gitchorus/shared';
  * Displays step-by-step progress log, structured results, GitHub push preview,
  * error states with retry, and staleness banner with re-validate prompt.
  * Falls back to history results when no live result is available.
+ * After completion, the step log collapses into an "Activity Log" section.
  */
 export function ValidationPanel() {
   const {
@@ -33,12 +37,12 @@ export function ValidationPanel() {
     listComments,
   } = useValidation();
 
-  const selectedIssueNumber = useIssueStore(selectSelectedIssue);
+  const selectedIssueNumber = useIssueStore((state) => state.selectedIssueNumber);
   const issues = useIssueStore((state) => state.issues);
 
   const queue = useValidationStore((state) => state.queue);
   const steps = useValidationStore((state) =>
-    selectedIssueNumber ? state.steps.get(selectedIssueNumber) || [] : []
+    selectedIssueNumber ? state.steps.get(selectedIssueNumber) : undefined
   );
   const liveResult = useValidationStore((state) =>
     selectedIssueNumber ? state.results.get(selectedIssueNumber) : undefined
@@ -47,16 +51,25 @@ export function ValidationPanel() {
     selectedIssueNumber ? state.errors.get(selectedIssueNumber) : undefined
   );
 
-  // Get latest validation (live or history) for display and staleness
-  const latestValidation = useValidationStore(
-    selectedIssueNumber !== null
-      ? selectLatestValidationForIssue(selectedIssueNumber)
-      : () => undefined
-  );
+  // Get latest validation (live or history) for display and staleness — inline to avoid new closure per render
+  const latestValidation = useValidationStore((state) => {
+    if (selectedIssueNumber === null) return undefined;
+    const live = state.results.get(selectedIssueNumber);
+    if (live) return live;
+    return state.history.find((e) => e.issueNumber === selectedIssueNumber);
+  });
 
   // Use live result if available, otherwise fall back to history
   const result = liveResult || latestValidation;
   const isFromHistory = !liveResult && !!latestValidation;
+
+  // Collapsible activity log state — collapsed by default after completion
+  const [logExpanded, setLogExpanded] = useState(false);
+
+  // Reset logExpanded when issue changes
+  useEffect(() => {
+    setLogExpanded(false);
+  }, [selectedIssueNumber]);
 
   if (selectedIssueNumber === null) {
     return (
@@ -89,6 +102,11 @@ export function ValidationPanel() {
 
   // Staleness detection: issue updated after last validation
   const isStale = !!result && new Date(issue.updatedAt).getTime() > new Date(result.validatedAt).getTime();
+
+  // Whether to show step log as active (open, not collapsible) or as collapsible
+  const hasSteps = steps && steps.length > 0;
+  const showActiveLog = hasSteps && isRunning;
+  const showCollapsibleLog = hasSteps && !isRunning;
 
   return (
     <div className="flex flex-col h-full">
@@ -181,16 +199,34 @@ export function ValidationPanel() {
           </div>
         )}
 
-        {/* Step log */}
-        {steps.length > 0 && (
+        {/* Active step log — shown open while running */}
+        {showActiveLog && (
           <div>
             <h4 className="text-xs font-medium text-foreground mb-2">Progress</h4>
             <ValidationStepLog steps={steps} isRunning={isRunning} />
           </div>
         )}
 
+        {/* Collapsible activity log — shown after completion */}
+        {showCollapsibleLog && (
+          <div>
+            <button
+              onClick={() => setLogExpanded(!logExpanded)}
+              className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full text-left"
+            >
+              {logExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <span>Activity Log ({steps.length} steps)</span>
+            </button>
+            {logExpanded && (
+              <div className="mt-2">
+                <ValidationStepLog steps={steps} isRunning={false} />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Running indicator when no steps yet */}
-        {isRunning && steps.length === 0 && (
+        {isRunning && (!steps || steps.length === 0) && (
           <div className="flex items-center gap-2 py-8 justify-center">
             <Loader2 size={16} className="animate-spin text-primary" />
             <span className="text-sm text-muted-foreground">Starting validation...</span>
