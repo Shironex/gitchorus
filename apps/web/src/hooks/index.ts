@@ -4,3 +4,4 @@ export { useIssues } from './useIssues';
 export { useRepositoryConnection } from './useRepositoryConnection';
 export { useUpdateToast } from './useUpdateToast';
 export { useClickOutside } from './useClickOutside';
+export { useValidation } from './useValidation';

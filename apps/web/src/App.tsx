@@ -1,5 +1,6 @@
 import { useAppInitialization } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
+import { useValidation } from '@/hooks/useValidation';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import { TopBar, WelcomeView } from '@/components/shared';
 import { SettingsModal } from '@/components/settings';
@@ -8,6 +9,8 @@ import { IssueListView } from '@/components/issues';
 function App() {
   useAppInitialization();
   useUpdateToast();
+  // Initialize validation socket listeners at app level
+  useValidation();
 
   const repositoryPath = useRepositoryStore(state => state.repositoryPath);
   const isConnected = repositoryPath !== null;

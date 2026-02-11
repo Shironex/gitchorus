@@ -2,6 +2,7 @@ import { MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { useValidationStore } from '@/stores/useValidationStore';
 import type { Issue, ValidationStatus } from '@gitchorus/shared';
 
 /**
@@ -49,17 +50,27 @@ interface IssueCardProps {
   issue: Issue;
   isSelected: boolean;
   onClick: () => void;
+  /** @deprecated Use store-based status. Kept for backward compatibility. */
   validationStatus?: ValidationStatus;
 }
 
 /**
- * Card-based issue display with title, labels, age, and optional validation status.
+ * Card-based issue display with title, labels, age, and validation status badge.
  *
  * Per design decision: minimal metadata (title, labels, age only).
- * Validation status badge shown only when provided.
+ * Validation status is read from the validation store (queue state).
  */
-export function IssueCard({ issue, isSelected, onClick, validationStatus }: IssueCardProps) {
-  const validationBadge = validationStatus ? getValidationBadge(validationStatus) : null;
+export function IssueCard({ issue, isSelected, onClick, validationStatus: propStatus }: IssueCardProps) {
+  // Read status from the validation store queue, falling back to prop
+  const queueItem = useValidationStore((state) =>
+    state.queue.find((q) => q.issueNumber === issue.number)
+  );
+  const storeStatus = queueItem?.status;
+  // Also check if there's a result stored (completed validation not yet in queue)
+  const hasResult = useValidationStore((state) => state.results.has(issue.number));
+
+  const effectiveStatus = storeStatus || propStatus || (hasResult ? 'completed' : undefined);
+  const validationBadge = effectiveStatus ? getValidationBadge(effectiveStatus) : null;
 
   return (
     <Card
