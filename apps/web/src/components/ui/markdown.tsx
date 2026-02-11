@@ -17,7 +17,10 @@ let highlighterInstance: HighlighterGeneric<BundledLanguage, BundledTheme> | nul
 async function getHighlighter() {
   if (highlighterInstance) return highlighterInstance;
   if (!highlighterPromise) {
-    highlighterPromise = import('shiki').then(async ({ createHighlighter }) => {
+    highlighterPromise = Promise.all([
+      import('shiki'),
+      import('shiki/engine/javascript'),
+    ]).then(async ([{ createHighlighter }, { createJavaScriptRegexEngine }]) => {
       const instance = await createHighlighter({
         themes: ['github-light', 'github-dark'],
         langs: [
@@ -44,6 +47,7 @@ async function getHighlighter() {
           'tsx',
           'jsx',
         ],
+        engine: createJavaScriptRegexEngine(),
       });
       highlighterInstance = instance;
       return instance;
