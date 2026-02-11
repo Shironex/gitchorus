@@ -62,6 +62,8 @@ export interface ValidationParams {
   repoName: string;
   /** Optional provider configuration overrides */
   config?: ProviderConfig;
+  /** Optional file transport function for writing logs to disk */
+  fileTransport?: (message: string) => void;
 }
 
 // ============================================

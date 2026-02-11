@@ -55,6 +55,7 @@ export const ValidationEvents = {
   HISTORY_LIST: 'validation:history-list',
   HISTORY_GET: 'validation:history-get',
   HISTORY_DELETE: 'validation:history-delete',
+  LOG_ENTRIES: 'validation:log-entries',
 } as const;
 
 // ============================================

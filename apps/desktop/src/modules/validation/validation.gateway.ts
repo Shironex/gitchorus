@@ -25,10 +25,13 @@ import {
   type ValidationHistoryGetPayload,
   type ValidationHistoryGetResponse,
   type ValidationHistoryDeletePayload,
+  type ValidationLogEntriesPayload,
+  type ValidationLogEntriesResponse,
 } from '@gitchorus/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 import { ValidationService, InternalValidationEvents } from './validation.service';
 import { ValidationHistoryService } from './validation-history.service';
+import { ValidationLogService } from './validation-log.service';
 
 /**
  * WebSocket gateway for validation events.
@@ -48,7 +51,8 @@ export class ValidationGateway implements OnGatewayInit {
 
   constructor(
     private readonly validationService: ValidationService,
-    private readonly historyService: ValidationHistoryService
+    private readonly historyService: ValidationHistoryService,
+    private readonly logService: ValidationLogService
   ) {}
 
   afterInit(): void {
@@ -178,6 +182,28 @@ export class ValidationGateway implements OnGatewayInit {
       const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error deleting history entry: ${message}`);
       return { success: false, error: message };
+    }
+  }
+
+  // ============================================
+  // Log handlers
+  // ============================================
+
+  /**
+   * Handle request to get recent validation log entries.
+   */
+  @SubscribeMessage(ValidationEvents.LOG_ENTRIES)
+  handleLogEntries(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ValidationLogEntriesPayload
+  ): ValidationLogEntriesResponse {
+    try {
+      const entries = this.logService.getLogEntries(payload?.limit);
+      return { entries };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error fetching log entries: ${message}`);
+      return { entries: [], error: message };
     }
   }
 

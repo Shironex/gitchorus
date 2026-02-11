@@ -4,6 +4,7 @@ import {
   createLogger,
 } from '@gitchorus/shared';
 import type {
+  Logger,
   ValidationStep,
   ValidationResult,
   ValidationQueueItem,
@@ -12,8 +13,7 @@ import type {
 import { GithubService } from '../git/github.service';
 import { ProviderRegistry } from '../provider/provider.registry';
 import { ValidationHistoryService } from './validation-history.service';
-
-const logger = createLogger('ValidationService');
+import { ValidationLogService } from './validation-log.service';
 
 /**
  * Internal event names for EventEmitter2 communication
@@ -46,12 +46,22 @@ export class ValidationService {
   /** Project path for the current session */
   private projectPath: string | null = null;
 
+  /** Logger with file transport for troubleshooting */
+  private readonly logger: Logger;
+
+  /** File transport function for passing to providers */
+  private readonly fileTransport: (message: string) => void;
+
   constructor(
     private readonly providerRegistry: ProviderRegistry,
     private readonly githubService: GithubService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly historyService: ValidationHistoryService
-  ) {}
+    private readonly historyService: ValidationHistoryService,
+    private readonly logService: ValidationLogService
+  ) {
+    this.fileTransport = this.logService.getLogTransport();
+    this.logger = createLogger('ValidationService', { fileTransport: this.fileTransport });
+  }
 
   /**
    * Queue a validation for the given issue number.
@@ -63,7 +73,7 @@ export class ValidationService {
     // If already in queue or running, skip
     const existing = this.validationQueue.get(issueNumber);
     if (existing && (existing.status === 'queued' || existing.status === 'running')) {
-      logger.info(`Issue #${issueNumber} already ${existing.status}, skipping`);
+      this.logger.info(`Issue #${issueNumber} already ${existing.status}, skipping`);
       return;
     }
 
@@ -74,7 +84,7 @@ export class ValidationService {
     };
 
     this.validationQueue.set(issueNumber, queueItem);
-    logger.info(`Queued validation for issue #${issueNumber}`);
+    this.logger.info(`Queued validation for issue #${issueNumber}`);
     this.emitQueueUpdate();
 
     // If nothing is running, start processing
@@ -92,10 +102,10 @@ export class ValidationService {
     if (!item) return;
 
     if (item.status === 'running' && this.abortController) {
-      logger.info(`Cancelling running validation for issue #${issueNumber}`);
+      this.logger.info(`Cancelling running validation for issue #${issueNumber}`);
       this.abortController.abort();
     } else if (item.status === 'queued') {
-      logger.info(`Removing queued validation for issue #${issueNumber}`);
+      this.logger.info(`Removing queued validation for issue #${issueNumber}`);
       this.updateQueueItem(issueNumber, {
         status: 'cancelled',
         completedAt: new Date().toISOString(),
@@ -132,7 +142,7 @@ export class ValidationService {
       await this.runValidation(nextItem.issueNumber, this.projectPath);
     } catch (error) {
       // Error handling is done inside runValidation
-      logger.error(`Unexpected error in processQueue for #${nextItem.issueNumber}:`, error);
+      this.logger.error(`Unexpected error in processQueue for #${nextItem.issueNumber}:`, error);
     }
 
     // Process next item in queue
@@ -171,11 +181,12 @@ export class ValidationService {
       // Create abort controller
       this.abortController = new AbortController();
 
-      // Run the validation generator
+      // Run the validation generator — pass fileTransport for log file writing
       const generator = provider.validate({
         issue,
         repoPath: projectPath,
         repoName,
+        fileTransport: this.fileTransport,
       });
 
       let result: ValidationResult | undefined;

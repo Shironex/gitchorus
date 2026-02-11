@@ -14,6 +14,7 @@ import type {
   IssueComment,
 } from './github';
 import type { ProviderStatus } from './provider';
+import type { LogEntry } from '../logger';
 import type { ValidationStep, ValidationResult, ValidationQueueItem, ValidationHistoryEntry } from './validation';
 
 // ============================================
@@ -358,6 +359,25 @@ export interface ValidationHistoryGetResponse {
  */
 export interface ValidationHistoryDeletePayload {
   id: string;
+}
+
+// ============================================
+// Validation Log Payloads
+// ============================================
+
+/**
+ * Payload to request recent log entries
+ */
+export interface ValidationLogEntriesPayload {
+  limit?: number;
+}
+
+/**
+ * Response containing recent log entries
+ */
+export interface ValidationLogEntriesResponse {
+  entries: LogEntry[];
+  error?: string;
 }
 
 // ============================================

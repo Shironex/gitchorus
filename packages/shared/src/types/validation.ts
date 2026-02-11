@@ -49,6 +49,19 @@ export interface AffectedFile {
 }
 
 /**
+ * Step type for categorizing validation progress steps.
+ * Used by the frontend to render appropriate icons per step type.
+ */
+export type ValidationStepType =
+  | 'init'
+  | 'reading'
+  | 'searching'
+  | 'analyzing'
+  | 'tool-use'
+  | 'processing'
+  | 'complete';
+
+/**
  * A progress step emitted during validation
  */
 export interface ValidationStep {
@@ -58,6 +71,12 @@ export interface ValidationStep {
   message: string;
   /** ISO timestamp when this step occurred */
   timestamp: string;
+  /** Categorization of this step for icon rendering */
+  stepType?: ValidationStepType;
+  /** Tool name if this step corresponds to a tool invocation (e.g., 'Read', 'Grep', 'Bash') */
+  toolName?: string;
+  /** File path if this step involves a specific file */
+  filePath?: string;
 }
 
 // ============================================
