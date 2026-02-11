@@ -3,13 +3,14 @@ import {
   X,
   RefreshCw,
   AlertCircle,
+  AlertTriangle,
   Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useIssueStore, selectSelectedIssue } from '@/stores/useIssueStore';
-import { useValidationStore } from '@/stores/useValidationStore';
+import { useValidationStore, selectLatestValidationForIssue } from '@/stores/useValidationStore';
 import { useValidation } from '@/hooks/useValidation';
 import { ValidationStepLog } from './ValidationStepLog';
 import { ValidationResults } from './ValidationResults';
@@ -20,7 +21,8 @@ import type { ValidationStatus } from '@gitchorus/shared';
  * Side panel that shows validation state for the selected issue.
  *
  * Displays step-by-step progress log, structured results, GitHub push preview,
- * and error states with retry. Includes validate/cancel/re-validate controls.
+ * error states with retry, and staleness banner with re-validate prompt.
+ * Falls back to history results when no live result is available.
  */
 export function ValidationPanel() {
   const {
@@ -38,12 +40,23 @@ export function ValidationPanel() {
   const steps = useValidationStore((state) =>
     selectedIssueNumber ? state.steps.get(selectedIssueNumber) || [] : []
   );
-  const result = useValidationStore((state) =>
+  const liveResult = useValidationStore((state) =>
     selectedIssueNumber ? state.results.get(selectedIssueNumber) : undefined
   );
   const error = useValidationStore((state) =>
     selectedIssueNumber ? state.errors.get(selectedIssueNumber) : undefined
   );
+
+  // Get latest validation (live or history) for display and staleness
+  const latestValidation = useValidationStore(
+    selectedIssueNumber !== null
+      ? selectLatestValidationForIssue(selectedIssueNumber)
+      : () => undefined
+  );
+
+  // Use live result if available, otherwise fall back to history
+  const result = liveResult || latestValidation;
+  const isFromHistory = !liveResult && !!latestValidation;
 
   if (selectedIssueNumber === null) {
     return (
@@ -70,9 +83,12 @@ export function ValidationPanel() {
   const isCompleted = status === 'completed';
   const isFailed = status === 'failed';
   const isCancelled = status === 'cancelled';
-  const isIdle = status === 'idle' && !result && !error;
   const hasResult = !!result;
-  const canRevalidate = isCompleted || isFailed || isCancelled;
+  const isIdle = status === 'idle' && !liveResult && !latestValidation && !error;
+  const canRevalidate = isCompleted || isFailed || isCancelled || isFromHistory;
+
+  // Staleness detection: issue updated after last validation
+  const isStale = !!result && new Date(issue.updatedAt).getTime() > new Date(result.validatedAt).getTime();
 
   return (
     <div className="flex flex-col h-full">
@@ -131,6 +147,40 @@ export function ValidationPanel() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+        {/* Staleness banner */}
+        {isStale && hasResult && !isRunning && !isQueued && (
+          <div className="rounded-lg border p-3 border-amber-500/30 bg-amber-500/5">
+            <div className="flex items-start gap-2">
+              <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
+                  Results may be outdated
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  This issue was updated after the last validation.
+                </p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-xs mt-1.5 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
+                  onClick={() => startValidation(selectedIssueNumber)}
+                >
+                  <RefreshCw size={12} className="mr-1" /> Re-validate
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* History notice */}
+        {isFromHistory && !isStale && !isRunning && !isQueued && (
+          <div className="rounded-lg border p-2.5 border-muted bg-muted/20">
+            <p className="text-[11px] text-muted-foreground">
+              Showing results from a previous validation.
+            </p>
+          </div>
+        )}
+
         {/* Step log */}
         {steps.length > 0 && (
           <div>

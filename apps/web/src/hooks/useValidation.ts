@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { socket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
@@ -21,6 +21,9 @@ import {
   type GithubUpdateCommentPayload,
   type GithubUpdateCommentResponse,
   type IssueComment,
+  type ValidationHistoryListPayload,
+  type ValidationHistoryListResponse,
+  type ValidationHistoryDeletePayload,
 } from '@gitchorus/shared';
 
 const logger = createLogger('useValidation');
@@ -29,12 +32,16 @@ const logger = createLogger('useValidation');
  * Hook that orchestrates the validation flow.
  *
  * Sets up Socket.io listeners for progress, completion, error, and queue updates.
- * Provides functions to start/cancel validation and push/update GitHub comments.
+ * Provides functions to start/cancel validation, push/update GitHub comments,
+ * and manage validation history (fetch, delete, staleness detection).
  *
  * Should be initialized once at the app level (e.g., in App.tsx).
  */
 export function useValidation() {
   const repositoryPath = useRepositoryStore((state) => state.repositoryPath);
+  const githubInfo = useRepositoryStore((state) => state.githubInfo);
+  const repositoryFullName = githubInfo?.fullName || null;
+
   const {
     updateQueue,
     addStep,
@@ -44,8 +51,42 @@ export function useValidation() {
     setPushStatus,
     setPostedCommentUrl,
     setPostedCommentId,
+    setHistory,
+    setHistoryLoading,
+    removeHistoryEntry,
   } = useValidationStore();
   const setValidationStatus = useIssueStore((state) => state.setValidationStatus);
+
+  // Track previous repositoryFullName to detect changes
+  const prevRepoRef = useRef<string | null>(null);
+
+  // Fetch history when repository changes
+  const fetchHistoryInternal = useCallback(
+    async (repoFullName: string) => {
+      setHistoryLoading(true);
+      try {
+        const response = await emitAsync<
+          ValidationHistoryListPayload,
+          ValidationHistoryListResponse
+        >(ValidationEvents.HISTORY_LIST, {
+          repositoryFullName: repoFullName,
+        });
+
+        if (response.error) {
+          logger.warn('Error fetching history:', response.error);
+          setHistory([]);
+        } else {
+          setHistory(response.entries);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to fetch history';
+        logger.error('Failed to fetch history:', message);
+        setHistory([]);
+      }
+    },
+    [setHistory, setHistoryLoading]
+  );
 
   // Set up Socket.io listeners
   useEffect(() => {
@@ -58,13 +99,22 @@ export function useValidation() {
       logger.info(`Complete #${data.issueNumber}: ${data.result.verdict}`);
       setResult(data.issueNumber, data.result);
       setValidationStatus(data.issueNumber, 'completed');
+      // Refresh history after a validation completes
+      const repoName = useRepositoryStore.getState().githubInfo?.fullName;
+      if (repoName) {
+        fetchHistoryInternal(repoName);
+      }
     };
 
     const onError = (data: ValidationErrorResponse) => {
       logger.warn(`Error #${data.issueNumber}: ${data.error}`);
       setError(data.issueNumber, data.error);
-      const isCancelled = data.error.includes('cancelled') || data.error.includes('aborted');
-      setValidationStatus(data.issueNumber, isCancelled ? 'cancelled' : 'failed');
+      const isCancelled =
+        data.error.includes('cancelled') || data.error.includes('aborted');
+      setValidationStatus(
+        data.issueNumber,
+        isCancelled ? 'cancelled' : 'failed'
+      );
     };
 
     const onQueueUpdate = (data: ValidationQueueUpdateResponse) => {
@@ -87,7 +137,22 @@ export function useValidation() {
       socket.off(ValidationEvents.ERROR, onError);
       socket.off(ValidationEvents.QUEUE_UPDATE, onQueueUpdate);
     };
-  }, [addStep, setResult, setError, updateQueue, setValidationStatus]);
+  }, [
+    addStep,
+    setResult,
+    setError,
+    updateQueue,
+    setValidationStatus,
+    fetchHistoryInternal,
+  ]);
+
+  // Fetch history when repository changes
+  useEffect(() => {
+    if (repositoryFullName && repositoryFullName !== prevRepoRef.current) {
+      fetchHistoryInternal(repositoryFullName);
+    }
+    prevRepoRef.current = repositoryFullName;
+  }, [repositoryFullName, fetchHistoryInternal]);
 
   const startValidation = useCallback(
     async (issueNumber: number) => {
@@ -98,15 +163,16 @@ export function useValidation() {
       setValidationStatus(issueNumber, 'queued');
 
       try {
-        await emitAsync<ValidationStartPayload, { success: boolean; error?: string }>(
-          ValidationEvents.START,
-          {
-            projectPath: repositoryPath,
-            issueNumber,
-          }
-        );
+        await emitAsync<
+          ValidationStartPayload,
+          { success: boolean; error?: string }
+        >(ValidationEvents.START, {
+          projectPath: repositoryPath,
+          issueNumber,
+        });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to start validation';
+        const message =
+          err instanceof Error ? err.message : 'Failed to start validation';
         logger.error('Failed to start validation:', message);
         setError(issueNumber, message);
         setValidationStatus(issueNumber, 'failed');
@@ -118,12 +184,13 @@ export function useValidation() {
   const cancelValidation = useCallback(
     async (issueNumber: number) => {
       try {
-        await emitAsync<ValidationCancelPayload, { success: boolean; error?: string }>(
-          ValidationEvents.CANCEL,
-          { issueNumber }
-        );
+        await emitAsync<
+          ValidationCancelPayload,
+          { success: boolean; error?: string }
+        >(ValidationEvents.CANCEL, { issueNumber });
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to cancel validation';
+        const message =
+          err instanceof Error ? err.message : 'Failed to cancel validation';
         logger.error('Failed to cancel validation:', message);
       }
     },
@@ -137,14 +204,14 @@ export function useValidation() {
       setPushStatus(issueNumber, 'pushing');
 
       try {
-        const response = await emitAsync<GithubCreateCommentPayload, GithubCreateCommentResponse>(
-          GithubEvents.CREATE_COMMENT,
-          {
-            projectPath: repositoryPath,
-            issueNumber,
-            body,
-          }
-        );
+        const response = await emitAsync<
+          GithubCreateCommentPayload,
+          GithubCreateCommentResponse
+        >(GithubEvents.CREATE_COMMENT, {
+          projectPath: repositoryPath,
+          issueNumber,
+          body,
+        });
 
         if (!response.success || !response.commentUrl) {
           throw new Error(response.error || 'Failed to create comment');
@@ -152,10 +219,13 @@ export function useValidation() {
 
         setPushStatus(issueNumber, 'posted');
         setPostedCommentUrl(issueNumber, response.commentUrl);
-        logger.info(`Comment posted for #${issueNumber}: ${response.commentUrl}`);
+        logger.info(
+          `Comment posted for #${issueNumber}: ${response.commentUrl}`
+        );
         return response.commentUrl;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to push to GitHub';
+        const message =
+          err instanceof Error ? err.message : 'Failed to push to GitHub';
         logger.error('Failed to push to GitHub:', message);
         setPushStatus(issueNumber, 'idle');
         return null;
@@ -165,20 +235,24 @@ export function useValidation() {
   );
 
   const updateGithubComment = useCallback(
-    async (issueNumber: number, commentId: string, body: string): Promise<string | null> => {
+    async (
+      issueNumber: number,
+      commentId: string,
+      body: string
+    ): Promise<string | null> => {
       if (!repositoryPath) return null;
 
       setPushStatus(issueNumber, 'pushing');
 
       try {
-        const response = await emitAsync<GithubUpdateCommentPayload, GithubUpdateCommentResponse>(
-          GithubEvents.UPDATE_COMMENT,
-          {
-            projectPath: repositoryPath,
-            commentId,
-            body,
-          }
-        );
+        const response = await emitAsync<
+          GithubUpdateCommentPayload,
+          GithubUpdateCommentResponse
+        >(GithubEvents.UPDATE_COMMENT, {
+          projectPath: repositoryPath,
+          commentId,
+          body,
+        });
 
         if (!response.success || !response.commentUrl) {
           throw new Error(response.error || 'Failed to update comment');
@@ -187,10 +261,13 @@ export function useValidation() {
         setPushStatus(issueNumber, 'posted');
         setPostedCommentUrl(issueNumber, response.commentUrl);
         setPostedCommentId(issueNumber, commentId);
-        logger.info(`Comment updated for #${issueNumber}: ${response.commentUrl}`);
+        logger.info(
+          `Comment updated for #${issueNumber}: ${response.commentUrl}`
+        );
         return response.commentUrl;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to update comment';
+        const message =
+          err instanceof Error ? err.message : 'Failed to update comment';
         logger.error('Failed to update GitHub comment:', message);
         setPushStatus(issueNumber, 'idle');
         return null;
@@ -204,13 +281,13 @@ export function useValidation() {
       if (!repositoryPath) return [];
 
       try {
-        const response = await emitAsync<GithubListCommentsPayload, GithubListCommentsResponse>(
-          GithubEvents.LIST_COMMENTS,
-          {
-            projectPath: repositoryPath,
-            issueNumber,
-          }
-        );
+        const response = await emitAsync<
+          GithubListCommentsPayload,
+          GithubListCommentsResponse
+        >(GithubEvents.LIST_COMMENTS, {
+          projectPath: repositoryPath,
+          issueNumber,
+        });
 
         if (response.error) {
           logger.warn('Error listing comments:', response.error);
@@ -219,12 +296,64 @@ export function useValidation() {
 
         return response.comments;
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Failed to list comments';
+        const message =
+          err instanceof Error ? err.message : 'Failed to list comments';
         logger.error('Failed to list comments:', message);
         return [];
       }
     },
     [repositoryPath]
+  );
+
+  /**
+   * Fetch history for a given repository.
+   * Can be called externally to refresh history.
+   */
+  const fetchHistory = useCallback(
+    async (repoFullName: string) => {
+      await fetchHistoryInternal(repoFullName);
+    },
+    [fetchHistoryInternal]
+  );
+
+  /**
+   * Delete a history entry by ID.
+   */
+  const deleteHistoryEntry = useCallback(
+    async (id: string) => {
+      try {
+        const response = await emitAsync<
+          ValidationHistoryDeletePayload,
+          { success: boolean; error?: string }
+        >(ValidationEvents.HISTORY_DELETE, { id });
+
+        if (response.success) {
+          removeHistoryEntry(id);
+        } else {
+          logger.warn('Failed to delete history entry:', response.error);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Failed to delete history entry';
+        logger.error('Failed to delete history entry:', message);
+      }
+    },
+    [removeHistoryEntry]
+  );
+
+  /**
+   * Check if a validation result is stale compared to the issue's updatedAt.
+   * Returns true if the issue was updated after the validation completed.
+   */
+  const isStale = useCallback(
+    (validatedAt: string, issueUpdatedAt: string): boolean => {
+      const validatedTime = new Date(validatedAt).getTime();
+      const updatedTime = new Date(issueUpdatedAt).getTime();
+      return updatedTime > validatedTime;
+    },
+    []
   );
 
   return {
@@ -233,5 +362,8 @@ export function useValidation() {
     pushToGithub,
     updateGithubComment,
     listComments,
+    fetchHistory,
+    deleteHistoryEntry,
+    isStale,
   };
 }

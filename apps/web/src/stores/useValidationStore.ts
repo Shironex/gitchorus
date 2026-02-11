@@ -6,6 +6,7 @@ import type {
   ValidationResult,
   ValidationQueueItem,
   ValidationStatus,
+  ValidationHistoryEntry,
 } from '@gitchorus/shared';
 
 const logger = createLogger('ValidationStore');
@@ -35,6 +36,10 @@ interface ValidationState {
   postedCommentUrls: Map<number, string>;
   /** Posted comment IDs per issue number (for update support) */
   postedCommentIds: Map<number, string>;
+  /** Validation history entries from electron-store persistence */
+  history: ValidationHistoryEntry[];
+  /** Whether history is currently being loaded */
+  historyLoading: boolean;
 }
 
 // ============================================
@@ -58,6 +63,12 @@ interface ValidationActions {
   setPostedCommentUrl: (issueNumber: number, url: string) => void;
   /** Set posted comment ID after successful push */
   setPostedCommentId: (issueNumber: number, commentId: string) => void;
+  /** Set history entries */
+  setHistory: (entries: ValidationHistoryEntry[]) => void;
+  /** Set history loading state */
+  setHistoryLoading: (loading: boolean) => void;
+  /** Remove a specific history entry by ID */
+  removeHistoryEntry: (id: string) => void;
   /** Clear all validation state */
   clearAll: () => void;
 }
@@ -83,6 +94,8 @@ export const useValidationStore = create<ValidationStore>()(
       pushStatus: new Map(),
       postedCommentUrls: new Map(),
       postedCommentIds: new Map(),
+      history: [],
+      historyLoading: false,
 
       // Actions
       updateQueue: (queue: ValidationQueueItem[]) => {
@@ -188,6 +201,25 @@ export const useValidationStore = create<ValidationStore>()(
         );
       },
 
+      setHistory: (entries: ValidationHistoryEntry[]) => {
+        logger.debug(`History loaded: ${entries.length} entries`);
+        set({ history: entries, historyLoading: false }, undefined, 'validation/setHistory');
+      },
+
+      setHistoryLoading: (loading: boolean) => {
+        set({ historyLoading: loading }, undefined, 'validation/setHistoryLoading');
+      },
+
+      removeHistoryEntry: (id: string) => {
+        set(
+          (state) => ({
+            history: state.history.filter((e) => e.id !== id),
+          }),
+          undefined,
+          'validation/removeHistoryEntry'
+        );
+      },
+
       clearAll: () => {
         logger.info('Clearing all validation state');
         set(
@@ -199,6 +231,8 @@ export const useValidationStore = create<ValidationStore>()(
             pushStatus: new Map(),
             postedCommentUrls: new Map(),
             postedCommentIds: new Map(),
+            history: [],
+            historyLoading: false,
           },
           undefined,
           'validation/clearAll'
@@ -242,4 +276,15 @@ export const selectPushStatus = (issueNumber: number) => (state: ValidationStore
 /** Get posted comment URL for a specific issue */
 export const selectPostedCommentUrl = (issueNumber: number) => (state: ValidationStore): string | undefined => {
   return state.postedCommentUrls.get(issueNumber);
+};
+
+/** Get the latest validation for an issue — checks live results first, then history */
+export const selectLatestValidationForIssue = (issueNumber: number) => (state: ValidationStore): ValidationResult | ValidationHistoryEntry | undefined => {
+  // Live result takes priority
+  const liveResult = state.results.get(issueNumber);
+  if (liveResult) return liveResult;
+
+  // Fall back to history
+  const historyEntry = state.history.find((e) => e.issueNumber === issueNumber);
+  return historyEntry;
 };

@@ -1,8 +1,8 @@
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useValidationStore } from '@/stores/useValidationStore';
+import { useValidationStore, selectLatestValidationForIssue } from '@/stores/useValidationStore';
 import type { Issue, ValidationStatus } from '@gitchorus/shared';
 
 /**
@@ -55,7 +55,8 @@ interface IssueCardProps {
 }
 
 /**
- * Card-based issue display with title, labels, age, and validation status badge.
+ * Card-based issue display with title, labels, age, validation status badge,
+ * and staleness detection (Outdated badge when issue updated since last validation).
  *
  * Per design decision: minimal metadata (title, labels, age only).
  * Validation status is read from the validation store (queue state).
@@ -69,8 +70,14 @@ export function IssueCard({ issue, isSelected, onClick, validationStatus: propSt
   // Also check if there's a result stored (completed validation not yet in queue)
   const hasResult = useValidationStore((state) => state.results.has(issue.number));
 
+  // Check latest validation for staleness detection
+  const latestValidation = useValidationStore(selectLatestValidationForIssue(issue.number));
+
   const effectiveStatus = storeStatus || propStatus || (hasResult ? 'completed' : undefined);
   const validationBadge = effectiveStatus ? getValidationBadge(effectiveStatus) : null;
+
+  // Staleness: issue was updated after the last validation
+  const isStale = !!latestValidation && new Date(issue.updatedAt).getTime() > new Date(latestValidation.validatedAt).getTime();
 
   return (
     <Card
@@ -82,7 +89,7 @@ export function IssueCard({ issue, isSelected, onClick, validationStatus: propSt
       onClick={onClick}
     >
       <CardContent className="p-4">
-        {/* Header: number + title + validation badge */}
+        {/* Header: number + title + badges */}
         <div className="flex items-start gap-2">
           <span className="text-xs text-muted-foreground font-mono shrink-0 mt-0.5">
             #{issue.number}
@@ -90,14 +97,25 @@ export function IssueCard({ issue, isSelected, onClick, validationStatus: propSt
           <h3 className="text-sm font-medium text-foreground leading-snug flex-1 min-w-0">
             {issue.title}
           </h3>
-          {validationBadge && (
-            <Badge
-              variant="outline"
-              className={cn('text-[10px] px-1.5 py-0 shrink-0', validationBadge.className)}
-            >
-              {validationBadge.label}
-            </Badge>
-          )}
+          <div className="flex items-center gap-1 shrink-0">
+            {isStale && (
+              <Badge
+                variant="outline"
+                className="text-[10px] px-1.5 py-0 bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 gap-0.5"
+              >
+                <AlertTriangle size={10} />
+                Outdated
+              </Badge>
+            )}
+            {validationBadge && (
+              <Badge
+                variant="outline"
+                className={cn('text-[10px] px-1.5 py-0', validationBadge.className)}
+              >
+                {validationBadge.label}
+              </Badge>
+            )}
+          </div>
         </div>
 
         {/* Footer: labels + metadata */}

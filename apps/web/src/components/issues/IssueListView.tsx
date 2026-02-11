@@ -12,6 +12,7 @@ import { IssueCard } from './IssueCard';
 import { IssueFilters } from './IssueFilters';
 import { EmptyIssuesState } from './EmptyIssuesState';
 import { ValidationPanel } from '../validation/ValidationPanel';
+import { ValidationHistory } from '../validation/ValidationHistory';
 
 interface IssueListViewProps {
   className?: string;
@@ -145,6 +146,9 @@ export function IssueListView({ className }: IssueListViewProps) {
             </div>
           )}
         </div>
+
+        {/* Validation history (collapsible section below issue list) */}
+        <ValidationHistory />
       </div>
 
       {/* Validation panel (right side, shown when issue selected) */}
