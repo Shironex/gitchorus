@@ -1,13 +1,10 @@
+import { useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useIssues } from '@/hooks/useIssues';
-import {
-  useIssueStore,
-  selectFilteredSortedIssues,
-  selectSelectedIssue,
-} from '@/stores/useIssueStore';
+import { useIssueStore } from '@/stores/useIssueStore';
 import { IssueCard } from './IssueCard';
 import { IssueFilters } from './IssueFilters';
 import { EmptyIssuesState } from './EmptyIssuesState';
@@ -49,10 +46,37 @@ function IssueCardSkeleton() {
  */
 export function IssueListView({ className }: IssueListViewProps) {
   const { isLoading, error, refetch } = useIssues();
-  const filteredIssues = useIssueStore(selectFilteredSortedIssues);
-  const selectedIssueNumber = useIssueStore(selectSelectedIssue);
+  const issues = useIssueStore((state) => state.issues);
+  const sortBy = useIssueStore((state) => state.sortBy);
+  const filterLabels = useIssueStore((state) => state.filterLabels);
+  const selectedIssueNumber = useIssueStore((state) => state.selectedIssueNumber);
   const setSelectedIssue = useIssueStore((state) => state.setSelectedIssue);
-  const totalIssues = useIssueStore((state) => state.issues.length);
+  const totalIssues = issues.length;
+
+  // Memoize filtered+sorted issues to avoid creating new arrays on every render
+  const filteredIssues = useMemo(() => {
+    let filtered = issues;
+    if (filterLabels.length > 0) {
+      filtered = filtered.filter((issue) =>
+        filterLabels.some((filterLabel) =>
+          issue.labels.some((label) => label.name === filterLabel)
+        )
+      );
+    }
+    const sorted = [...filtered];
+    switch (sortBy) {
+      case 'newest':
+        sorted.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case 'oldest':
+        sorted.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
+        break;
+      case 'most-commented':
+        sorted.sort((a, b) => b.commentsCount - a.commentsCount);
+        break;
+    }
+    return sorted;
+  }, [issues, sortBy, filterLabels]);
 
   const hasSelection = selectedIssueNumber !== null;
 

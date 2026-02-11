@@ -2,7 +2,7 @@ import { MessageSquare, AlertTriangle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { useValidationStore, selectLatestValidationForIssue } from '@/stores/useValidationStore';
+import { useValidationStore } from '@/stores/useValidationStore';
 import type { Issue, ValidationStatus } from '@gitchorus/shared';
 
 /**
@@ -70,8 +70,12 @@ export function IssueCard({ issue, isSelected, onClick, validationStatus: propSt
   // Also check if there's a result stored (completed validation not yet in queue)
   const hasResult = useValidationStore((state) => state.results.has(issue.number));
 
-  // Check latest validation for staleness detection
-  const latestValidation = useValidationStore(selectLatestValidationForIssue(issue.number));
+  // Check latest validation for staleness detection — inline to avoid creating new closure each render
+  const latestValidation = useValidationStore((state) => {
+    const liveResult = state.results.get(issue.number);
+    if (liveResult) return liveResult;
+    return state.history.find((e) => e.issueNumber === issue.number);
+  });
 
   const effectiveStatus = storeStatus || propStatus || (hasResult ? 'completed' : undefined);
   const validationBadge = effectiveStatus ? getValidationBadge(effectiveStatus) : null;

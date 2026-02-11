@@ -153,7 +153,7 @@ export function ValidationHistory() {
   const history = useValidationStore((state) => state.history);
   const historyLoading = useValidationStore((state) => state.historyLoading);
   const { deleteHistoryEntry } = useValidation();
-  const setSelectedIssue = useIssueStore((state) => state.setSelectedIssue);
+  const setSelectedIssue = useIssueStore((s) => s.setSelectedIssue);
 
   const handleSelect = (issueNumber: number) => {
     setSelectedIssue(issueNumber);
