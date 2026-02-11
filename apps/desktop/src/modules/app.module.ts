@@ -3,6 +3,7 @@ import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { GitModule } from './git';
 import { ProviderModule } from './provider';
+import { ValidationModule } from './validation';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { ProviderModule } from './provider';
     ]),
     GitModule,
     ProviderModule,
+    ValidationModule,
   ],
   controllers: [],
   providers: [],

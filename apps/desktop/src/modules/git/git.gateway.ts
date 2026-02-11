@@ -39,6 +39,12 @@ import {
   GithubIssuesResponse,
   GithubGetIssuePayload,
   GithubIssueResponse,
+  GithubCreateCommentPayload,
+  GithubCreateCommentResponse,
+  GithubListCommentsPayload,
+  GithubListCommentsResponse,
+  GithubUpdateCommentPayload,
+  GithubUpdateCommentResponse,
   GitEvents,
   GithubEvents,
   RepositoryEvents,
@@ -626,6 +632,98 @@ export class GitGateway implements OnGatewayInit {
         issue: null,
         error: message,
       };
+    }
+  }
+
+  // ============================================
+  // GitHub Comment Handlers
+  // ============================================
+
+  @RequiresGhCli()
+  @SubscribeMessage(GithubEvents.CREATE_COMMENT)
+  async handleCreateComment(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubCreateCommentPayload
+  ): Promise<GithubCreateCommentResponse> {
+    try {
+      const { projectPath, issueNumber, body } = payload;
+      const pathError = this.validatePath(projectPath);
+
+      if (pathError) {
+        return { success: false, error: pathError };
+      }
+
+      if (!issueNumber || !body) {
+        return { success: false, error: 'Issue number and comment body are required' };
+      }
+
+      const result = await this.githubService.createComment(projectPath, issueNumber, body);
+
+      return { success: true, commentUrl: result.url };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error creating comment: ${message}`);
+
+      return { success: false, error: message };
+    }
+  }
+
+  @SkipThrottle()
+  @RequiresGhCli()
+  @SubscribeMessage(GithubEvents.LIST_COMMENTS)
+  async handleListComments(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubListCommentsPayload
+  ): Promise<GithubListCommentsResponse> {
+    try {
+      const { projectPath, issueNumber } = payload;
+      const pathError = this.validatePath(projectPath);
+
+      if (pathError) {
+        return { comments: [], error: pathError };
+      }
+
+      if (!issueNumber) {
+        return { comments: [], error: 'Issue number is required' };
+      }
+
+      const comments = await this.githubService.listComments(projectPath, issueNumber);
+
+      return { comments };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error listing comments: ${message}`);
+
+      return { comments: [], error: message };
+    }
+  }
+
+  @RequiresGhCli()
+  @SubscribeMessage(GithubEvents.UPDATE_COMMENT)
+  async handleUpdateComment(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubUpdateCommentPayload
+  ): Promise<GithubUpdateCommentResponse> {
+    try {
+      const { projectPath, commentId, body } = payload;
+      const pathError = this.validatePath(projectPath);
+
+      if (pathError) {
+        return { success: false, error: pathError };
+      }
+
+      if (!commentId || !body) {
+        return { success: false, error: 'Comment ID and body are required' };
+      }
+
+      const result = await this.githubService.updateComment(projectPath, commentId, body);
+
+      return { success: true, commentUrl: result.url };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error updating comment: ${message}`);
+
+      return { success: false, error: message };
     }
   }
 }

@@ -11,6 +11,7 @@ import type {
   RepoInfo,
   PullRequest,
   Issue,
+  IssueComment,
 } from './github';
 import type { ProviderStatus } from './provider';
 import type { ValidationStep, ValidationResult, ValidationQueueItem } from './validation';
@@ -344,6 +345,40 @@ export interface GithubCreateCommentPayload {
  * Response for creating an issue comment
  */
 export interface GithubCreateCommentResponse {
+  success: boolean;
+  commentUrl?: string;
+  error?: string;
+}
+
+/**
+ * Payload to list comments on an issue
+ */
+export interface GithubListCommentsPayload {
+  projectPath: string;
+  issueNumber: number;
+}
+
+/**
+ * Response for listing issue comments
+ */
+export interface GithubListCommentsResponse {
+  comments: IssueComment[];
+  error?: string;
+}
+
+/**
+ * Payload to update an existing comment
+ */
+export interface GithubUpdateCommentPayload {
+  projectPath: string;
+  commentId: string;
+  body: string;
+}
+
+/**
+ * Response for updating a comment
+ */
+export interface GithubUpdateCommentResponse {
   success: boolean;
   commentUrl?: string;
   error?: string;

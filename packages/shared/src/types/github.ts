@@ -227,6 +227,22 @@ export interface Issue {
 }
 
 /**
+ * A comment on a GitHub issue
+ */
+export interface IssueComment {
+  /** Comment ID (numeric, stored as string for API compatibility) */
+  id: string;
+  /** Comment author */
+  author: { login: string };
+  /** Comment body (markdown) */
+  body: string;
+  /** Created timestamp */
+  createdAt: string;
+  /** Comment URL */
+  url: string;
+}
+
+/**
  * Options for listing issues
  */
 export interface ListIssuesOptions {

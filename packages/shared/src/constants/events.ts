@@ -29,6 +29,9 @@ export const GithubEvents = {
   CREATE_PR: 'github:create-pr',
   ISSUES: 'github:issues',
   ISSUE: 'github:issue',
+  CREATE_COMMENT: 'github:create-comment',
+  LIST_COMMENTS: 'github:list-comments',
+  UPDATE_COMMENT: 'github:update-comment',
 } as const;
 
 // ============================================

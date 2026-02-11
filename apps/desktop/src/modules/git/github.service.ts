@@ -20,6 +20,7 @@ import type {
   CreatePullRequestOptions,
   Issue,
   IssueState,
+  IssueComment,
   ListIssuesOptions,
   RepoInfo,
 } from '@gitchorus/shared';
@@ -487,6 +488,102 @@ export class GithubService {
       this.logger.debug(`Failed to get issue #${issueNumber}:`, error);
       return null;
     }
+  }
+
+  /**
+   * Create a comment on an issue.
+   * Returns the URL of the created comment.
+   */
+  async createComment(
+    repoPath: string,
+    issueNumber: number,
+    body: string
+  ): Promise<{ url: string }> {
+    const { stdout, stderr } = await this.execGh(repoPath, [
+      'issue',
+      'comment',
+      issueNumber.toString(),
+      '--body',
+      body,
+    ]);
+
+    // gh issue comment outputs the URL to stderr or stdout depending on version
+    const output = (stdout + stderr).trim();
+    // Try to extract a URL from the output
+    const urlMatch = output.match(/(https:\/\/github\.com\/[^\s]+)/);
+    const url = urlMatch
+      ? urlMatch[1]
+      : `https://github.com/issues/${issueNumber}`;
+
+    return { url };
+  }
+
+  /**
+   * List comments on an issue.
+   */
+  async listComments(
+    repoPath: string,
+    issueNumber: number
+  ): Promise<IssueComment[]> {
+    try {
+      const { stdout } = await this.execGh(repoPath, [
+        'issue',
+        'view',
+        issueNumber.toString(),
+        '--json',
+        'comments',
+      ]);
+
+      if (!stdout.trim()) {
+        return [];
+      }
+
+      const data = JSON.parse(stdout);
+      const comments = (data.comments || []) as Array<Record<string, unknown>>;
+
+      return comments.map((comment) => ({
+        id: String(comment.id ?? ''),
+        author: {
+          login: ((comment.author as Record<string, unknown>)?.login as string) || 'unknown',
+        },
+        body: (comment.body as string) || '',
+        createdAt: (comment.createdAt as string) || '',
+        url: (comment.url as string) || '',
+      }));
+    } catch (error) {
+      this.logger.debug(`Failed to list comments for issue #${issueNumber}:`, error);
+      return [];
+    }
+  }
+
+  /**
+   * Update an existing comment on an issue.
+   * Uses the gh api command to PATCH the comment.
+   */
+  async updateComment(
+    repoPath: string,
+    commentId: string,
+    body: string
+  ): Promise<{ url: string }> {
+    // First, get the repo info to construct the API path
+    const repoInfo = await this.getRepoInfo(repoPath);
+    if (!repoInfo) {
+      throw new Error('Could not determine repository info for comment update');
+    }
+
+    const { stdout } = await this.execGh(repoPath, [
+      'api',
+      `repos/${repoInfo.fullName}/issues/comments/${commentId}`,
+      '-X',
+      'PATCH',
+      '-f',
+      `body=${body}`,
+      '--jq',
+      '.html_url',
+    ]);
+
+    const url = stdout.trim() || `https://github.com/${repoInfo.fullName}/issues/comments/${commentId}`;
+    return { url };
   }
 
   /**
