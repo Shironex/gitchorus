@@ -1,10 +1,13 @@
+import { useState } from 'react';
 import { useAppInitialization } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useValidationSocket } from '@/hooks/useValidation';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
-import { TopBar, WelcomeView } from '@/components/shared';
+import { TopBar, WelcomeView, TabBar } from '@/components/shared';
+import type { AppTab } from '@/components/shared';
 import { SettingsModal } from '@/components/settings';
 import { IssueListView } from '@/components/issues';
+import { PRListView } from '@/components/pullrequests';
 
 function App() {
   useAppInitialization();
@@ -15,11 +18,22 @@ function App() {
   const repositoryPath = useRepositoryStore(state => state.repositoryPath);
   const isConnected = repositoryPath !== null;
 
+  const [activeTab, setActiveTab] = useState<AppTab>('issues');
+
   return (
     <div className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden">
       <TopBar />
+      {isConnected && (
+        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
+      )}
       <div className="flex-1 overflow-hidden">
-        {isConnected ? <IssueListView /> : <WelcomeView />}
+        {!isConnected ? (
+          <WelcomeView />
+        ) : activeTab === 'issues' ? (
+          <IssueListView />
+        ) : (
+          <PRListView />
+        )}
       </div>
       <SettingsModal />
     </div>
