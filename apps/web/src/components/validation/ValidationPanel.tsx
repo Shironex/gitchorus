@@ -8,6 +8,9 @@ import {
   Loader2,
   ChevronDown,
   ChevronRight,
+  Send,
+  Check,
+  ExternalLink,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -62,6 +65,15 @@ export function ValidationPanel() {
   // Use live result if available, otherwise fall back to history
   const result = liveResult || latestValidation;
   const isFromHistory = !liveResult && !!latestValidation;
+
+  // Push modal state
+  const [showPushModal, setShowPushModal] = useState(false);
+  const pushStatus = useValidationStore((state) =>
+    selectedIssueNumber ? state.pushStatus.get(selectedIssueNumber) || 'idle' : 'idle'
+  );
+  const postedUrl = useValidationStore((state) =>
+    selectedIssueNumber ? state.postedCommentUrls.get(selectedIssueNumber) : undefined
+  );
 
   // Collapsible activity log state — collapsed by default after completion
   const [logExpanded, setLogExpanded] = useState(false);
@@ -250,15 +262,43 @@ export function ValidationPanel() {
             <Separator />
             <div>
               <h4 className="text-xs font-medium text-foreground mb-2">Push to GitHub</h4>
-              <GithubPushPreview
-                issueNumber={selectedIssueNumber}
-                result={result}
-                onPush={pushToGithub}
-                onUpdate={updateGithubComment}
-                onListComments={listComments}
-              />
+              {pushStatus === 'posted' && postedUrl ? (
+                <div className="flex items-center gap-2 py-2">
+                  <Check size={14} className="text-green-500" />
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">Posted</span>
+                  <a
+                    href={postedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-primary hover:underline flex items-center gap-1"
+                  >
+                    View on GitHub <ExternalLink size={10} />
+                  </a>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  className="h-7 text-xs gap-1"
+                  onClick={() => setShowPushModal(true)}
+                >
+                  <Send size={12} /> Push to GitHub
+                </Button>
+              )}
             </div>
           </>
+        )}
+
+        {/* Push modal (Dialog portals itself) */}
+        {hasResult && result && (
+          <GithubPushPreview
+            open={showPushModal}
+            onOpenChange={setShowPushModal}
+            issueNumber={selectedIssueNumber}
+            result={result}
+            onPush={pushToGithub}
+            onUpdate={updateGithubComment}
+            onListComments={listComments}
+          />
         )}
 
         {/* Error state */}
