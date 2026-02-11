@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import {
   ChevronDown,
   ChevronRight,
@@ -7,10 +7,60 @@ import {
   FileCode,
   Clock,
   DollarSign,
+  Clipboard,
+  Check,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
+import { Markdown } from '@/components/ui/markdown';
 import type { ValidationResult, BugValidation, FeatureValidation } from '@gitchorus/shared';
+
+// ---------------------------------------------------------------------------
+// Language inference from file extension
+// ---------------------------------------------------------------------------
+
+const EXTENSION_MAP: Record<string, string> = {
+  ts: 'typescript',
+  tsx: 'tsx',
+  js: 'javascript',
+  jsx: 'jsx',
+  py: 'python',
+  rs: 'rust',
+  go: 'go',
+  java: 'java',
+  css: 'css',
+  html: 'html',
+  json: 'json',
+  md: 'markdown',
+  yml: 'yaml',
+  yaml: 'yaml',
+  sh: 'bash',
+  bash: 'bash',
+  sql: 'sql',
+  rb: 'ruby',
+  swift: 'swift',
+  kt: 'kotlin',
+  c: 'c',
+  h: 'c',
+  cpp: 'cpp',
+  hpp: 'cpp',
+  cc: 'cpp',
+  cs: 'csharp',
+  php: 'php',
+};
+
+/**
+ * Infer a syntax highlighting language identifier from a file path's extension.
+ * Returns an empty string when the extension is unrecognised.
+ */
+function inferLanguage(filePath: string): string {
+  const ext = filePath.split('.').pop()?.toLowerCase() ?? '';
+  return EXTENSION_MAP[ext] ?? '';
+}
+
+// ---------------------------------------------------------------------------
+// Component helpers
+// ---------------------------------------------------------------------------
 
 interface ValidationResultsProps {
   result: ValidationResult;
@@ -85,11 +135,46 @@ function CollapsibleSection({
 }
 
 /**
+ * Copy-to-clipboard button that swaps to a check icon briefly on success.
+ */
+function CopyButton({ text }: { text: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // Clipboard API not available — silently ignore
+    }
+  }, [text]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="absolute top-1 right-1 p-1 rounded bg-muted/80 hover:bg-muted text-muted-foreground hover:text-foreground opacity-0 group-hover:opacity-100 transition-all"
+      title={copied ? 'Copied!' : 'Copy snippet'}
+    >
+      {copied ? <Check size={12} /> : <Clipboard size={12} />}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main component
+// ---------------------------------------------------------------------------
+
+/**
  * Structured results display for completed validations.
  *
  * Shows verdict banner, confidence percentage, issue type badge,
  * complexity badge, affected files, suggested approach, and reasoning.
  * Feature requests additionally show prerequisites, conflicts, and effort estimate.
+ *
+ * - Suggested Approach renders full GitHub-flavored markdown with syntax highlighting.
+ * - Affected file snippets are syntax-highlighted based on inferred file extension.
+ * - Code snippets have a copy-to-clipboard button on hover.
  */
 export function ValidationResults({ result }: ValidationResultsProps) {
   const verdictBadge = getVerdictBadge(result.verdict);
@@ -119,12 +204,10 @@ export function ValidationResults({ result }: ValidationResultsProps) {
         </Badge>
       </div>
 
-      {/* Suggested approach */}
+      {/* Suggested approach — rendered as full GFM markdown */}
       <div>
         <h4 className="text-xs font-medium text-foreground mb-1">Suggested Approach</h4>
-        <p className="text-xs text-muted-foreground leading-relaxed">
-          {result.suggestedApproach}
-        </p>
+        <Markdown>{result.suggestedApproach}</Markdown>
       </div>
 
       {/* Feature-specific: prerequisites, conflicts, effort */}
@@ -165,7 +248,7 @@ export function ValidationResults({ result }: ValidationResultsProps) {
         </>
       )}
 
-      {/* Affected files */}
+      {/* Affected files — snippets syntax-highlighted via Markdown + inferred language */}
       {result.affectedFiles.length > 0 && (
         <CollapsibleSection title={`Affected Files (${result.affectedFiles.length})`} defaultOpen>
           <div className="space-y-2">
@@ -177,9 +260,10 @@ export function ValidationResults({ result }: ValidationResultsProps) {
                 </div>
                 <p className="text-muted-foreground mt-0.5">{file.reason}</p>
                 {file.snippet && (
-                  <pre className="mt-1 p-2 bg-muted/50 rounded text-[10px] font-mono overflow-x-auto">
-                    {file.snippet}
-                  </pre>
+                  <div className="relative group mt-1">
+                    <CopyButton text={file.snippet} />
+                    <Markdown>{`\`\`\`${inferLanguage(file.path)}\n${file.snippet}\n\`\`\``}</Markdown>
+                  </div>
                 )}
               </div>
             ))}
@@ -189,9 +273,7 @@ export function ValidationResults({ result }: ValidationResultsProps) {
 
       {/* Reasoning */}
       <CollapsibleSection title="Reasoning">
-        <p className="text-muted-foreground leading-relaxed whitespace-pre-wrap">
-          {(result as BugValidation | FeatureValidation).reasoning}
-        </p>
+        <Markdown>{(result as BugValidation | FeatureValidation).reasoning}</Markdown>
       </CollapsibleSection>
 
       {/* Cost and duration */}
