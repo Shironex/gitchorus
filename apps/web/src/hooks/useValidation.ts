@@ -32,36 +32,23 @@ import {
 const logger = createLogger('useValidation');
 
 /**
- * Hook that orchestrates the validation flow.
+ * Hook that sets up Socket.io listeners for validation events.
  *
- * Sets up Socket.io listeners for progress, completion, error, and queue updates.
- * Provides functions to start/cancel validation, push/update GitHub comments,
- * and manage validation history (fetch, delete, staleness detection).
- *
- * Should be initialized once at the app level (e.g., in App.tsx).
+ * MUST be called exactly once at the app level (e.g., in App.tsx).
+ * Multiple calls will result in duplicate event handling.
  */
-export function useValidation() {
-  const repositoryPath = useRepositoryStore((state) => state.repositoryPath);
-  const githubInfo = useRepositoryStore((state) => state.githubInfo);
-  const repositoryFullName = githubInfo?.fullName || null;
-
+export function useValidationSocket() {
   const updateQueue = useValidationStore((state) => state.updateQueue);
   const addStep = useValidationStore((state) => state.addStep);
   const setResult = useValidationStore((state) => state.setResult);
   const setError = useValidationStore((state) => state.setError);
-  const clearSteps = useValidationStore((state) => state.clearSteps);
-  const setPushStatus = useValidationStore((state) => state.setPushStatus);
-  const setPostedCommentUrl = useValidationStore((state) => state.setPostedCommentUrl);
-  const setPostedCommentId = useValidationStore((state) => state.setPostedCommentId);
   const setHistory = useValidationStore((state) => state.setHistory);
   const setHistoryLoading = useValidationStore((state) => state.setHistoryLoading);
-  const removeHistoryEntry = useValidationStore((state) => state.removeHistoryEntry);
   const setValidationStatus = useIssueStore((state) => state.setValidationStatus);
 
-  // Track previous repositoryFullName to detect changes
+  const repositoryFullName = useRepositoryStore((state) => state.githubInfo)?.fullName || null;
   const prevRepoRef = useRef<string | null>(null);
 
-  // Fetch history when repository changes
   const fetchHistoryInternal = useCallback(
     async (repoFullName: string) => {
       setHistoryLoading(true);
@@ -89,7 +76,7 @@ export function useValidation() {
     [setHistory, setHistoryLoading]
   );
 
-  // Set up Socket.io listeners
+  // Set up Socket.io listeners — exactly once
   useEffect(() => {
     const onProgress = (data: ValidationProgressResponse) => {
       logger.debug(`Progress #${data.issueNumber}: ${data.step.message}`);
@@ -154,6 +141,26 @@ export function useValidation() {
     }
     prevRepoRef.current = repositoryFullName;
   }, [repositoryFullName, fetchHistoryInternal]);
+}
+
+/**
+ * Hook that provides validation action functions.
+ *
+ * Can be called from any component that needs to trigger validation actions.
+ * Does NOT set up socket listeners — use useValidationSocket() for that.
+ */
+export function useValidation() {
+  const repositoryPath = useRepositoryStore((state) => state.repositoryPath);
+
+  const clearSteps = useValidationStore((state) => state.clearSteps);
+  const setError = useValidationStore((state) => state.setError);
+  const setPushStatus = useValidationStore((state) => state.setPushStatus);
+  const setPostedCommentUrl = useValidationStore((state) => state.setPostedCommentUrl);
+  const setPostedCommentId = useValidationStore((state) => state.setPostedCommentId);
+  const setHistory = useValidationStore((state) => state.setHistory);
+  const setHistoryLoading = useValidationStore((state) => state.setHistoryLoading);
+  const removeHistoryEntry = useValidationStore((state) => state.removeHistoryEntry);
+  const setValidationStatus = useIssueStore((state) => state.setValidationStatus);
 
   const startValidation = useCallback(
     async (issueNumber: number) => {
@@ -312,9 +319,29 @@ export function useValidation() {
    */
   const fetchHistory = useCallback(
     async (repoFullName: string) => {
-      await fetchHistoryInternal(repoFullName);
+      setHistoryLoading(true);
+      try {
+        const response = await emitAsync<
+          ValidationHistoryListPayload,
+          ValidationHistoryListResponse
+        >(ValidationEvents.HISTORY_LIST, {
+          repositoryFullName: repoFullName,
+        });
+
+        if (response.error) {
+          logger.warn('Error fetching history:', response.error);
+          setHistory([]);
+        } else {
+          setHistory(response.entries);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to fetch history';
+        logger.error('Failed to fetch history:', message);
+        setHistory([]);
+      }
     },
-    [fetchHistoryInternal]
+    [setHistory, setHistoryLoading]
   );
 
   /**
