@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, type ComponentPropsWithoutRef } from 'react';
+import { useEffect, useState, useMemo, type ComponentPropsWithoutRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
 import rehypeSanitize, { defaultSchema } from 'rehype-sanitize';
@@ -186,20 +186,15 @@ const sizeStyles = {
 export function Markdown({ children, className, size = 'sm' }: MarkdownProps) {
   const highlighter = useHighlighter();
 
-  // Stable reference for the components override so ReactMarkdown doesn't
-  // re-create the tree on every render unless the highlighter changes.
-  const componentsRef = useRef<Record<string, React.ComponentType<ComponentPropsWithoutRef<'code'>>>>({});
-
-  useEffect(() => {
-    componentsRef.current = {
-      // Override code rendering: fenced code blocks get shiki highlighting,
-      // inline code keeps default styling.
+  // Component overrides for ReactMarkdown — recreated when highlighter loads
+  // so fenced code blocks get shiki highlighting.
+  const components = useMemo(
+    () => ({
       code({ className: codeClassName, children: codeChildren, ...rest }: ComponentPropsWithoutRef<'code'>) {
         // react-markdown adds className="language-xxx" for fenced code blocks
         const match = /language-(\w+)/.exec(codeClassName ?? '');
 
         if (match) {
-          // Fenced code block
           const code = String(codeChildren).replace(/\n$/, '');
           return <HighlightedCode highlighter={highlighter} code={code} language={match[1]} />;
         }
@@ -216,23 +211,7 @@ export function Markdown({ children, className, size = 'sm' }: MarkdownProps) {
       pre({ children: preChildren }: ComponentPropsWithoutRef<'pre'>) {
         return <>{preChildren}</>;
       },
-    };
-  }, [highlighter]);
-
-  // Also create a stable inline object that reads from the ref.
-  // We use the highlighter as key to force re-render when it loads.
-  const components = useMemo(
-    () => ({
-      code(props: ComponentPropsWithoutRef<'code'>) {
-        const Comp = componentsRef.current.code;
-        return Comp ? <Comp {...props} /> : <code {...props} />;
-      },
-      pre(props: ComponentPropsWithoutRef<'pre'>) {
-        const Comp = componentsRef.current.pre;
-        return Comp ? <Comp {...props} /> : <pre {...props} />;
-      },
     }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [highlighter],
   );
 
