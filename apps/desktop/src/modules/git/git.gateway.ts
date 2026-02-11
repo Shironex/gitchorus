@@ -47,6 +47,8 @@ import {
   GithubUpdateCommentResponse,
   GithubPrDiffPayload,
   GithubPrDiffResponse,
+  GithubCreatePrReviewPayload,
+  GithubCreatePrReviewResponse,
   GitEvents,
   GithubEvents,
   RepositoryEvents,
@@ -754,6 +756,50 @@ export class GitGateway implements OnGatewayInit {
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error updating comment: ${message}`);
+
+      return { success: false, error: message };
+    }
+  }
+
+  // ============================================
+  // GitHub PR Review Handlers
+  // ============================================
+
+  @RequiresGhCli()
+  @SubscribeMessage(GithubEvents.CREATE_PR_REVIEW)
+  async handleCreatePrReview(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubCreatePrReviewPayload
+  ): Promise<GithubCreatePrReviewResponse> {
+    try {
+      const { projectPath, prNumber, body, event, comments } = payload;
+      const pathError = this.validatePath(projectPath);
+
+      if (pathError) {
+        return { success: false, error: pathError };
+      }
+
+      if (!prNumber || !body) {
+        return { success: false, error: 'PR number and review body are required' };
+      }
+
+      const result = await this.githubService.createPrReview(
+        projectPath,
+        prNumber,
+        body,
+        event,
+        comments || [],
+      );
+
+      return {
+        success: true,
+        url: result.url,
+        postedComments: result.postedComments,
+        skippedComments: result.skippedComments,
+      };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error creating PR review: ${message}`);
 
       return { success: false, error: message };
     }

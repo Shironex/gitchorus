@@ -463,6 +463,36 @@ export interface ProviderStatusResponse {
 }
 
 // ============================================
+// GitHub PR Review Payloads
+// ============================================
+
+/**
+ * Payload to create a PR review with inline comments
+ */
+export interface GithubCreatePrReviewPayload {
+  projectPath: string;
+  prNumber: number;
+  body: string;
+  event: 'REQUEST_CHANGES' | 'COMMENT';
+  comments: Array<{
+    path: string;
+    line: number;
+    body: string;
+  }>;
+}
+
+/**
+ * Response for creating a PR review
+ */
+export interface GithubCreatePrReviewResponse {
+  success: boolean;
+  url?: string;
+  postedComments?: number;
+  skippedComments?: number;
+  error?: string;
+}
+
+// ============================================
 // GitHub Comment Payloads
 // ============================================
 

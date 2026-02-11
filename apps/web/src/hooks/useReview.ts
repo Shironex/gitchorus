@@ -5,12 +5,16 @@ import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import { useReviewStore } from '@/stores/useReviewStore';
 import {
   ReviewEvents,
+  GithubEvents,
   createLogger,
   type ReviewStartPayload,
   type ReviewCancelPayload,
   type ReviewProgressResponse,
   type ReviewCompleteResponse,
   type ReviewErrorResponse,
+  type ReviewFinding,
+  type GithubCreatePrReviewPayload,
+  type GithubCreatePrReviewResponse,
 } from '@gitchorus/shared';
 
 const logger = createLogger('useReview');
@@ -114,8 +118,95 @@ export function useReview() {
     []
   );
 
+  const pushReview = useCallback(
+    async (
+      prNumber: number,
+      selectedFindings: ReviewFinding[],
+      verdict: string,
+      qualityScore: number,
+      reviewAction: 'REQUEST_CHANGES' | 'COMMENT',
+    ): Promise<{ url?: string; postedComments: number; skippedComments: number }> => {
+      if (!repositoryPath) {
+        throw new Error('No repository connected');
+      }
+
+      const GITCHORUS_MARKER = '<!-- gitchorus-review -->';
+
+      // Build finding summary for the review body
+      const findingSummaryParts = selectedFindings.map(
+        (f, i) => `${i + 1}. **[${f.severity.toUpperCase()} - ${f.category}]** ${f.title} (\`${f.file}:${f.line}\`)`,
+      );
+
+      // Build review body
+      const bodyLines = [
+        GITCHORUS_MARKER,
+        '## GitChorus AI Review',
+        '',
+        verdict,
+        '',
+        `**Quality Score:** ${qualityScore}/10`,
+        '',
+        '### Findings Summary',
+        '',
+        ...findingSummaryParts,
+        '',
+        '---',
+        '*via [GitChorus](https://github.com/Shironex/gitchorus)*',
+      ];
+
+      // Build inline comments
+      const comments = selectedFindings.map((f) => ({
+        path: f.file,
+        line: f.line,
+        body: [
+          `**[${f.severity.charAt(0).toUpperCase() + f.severity.slice(1)} - ${f.category.charAt(0).toUpperCase() + f.category.slice(1)}]** ${f.title}`,
+          '',
+          f.explanation,
+          '',
+          f.codeSnippet ? `**Problematic code:**\n\`\`\`\n${f.codeSnippet}\n\`\`\`` : '',
+          '',
+          f.suggestedFix ? `**Suggested fix:**\n\`\`\`\n${f.suggestedFix}\n\`\`\`` : '',
+        ]
+          .filter(Boolean)
+          .join('\n'),
+      }));
+
+      const payload: GithubCreatePrReviewPayload = {
+        projectPath: repositoryPath,
+        prNumber,
+        body: bodyLines.join('\n'),
+        event: reviewAction,
+        comments,
+      };
+
+      try {
+        const response = await emitAsync<
+          GithubCreatePrReviewPayload,
+          GithubCreatePrReviewResponse
+        >(GithubEvents.CREATE_PR_REVIEW, payload, { timeout: 30000 });
+
+        if (!response.success) {
+          throw new Error(response.error || 'Failed to create PR review');
+        }
+
+        // If comments were skipped, the backend already handled the fallback
+        return {
+          url: response.url,
+          postedComments: response.postedComments ?? 0,
+          skippedComments: response.skippedComments ?? 0,
+        };
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to push review';
+        logger.error('Failed to push review:', message);
+        throw new Error(message);
+      }
+    },
+    [repositoryPath],
+  );
+
   return {
     startReview,
     cancelReview,
+    pushReview,
   };
 }

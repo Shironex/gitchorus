@@ -28,6 +28,7 @@ export const GithubEvents = {
   PR: 'github:pr',
   PR_DIFF: 'github:pr-diff',
   CREATE_PR: 'github:create-pr',
+  CREATE_PR_REVIEW: 'github:create-pr-review',
   ISSUES: 'github:issues',
   ISSUE: 'github:issue',
   CREATE_COMMENT: 'github:create-comment',

@@ -589,6 +589,158 @@ export class GithubService {
   }
 
   /**
+   * Create a PR review with inline comments and a summary body.
+   *
+   * Uses the GitHub Reviews API (POST /repos/{owner}/{repo}/pulls/{prNumber}/reviews).
+   * If a comment cannot be placed inline (line not in diff), it's skipped and
+   * the caller is informed via `skippedComments` count so they can append to the summary.
+   */
+  async createPrReview(
+    repoPath: string,
+    prNumber: number,
+    body: string,
+    event: 'REQUEST_CHANGES' | 'COMMENT',
+    comments: Array<{ path: string; line: number; body: string }>,
+  ): Promise<{ url: string; postedComments: number; skippedComments: number }> {
+    const repoInfo = await this.getRepoInfo(repoPath);
+    if (!repoInfo) {
+      throw new Error('Could not determine repository info for PR review');
+    }
+
+    return this.createPrReviewWithStdin(repoPath, repoInfo.fullName, prNumber, {
+      body,
+      event,
+      comments,
+    });
+  }
+
+  /**
+   * Internal: create PR review using gh api with stdin JSON
+   */
+  private async createPrReviewWithStdin(
+    repoPath: string,
+    repoFullName: string,
+    prNumber: number,
+    payload: {
+      body: string;
+      event: string;
+      comments: Array<{ path: string; line: number; body: string }>;
+    },
+  ): Promise<{ url: string; postedComments: number; skippedComments: number }> {
+    const inputJson = JSON.stringify(payload);
+
+    try {
+      const child = require('child_process').spawn('gh', [
+        'api',
+        `repos/${repoFullName}/pulls/${prNumber}/reviews`,
+        '-X',
+        'POST',
+        '--input',
+        '-',
+      ], {
+        cwd: repoPath,
+        env: { ...process.env, ...GH_ENV },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      });
+
+      // Write JSON to stdin
+      child.stdin.write(inputJson);
+      child.stdin.end();
+
+      const result = await new Promise<{ stdout: string; stderr: string; code: number }>((resolve, reject) => {
+        let stdout = '';
+        let stderr = '';
+
+        child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
+        child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+
+        const timeout = setTimeout(() => {
+          child.kill();
+          reject(new Error('PR review creation timed out'));
+        }, GH_TIMEOUT_MS);
+
+        child.on('close', (code: number) => {
+          clearTimeout(timeout);
+          resolve({ stdout, stderr, code });
+        });
+
+        child.on('error', (err: Error) => {
+          clearTimeout(timeout);
+          reject(err);
+        });
+      });
+
+      if (result.code !== 0) {
+        // Check for 422 (validation error -- inline comment on line not in diff)
+        const errorOutput = result.stderr + result.stdout;
+        if (errorOutput.includes('422') || errorOutput.includes('pull_request_review_thread.path')) {
+          // Try without inline comments -- post as summary-only review
+          this.logger.warn(
+            `Some inline comments failed for PR #${prNumber}, retrying without inline comments`,
+          );
+          return this.createPrReviewSummaryOnly(
+            repoPath,
+            repoFullName,
+            prNumber,
+            payload.body,
+            payload.event,
+            payload.comments.length,
+          );
+        }
+        throw new Error(`Failed to create PR review: ${errorOutput}`);
+      }
+
+      // Parse response
+      const data = JSON.parse(result.stdout);
+      const url = data.html_url || `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
+
+      return {
+        url,
+        postedComments: payload.comments.length,
+        skippedComments: 0,
+      };
+    } catch (error) {
+      // If it's our known error, rethrow
+      if (error instanceof Error && error.message.startsWith('Failed to create PR review')) {
+        throw error;
+      }
+      throw new Error(`Failed to create PR review: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  /**
+   * Internal: fallback to summary-only review when inline comments fail
+   */
+  private async createPrReviewSummaryOnly(
+    repoPath: string,
+    repoFullName: string,
+    prNumber: number,
+    body: string,
+    event: string,
+    totalComments: number,
+  ): Promise<{ url: string; postedComments: number; skippedComments: number }> {
+    const { stdout } = await this.execGh(repoPath, [
+      'api',
+      `repos/${repoFullName}/pulls/${prNumber}/reviews`,
+      '-X',
+      'POST',
+      '-f',
+      `body=${body}`,
+      '-f',
+      `event=${event}`,
+    ]);
+
+    const data = JSON.parse(stdout);
+    const url = data.html_url || `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
+
+    return {
+      url,
+      postedComments: 0,
+      skippedComments: totalComments,
+    };
+  }
+
+  /**
    * Get PR diff using gh CLI
    */
   async getPrDiff(repoPath: string, prNumber: number): Promise<string> {
