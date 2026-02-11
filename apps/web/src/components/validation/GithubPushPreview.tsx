@@ -1,14 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   ExternalLink,
   Send,
   Loader2,
-  Check,
   RefreshCw,
+  Pencil,
+  Eye,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Markdown } from '@/components/ui/markdown';
 import { useValidationStore, type PushStatus } from '@/stores/useValidationStore';
 import type {
   ValidationResult,
@@ -17,7 +27,13 @@ import type {
   IssueComment,
 } from '@gitchorus/shared';
 
+// ============================================
+// Props
+// ============================================
+
 interface GithubPushPreviewProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   issueNumber: number;
   result: ValidationResult;
   onPush: (issueNumber: number, body: string) => Promise<string | null>;
@@ -25,7 +41,10 @@ interface GithubPushPreviewProps {
   onListComments: (issueNumber: number) => Promise<IssueComment[]>;
 }
 
-/** Section toggle state */
+// ============================================
+// Section toggle state
+// ============================================
+
 interface SectionToggles {
   verdict: boolean;
   affectedFiles: boolean;
@@ -34,12 +53,31 @@ interface SectionToggles {
   featureDetails: boolean;
 }
 
+// ============================================
+// Section edit overrides
+// ============================================
+
+interface SectionEdits {
+  approach?: string;
+  reasoning?: string;
+  featureDetails?: string;
+}
+
+// ============================================
+// Constants
+// ============================================
+
 const GITCHORUS_MARKER = '<!-- gitchorus-validation -->';
 
-/**
- * Build a markdown comment body from the validation result and section toggles.
- */
-function buildCommentBody(result: ValidationResult, toggles: SectionToggles): string {
+// ============================================
+// Build comment body
+// ============================================
+
+function buildCommentBody(
+  result: ValidationResult,
+  toggles: SectionToggles,
+  sectionEdits?: SectionEdits,
+): string {
   const isFeature = result.issueType === 'feature';
   const lines: string[] = [GITCHORUS_MARKER];
 
@@ -65,9 +103,10 @@ function buildCommentBody(result: ValidationResult, toggles: SectionToggles): st
 
   // Approach
   if (toggles.approach) {
+    const approachText = sectionEdits?.approach ?? result.suggestedApproach;
     lines.push('### Suggested Approach');
     lines.push('');
-    lines.push(result.suggestedApproach);
+    lines.push(approachText);
     lines.push('');
   }
 
@@ -75,22 +114,30 @@ function buildCommentBody(result: ValidationResult, toggles: SectionToggles): st
   if (isFeature && toggles.featureDetails) {
     const feat = result as FeatureValidation;
 
-    if (feat.prerequisites.length > 0) {
-      lines.push('### Prerequisites');
+    if (sectionEdits?.featureDetails !== undefined) {
+      // User edited the combined prerequisites & conflicts text
+      lines.push('### Prerequisites & Conflicts');
       lines.push('');
-      for (const prereq of feat.prerequisites) {
-        lines.push(`- ${prereq}`);
+      lines.push(sectionEdits.featureDetails);
+      lines.push('');
+    } else {
+      if (feat.prerequisites.length > 0) {
+        lines.push('### Prerequisites');
+        lines.push('');
+        for (const prereq of feat.prerequisites) {
+          lines.push(`- ${prereq}`);
+        }
+        lines.push('');
       }
-      lines.push('');
-    }
 
-    if (feat.potentialConflicts.length > 0) {
-      lines.push('### Potential Conflicts');
-      lines.push('');
-      for (const conflict of feat.potentialConflicts) {
-        lines.push(`- ${conflict}`);
+      if (feat.potentialConflicts.length > 0) {
+        lines.push('### Potential Conflicts');
+        lines.push('');
+        for (const conflict of feat.potentialConflicts) {
+          lines.push(`- ${conflict}`);
+        }
+        lines.push('');
       }
-      lines.push('');
     }
   }
 
@@ -113,10 +160,11 @@ function buildCommentBody(result: ValidationResult, toggles: SectionToggles): st
 
   // Reasoning
   if (toggles.reasoning) {
+    const reasoningText = sectionEdits?.reasoning ?? (result as BugValidation | FeatureValidation).reasoning;
     lines.push('<details>');
     lines.push('<summary><strong>Reasoning</strong></summary>');
     lines.push('');
-    lines.push((result as BugValidation | FeatureValidation).reasoning);
+    lines.push(reasoningText);
     lines.push('</details>');
     lines.push('');
   }
@@ -128,13 +176,72 @@ function buildCommentBody(result: ValidationResult, toggles: SectionToggles): st
   return lines.join('\n');
 }
 
+// ============================================
+// Helper: build default feature details text from result
+// ============================================
+
+function buildFeatureDetailsText(result: FeatureValidation): string {
+  const lines: string[] = [];
+  if (result.prerequisites.length > 0) {
+    lines.push('**Prerequisites:**');
+    for (const prereq of result.prerequisites) {
+      lines.push(`- ${prereq}`);
+    }
+  }
+  if (result.potentialConflicts.length > 0) {
+    if (lines.length > 0) lines.push('');
+    lines.push('**Potential Conflicts:**');
+    for (const conflict of result.potentialConflicts) {
+      lines.push(`- ${conflict}`);
+    }
+  }
+  return lines.join('\n');
+}
+
+// ============================================
+// Section checkbox row
+// ============================================
+
+function SectionRow({
+  label,
+  checked,
+  onChange,
+  children,
+}: {
+  label: string;
+  checked: boolean;
+  onChange: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={cn('rounded-lg border p-3 transition-opacity', !checked && 'opacity-40')}>
+      <label className="flex items-center gap-2 cursor-pointer select-none mb-2">
+        <input
+          type="checkbox"
+          checked={checked}
+          onChange={onChange}
+          className="h-4 w-4 rounded border-input text-primary accent-primary focus:ring-primary"
+        />
+        <span className="text-sm font-medium text-foreground">{label}</span>
+      </label>
+      <div className={cn(!checked && 'pointer-events-none')}>{children}</div>
+    </div>
+  );
+}
+
+// ============================================
+// GithubPushPreview Modal
+// ============================================
+
 /**
- * Editable preview with section toggles before pushing to GitHub.
+ * Modal dialog for editing and previewing a GitHub comment before pushing.
  *
+ * Features Edit/Preview tabs with per-section checkboxes and textareas.
  * Supports detecting prior GitChorus comments for update-or-post-new.
- * Push button shows state transitions: idle -> pushing -> posted with link.
  */
 export function GithubPushPreview({
+  open,
+  onOpenChange,
   issueNumber,
   result,
   onPush,
@@ -142,7 +249,6 @@ export function GithubPushPreview({
   onListComments,
 }: GithubPushPreviewProps) {
   const pushStatus = useValidationStore((state) => state.pushStatus.get(issueNumber) || 'idle') as PushStatus;
-  const postedUrl = useValidationStore((state) => state.postedCommentUrls.get(issueNumber));
   const setPushStatus = useValidationStore((state) => state.setPushStatus);
 
   const [toggles, setToggles] = useState<SectionToggles>({
@@ -153,19 +259,20 @@ export function GithubPushPreview({
     featureDetails: result.issueType === 'feature',
   });
 
-  const [commentBody, setCommentBody] = useState(() => buildCommentBody(result, toggles));
+  const [sectionEdits, setSectionEdits] = useState<SectionEdits>({});
   const [priorComment, setPriorComment] = useState<IssueComment | null>(null);
   const [checkingPrior, setCheckingPrior] = useState(false);
-  const [showUpdatePrompt, setShowUpdatePrompt] = useState(false);
+  const [pushSuccess, setPushSuccess] = useState<string | null>(null);
 
   const isFeature = result.issueType === 'feature';
 
-  // Rebuild comment body when toggles change
-  useEffect(() => {
-    setCommentBody(buildCommentBody(result, toggles));
-  }, [result, toggles]);
+  // Build comment body with current toggles and edits
+  const commentBody = useMemo(
+    () => buildCommentBody(result, toggles, sectionEdits),
+    [result, toggles, sectionEdits],
+  );
 
-  // Check for prior GitChorus comments
+  // Check for prior GitChorus comments when modal opens
   const checkPriorComments = useCallback(async () => {
     setCheckingPrior(true);
     try {
@@ -173,149 +280,244 @@ export function GithubPushPreview({
       const gitchorusComment = comments.find((c) => c.body.includes(GITCHORUS_MARKER));
       if (gitchorusComment) {
         setPriorComment(gitchorusComment);
-        setShowUpdatePrompt(true);
       }
     } catch {
-      // Non-blocking — just skip prior comment detection
+      // Non-blocking -- just skip prior comment detection
     }
     setCheckingPrior(false);
   }, [issueNumber, onListComments]);
 
-  // Check on mount
   useEffect(() => {
-    if (pushStatus === 'idle') {
+    if (open && pushStatus !== 'posted') {
       checkPriorComments();
     }
-  }, [pushStatus, checkPriorComments]);
+  }, [open, pushStatus, checkPriorComments]);
+
+  // Reset state when modal closes
+  useEffect(() => {
+    if (!open) {
+      setPushSuccess(null);
+    }
+  }, [open]);
 
   const handleToggle = (key: keyof SectionToggles) => {
     setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handleSectionEdit = (key: keyof SectionEdits, value: string) => {
+    setSectionEdits((prev) => ({ ...prev, [key]: value }));
+  };
+
   const handlePushNew = async () => {
-    setShowUpdatePrompt(false);
-    await onPush(issueNumber, commentBody);
+    setPushStatus(issueNumber, 'pushing');
+    const url = await onPush(issueNumber, commentBody);
+    if (url) {
+      setPushSuccess(url);
+      setTimeout(() => onOpenChange(false), 2000);
+    } else {
+      setPushStatus(issueNumber, 'idle');
+    }
   };
 
   const handleUpdateExisting = async () => {
     if (!priorComment) return;
-    setShowUpdatePrompt(false);
-    await onUpdate(issueNumber, priorComment.id, commentBody);
+    setPushStatus(issueNumber, 'pushing');
+    const url = await onUpdate(issueNumber, priorComment.id, commentBody);
+    if (url) {
+      setPushSuccess(url);
+      setTimeout(() => onOpenChange(false), 2000);
+    } else {
+      setPushStatus(issueNumber, 'idle');
+    }
   };
 
-  const handleEdit = () => {
-    setPushStatus(issueNumber, 'editing');
-  };
-
-  if (pushStatus === 'posted' && postedUrl) {
-    return (
-      <div className="flex items-center gap-2 py-2">
-        <Check size={14} className="text-green-500" />
-        <span className="text-xs text-green-600 dark:text-green-400 font-medium">Posted</span>
-        <a
-          href={postedUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-xs text-primary hover:underline flex items-center gap-1"
-        >
-          View on GitHub <ExternalLink size={10} />
-        </a>
-      </div>
-    );
-  }
+  const isPushing = pushStatus === 'pushing';
 
   return (
-    <div className="space-y-3">
-      {/* Section toggles */}
-      <div className="space-y-2">
-        <h4 className="text-xs font-medium text-foreground">Include sections:</h4>
-        <div className="space-y-1.5">
-          <ToggleRow label="Verdict & confidence" checked={toggles.verdict} onChange={() => handleToggle('verdict')} />
-          <ToggleRow label="Suggested approach" checked={toggles.approach} onChange={() => handleToggle('approach')} />
-          <ToggleRow label="Affected files" checked={toggles.affectedFiles} onChange={() => handleToggle('affectedFiles')} />
-          <ToggleRow label="Reasoning" checked={toggles.reasoning} onChange={() => handleToggle('reasoning')} />
-          {isFeature && (
-            <ToggleRow
-              label="Prerequisites & conflicts"
-              checked={toggles.featureDetails}
-              onChange={() => handleToggle('featureDetails')}
-            />
-          )}
-        </div>
-      </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl max-h-[80vh] flex flex-col gap-0 p-0">
+        <DialogHeader className="px-6 pt-6 pb-3">
+          <DialogTitle className="text-base">Push to GitHub</DialogTitle>
+          <DialogDescription className="text-xs text-muted-foreground">
+            Edit sections and preview the comment before posting to issue #{issueNumber}
+          </DialogDescription>
+        </DialogHeader>
 
-      {/* Editable body */}
-      {pushStatus === 'editing' && (
-        <textarea
-          className="w-full h-40 p-2 text-xs font-mono bg-muted/50 border rounded-lg resize-y focus:outline-none focus:ring-1 focus:ring-primary"
-          value={commentBody}
-          onChange={(e) => setCommentBody(e.target.value)}
-        />
-      )}
-
-      {/* Prior comment prompt */}
-      {showUpdatePrompt && priorComment && pushStatus !== 'pushing' && (
-        <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-2.5">
-          <p className="text-xs text-yellow-700 dark:text-yellow-400 mb-2">
-            A previous GitChorus comment was found on this issue.
-          </p>
-          <div className="flex gap-2">
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleUpdateExisting}>
-              <RefreshCw size={12} className="mr-1" /> Update existing
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handlePushNew}>
-              <Send size={12} className="mr-1" /> Post new
-            </Button>
+        {/* Success state */}
+        {pushSuccess ? (
+          <div className="flex flex-col items-center justify-center gap-3 py-12 px-6">
+            <div className="h-10 w-10 rounded-full bg-green-500/10 flex items-center justify-center">
+              <Send size={18} className="text-green-500" />
+            </div>
+            <p className="text-sm font-medium text-foreground">Comment posted successfully</p>
+            <a
+              href={pushSuccess}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline flex items-center gap-1"
+            >
+              View on GitHub <ExternalLink size={10} />
+            </a>
           </div>
-        </div>
-      )}
+        ) : (
+          <>
+            <Tabs defaultValue="edit" className="flex-1 flex flex-col min-h-0">
+              <div className="px-6">
+                <TabsList className="w-full">
+                  <TabsTrigger value="edit" className="flex-1 gap-1.5">
+                    <Pencil size={12} /> Edit
+                  </TabsTrigger>
+                  <TabsTrigger value="preview" className="flex-1 gap-1.5">
+                    <Eye size={12} /> Preview
+                  </TabsTrigger>
+                </TabsList>
+              </div>
 
-      {/* Action buttons */}
-      <div className="flex items-center gap-2">
-        {pushStatus === 'pushing' ? (
-          <Button size="sm" disabled className="h-7 text-xs">
-            <Loader2 size={12} className="mr-1 animate-spin" /> Pushing...
-          </Button>
-        ) : !showUpdatePrompt ? (
-          <Button size="sm" className="h-7 text-xs" onClick={handlePushNew}>
-            <Send size={12} className="mr-1" /> Push to GitHub
-          </Button>
-        ) : null}
+              {/* Edit tab */}
+              <TabsContent value="edit" className="flex-1 overflow-y-auto px-6 pb-4 mt-0 pt-3">
+                <div className="space-y-3">
+                  {/* Verdict section (read-only) */}
+                  <SectionRow
+                    label="Verdict & Confidence"
+                    checked={toggles.verdict}
+                    onChange={() => handleToggle('verdict')}
+                  >
+                    <div className="rounded-md bg-muted/50 p-2.5 text-xs text-muted-foreground space-y-0.5">
+                      <p>
+                        <span className="font-medium text-foreground">{result.verdict}</span> at{' '}
+                        {result.confidence}% confidence
+                      </p>
+                      <p>
+                        Complexity: {result.complexity.replace('-', ' ')}
+                      </p>
+                      {isFeature && (result as FeatureValidation).effortEstimate && (
+                        <p>Effort: {(result as FeatureValidation).effortEstimate}</p>
+                      )}
+                    </div>
+                  </SectionRow>
 
-        {pushStatus !== 'pushing' && pushStatus !== 'editing' && (
-          <Button size="sm" variant="ghost" className="h-7 text-xs" onClick={handleEdit}>
-            Edit
-          </Button>
+                  {/* Approach section (editable) */}
+                  <SectionRow
+                    label="Suggested Approach"
+                    checked={toggles.approach}
+                    onChange={() => handleToggle('approach')}
+                  >
+                    <textarea
+                      className="w-full min-h-[80px] p-2.5 text-xs font-mono bg-muted/50 border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+                      value={sectionEdits.approach ?? result.suggestedApproach}
+                      onChange={(e) => handleSectionEdit('approach', e.target.value)}
+                    />
+                  </SectionRow>
+
+                  {/* Affected files section (read-only) */}
+                  <SectionRow
+                    label={`Affected Files (${result.affectedFiles.length})`}
+                    checked={toggles.affectedFiles}
+                    onChange={() => handleToggle('affectedFiles')}
+                  >
+                    <div className="rounded-md bg-muted/50 p-2.5 text-xs text-muted-foreground space-y-1 max-h-[120px] overflow-y-auto">
+                      {result.affectedFiles.length > 0 ? (
+                        result.affectedFiles.map((file, idx) => (
+                          <p key={idx}>
+                            <code className="text-[11px] text-chart-2 bg-muted px-1 py-0.5 rounded font-mono">
+                              {file.path}
+                            </code>{' '}
+                            <span className="text-muted-foreground">- {file.reason}</span>
+                          </p>
+                        ))
+                      ) : (
+                        <p className="italic">No affected files identified</p>
+                      )}
+                    </div>
+                  </SectionRow>
+
+                  {/* Reasoning section (editable) */}
+                  <SectionRow
+                    label="Reasoning"
+                    checked={toggles.reasoning}
+                    onChange={() => handleToggle('reasoning')}
+                  >
+                    <textarea
+                      className="w-full min-h-[80px] p-2.5 text-xs font-mono bg-muted/50 border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+                      value={sectionEdits.reasoning ?? (result as BugValidation | FeatureValidation).reasoning}
+                      onChange={(e) => handleSectionEdit('reasoning', e.target.value)}
+                    />
+                  </SectionRow>
+
+                  {/* Feature details section (editable) */}
+                  {isFeature && (
+                    <SectionRow
+                      label="Prerequisites & Conflicts"
+                      checked={toggles.featureDetails}
+                      onChange={() => handleToggle('featureDetails')}
+                    >
+                      <textarea
+                        className="w-full min-h-[80px] p-2.5 text-xs font-mono bg-muted/50 border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary"
+                        value={
+                          sectionEdits.featureDetails ??
+                          buildFeatureDetailsText(result as FeatureValidation)
+                        }
+                        onChange={(e) => handleSectionEdit('featureDetails', e.target.value)}
+                      />
+                    </SectionRow>
+                  )}
+                </div>
+              </TabsContent>
+
+              {/* Preview tab */}
+              <TabsContent value="preview" className="flex-1 overflow-y-auto px-6 pb-4 mt-0 pt-3">
+                <div className="rounded-lg border bg-white dark:bg-[#0d1117] p-4 github-preview">
+                  <Markdown size="md">{commentBody}</Markdown>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            {/* Footer with action buttons */}
+            <DialogFooter className="px-6 py-4 border-t">
+              <div className="flex items-center justify-between w-full">
+                <div className="text-xs text-muted-foreground">
+                  {checkingPrior && (
+                    <span className="flex items-center gap-1">
+                      <Loader2 size={10} className="animate-spin" /> Checking for prior comments...
+                    </span>
+                  )}
+                  {priorComment && !checkingPrior && (
+                    <span className="text-yellow-600 dark:text-yellow-400">
+                      Existing GitChorus comment found
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  {isPushing ? (
+                    <Button size="sm" disabled className="h-8 text-xs">
+                      <Loader2 size={12} className="mr-1.5 animate-spin" /> Pushing...
+                    </Button>
+                  ) : priorComment ? (
+                    <>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-8 text-xs"
+                        onClick={handleUpdateExisting}
+                      >
+                        <RefreshCw size={12} className="mr-1.5" /> Update existing
+                      </Button>
+                      <Button size="sm" className="h-8 text-xs" onClick={handlePushNew}>
+                        <Send size={12} className="mr-1.5" /> Post new
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" className="h-8 text-xs" onClick={handlePushNew}>
+                      <Send size={12} className="mr-1.5" /> Push to GitHub
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </DialogFooter>
+          </>
         )}
-
-        {checkingPrior && (
-          <span className="text-[10px] text-muted-foreground flex items-center gap-1">
-            <Loader2 size={10} className="animate-spin" /> Checking for prior comments...
-          </span>
-        )}
-      </div>
-    </div>
-  );
-}
-
-/**
- * Simple toggle row with label and switch.
- */
-function ToggleRow({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: () => void;
-}) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className={cn('text-xs', checked ? 'text-foreground' : 'text-muted-foreground')}>
-        {label}
-      </span>
-      <Switch checked={checked} onCheckedChange={onChange} className="scale-75" />
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
