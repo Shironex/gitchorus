@@ -32,6 +32,14 @@ export const GithubEvents = {
 } as const;
 
 // ============================================
+// Repository Events
+// ============================================
+export const RepositoryEvents = {
+  VALIDATE_REPO: 'git:validate-repo',
+  GET_GITHUB_REMOTE: 'git:github-remote',
+} as const;
+
+// ============================================
 // System Events
 // ============================================
 export const SystemEvents = {

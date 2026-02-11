@@ -7,6 +7,9 @@ export * from './types/git';
 // GitHub types
 export * from './types/github';
 
+// Repository types
+export * from './types/repository';
+
 // Settings types
 export * from './types/settings';
 

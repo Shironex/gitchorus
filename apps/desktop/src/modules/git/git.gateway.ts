@@ -41,9 +41,13 @@ import {
   GithubIssueResponse,
   GitEvents,
   GithubEvents,
+  RepositoryEvents,
   MAX_PATH_LENGTH,
   createLogger,
   extractErrorMessage,
+  type ValidateRepositoryPayload,
+  type ValidateRepositoryResponse,
+  type GithubRemoteResponse,
 } from '@gitchorus/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 
@@ -286,6 +290,79 @@ export class GitGateway implements OnGatewayInit {
         currentBranch: '',
         error: message,
       };
+    }
+  }
+
+  // ============================================
+  // Repository Connection Handlers
+  // ============================================
+
+  @SkipThrottle()
+  @SkipGhCliCheck()
+  @SubscribeMessage(RepositoryEvents.VALIDATE_REPO)
+  async handleValidateRepo(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ValidateRepositoryPayload
+  ): Promise<ValidateRepositoryResponse> {
+    try {
+      const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
+
+      if (pathError) {
+        return { valid: false, reason: pathError };
+      }
+
+      const isRepo = await this.gitService.isGitRepository(projectPath);
+
+      if (!isRepo) {
+        return {
+          valid: false,
+          reason: 'The selected folder is not a git repository',
+        };
+      }
+
+      const repoName = path.basename(projectPath);
+      const currentBranch = await this.gitService.getCurrentBranch(projectPath);
+
+      return {
+        valid: true,
+        repoName,
+        currentBranch,
+      };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error validating repository: ${message}`);
+
+      return {
+        valid: false,
+        reason: message,
+      };
+    }
+  }
+
+  @SkipThrottle()
+  @SkipGhCliCheck()
+  @SubscribeMessage(RepositoryEvents.GET_GITHUB_REMOTE)
+  async handleGithubRemote(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ValidateRepositoryPayload
+  ): Promise<GithubRemoteResponse> {
+    try {
+      const { projectPath } = payload;
+      const pathError = this.validatePath(projectPath);
+
+      if (pathError) {
+        return { repo: null, error: pathError };
+      }
+
+      const repo = await this.githubService.getRepoInfo(projectPath);
+
+      return { repo };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error detecting GitHub remote: ${message}`);
+
+      return { repo: null, error: message };
     }
   }
 
