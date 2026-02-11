@@ -13,6 +13,9 @@ export * from './types/provider';
 // Validation types
 export * from './types/validation';
 
+// Review types
+export * from './types/review';
+
 // Repository types
 export * from './types/repository';
 

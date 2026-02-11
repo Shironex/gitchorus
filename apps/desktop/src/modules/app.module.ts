@@ -4,6 +4,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { GitModule } from './git';
 import { ProviderModule } from './provider';
 import { ValidationModule } from './validation';
+import { ReviewModule } from './review';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { ValidationModule } from './validation';
     GitModule,
     ProviderModule,
     ValidationModule,
+    ReviewModule,
   ],
   controllers: [],
   providers: [],

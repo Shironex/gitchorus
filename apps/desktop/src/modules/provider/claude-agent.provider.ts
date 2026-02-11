@@ -13,6 +13,8 @@ import type {
   ValidationParams,
   ValidationStep,
   ValidationResult,
+  ReviewParams,
+  ReviewResult,
 } from '@gitchorus/shared';
 import { createLogger } from '@gitchorus/shared';
 import { getClaudeCliStatus } from '../../main/utils';
@@ -26,6 +28,11 @@ const DEFAULT_MODEL = 'claude-sonnet-4-5-20250929';
  * Default maximum turns for agent queries
  */
 const DEFAULT_MAX_TURNS = 30;
+
+/**
+ * Default maximum turns for review queries (larger scope than validation)
+ */
+const DEFAULT_REVIEW_MAX_TURNS = 50;
 
 /**
  * JSON schema for structured validation output.
@@ -116,6 +123,89 @@ ${issue.labels.length > 0 ? `Labels: ${issue.labels.map(l => l.name).join(', ')}
 ${issue.body ? `\n${issue.body}` : '(No description provided)'}
 
 Analyze this issue against the codebase and produce your validation result.`;
+}
+
+/**
+ * JSON schema for structured review output.
+ * Matches the ReviewResult type (without metadata fields that are added after).
+ */
+const REVIEW_OUTPUT_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          severity: { type: 'string', enum: ['critical', 'major', 'minor', 'nit'] },
+          category: { type: 'string', enum: ['security', 'logic', 'performance', 'style', 'codebase-fit'] },
+          file: { type: 'string' },
+          line: { type: 'number' },
+          codeSnippet: { type: 'string' },
+          explanation: { type: 'string' },
+          suggestedFix: { type: 'string' },
+          title: { type: 'string' },
+        },
+        required: ['severity', 'category', 'file', 'line', 'codeSnippet', 'explanation', 'suggestedFix', 'title'],
+      },
+    },
+    verdict: { type: 'string' },
+    qualityScore: { type: 'number', minimum: 1, maximum: 10 },
+  },
+  required: ['findings', 'verdict', 'qualityScore'],
+};
+
+/**
+ * Build the system prompt for PR code review.
+ */
+function buildReviewSystemPrompt(): string {
+  return `You are a senior software engineer performing a thorough code review of a pull request. You have full access to the codebase.
+
+Your task:
+1. Analyze the PR diff carefully, understanding every change
+2. Use the codebase tools to read related files, search for patterns, and understand context
+3. Review all changed files across these categories: Security, Logic, Performance, Style, Codebase-fit
+4. Produce structured findings for each issue you discover
+5. Provide an overall verdict with a quality score from 1-10
+
+For each finding, provide:
+- severity: critical (security holes, data loss, crashes) | major (bugs, logic errors, significant issues) | minor (code quality, edge cases) | nit (style, naming, formatting)
+- category: security | logic | performance | style | codebase-fit
+- file: the file path where the issue was found
+- line: the line number in the file (approximate is fine)
+- codeSnippet: the problematic code from the diff
+- explanation: clear explanation of why this is an issue
+- suggestedFix: suggested fix as a code block with inline comments
+- title: one-line summary of the finding
+
+IMPORTANT RULES:
+- Be thorough: read related files beyond the diff to understand context
+- Be evidence-based: cite actual code from the diff and codebase
+- Be actionable: every finding should have a clear suggested fix
+- Be calibrated: don't flag style nits as major issues
+- Be constructive: explain WHY something is an issue, not just WHAT
+- Review ALL changed files, no size limit
+- If the code looks good, say so — don't manufacture issues
+- Use read-only tools only: Read, Grep, Glob, Bash (for non-destructive commands)`;
+}
+
+/**
+ * Build the user prompt for a specific PR review.
+ */
+function buildReviewPrompt(params: ReviewParams): string {
+  return `Review the following pull request against the repository at ${params.repoPath}:
+
+**Repository:** ${params.repoName}
+**PR #${params.prNumber}: ${params.prTitle}**
+**Branch:** ${params.headBranch} -> ${params.baseBranch}
+${params.prBody ? `\n**Description:**\n${params.prBody}` : '(No description provided)'}
+
+**Diff:**
+\`\`\`diff
+${params.diff}
+\`\`\`
+
+Analyze this PR against the codebase and produce your review findings. Read related files for context beyond the diff.`;
 }
 
 /**
@@ -391,7 +481,144 @@ export class ClaudeAgentProvider {
   }
 
   /**
-   * Cancel the current validation.
+   * Run a PR code review using the Claude Agent SDK.
+   *
+   * This is an async generator that yields ValidationStep events
+   * for progress tracking and returns the final ReviewResult.
+   */
+  async *review(
+    params: ReviewParams
+  ): AsyncGenerator<ValidationStep, ReviewResult> {
+    const startTime = Date.now();
+    const model = params.config?.model || DEFAULT_MODEL;
+    const maxTurns = params.config?.maxTurns || DEFAULT_REVIEW_MAX_TURNS;
+
+    // Create logger -- with file transport if provided
+    const logger = createLogger('ClaudeAgentProvider', {
+      fileTransport: params.fileTransport,
+    });
+
+    this.abortController = new AbortController();
+
+    yield {
+      step: 'initializing',
+      message: 'Starting Claude agent for PR review...',
+      timestamp: new Date().toISOString(),
+      stepType: 'init',
+    };
+
+    const agentQuery = query({
+      prompt: buildReviewPrompt(params),
+      options: {
+        cwd: params.repoPath,
+        tools: ['Read', 'Grep', 'Glob', 'Bash'],
+        permissionMode: 'bypassPermissions',
+        allowDangerouslySkipPermissions: true,
+        abortController: this.abortController,
+        systemPrompt: buildReviewSystemPrompt(),
+        model,
+        maxTurns,
+        maxBudgetUsd: params.config?.maxBudgetUsd,
+        outputFormat: {
+          type: 'json_schema',
+          schema: REVIEW_OUTPUT_SCHEMA,
+        },
+        persistSession: false,
+      },
+    });
+
+    yield {
+      step: 'reading-pr',
+      message: `Analyzing PR #${params.prNumber}: ${params.prTitle}`,
+      timestamp: new Date().toISOString(),
+      stepType: 'analyzing',
+    };
+
+    let resultMessage: SDKResultSuccess | null = null;
+
+    try {
+      for await (const message of agentQuery as AsyncIterable<SDKMessage>) {
+        logger.debug(`SDK message: type=${message.type}`);
+
+        if (message.type === 'assistant') {
+          const assistantMsg = message as SDKAssistantMessage;
+          const toolSteps = [...parseAssistantToolUseBlocks(assistantMsg)];
+
+          for (const step of toolSteps) {
+            logger.info(`Step: [${step.stepType}] ${step.message}`);
+            yield step;
+          }
+        } else if (message.type === 'tool_use_summary') {
+          const summaryMsg = message as SDKToolUseSummaryMessage;
+          const step: ValidationStep = {
+            step: 'tool-summary',
+            message: summaryMsg.summary,
+            timestamp: new Date().toISOString(),
+            stepType: 'tool-use',
+          };
+          logger.info(`Step: [tool-summary] ${summaryMsg.summary}`);
+          yield step;
+        } else if (message.type === 'tool_progress') {
+          const progressMsg = message as SDKToolProgressMessage;
+          const step: ValidationStep = {
+            step: 'tool-progress',
+            message: `Running ${progressMsg.tool_name}...`,
+            timestamp: new Date().toISOString(),
+            stepType: 'tool-use',
+            toolName: progressMsg.tool_name,
+          };
+          logger.debug(`Tool progress: ${progressMsg.tool_name}`);
+          yield step;
+        } else if (message.type === 'result') {
+          if (message.subtype === 'success') {
+            resultMessage = message as SDKResultSuccess;
+            logger.info('Review agent query completed successfully');
+          } else {
+            const errorResult = message as SDKResultError;
+            const errorMsg = `Review agent query failed: ${errorResult.subtype} - ${errorResult.errors?.join(', ') || 'Unknown error'}`;
+            logger.error(errorMsg);
+            throw new Error(errorMsg);
+          }
+        }
+      }
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        logger.info('Review cancelled by user');
+        throw new Error('Review cancelled by user');
+      }
+      throw error;
+    } finally {
+      this.abortController = null;
+    }
+
+    if (!resultMessage) {
+      throw new Error('Review agent query completed without producing a result');
+    }
+
+    yield {
+      step: 'processing-result',
+      message: 'Processing review result...',
+      timestamp: new Date().toISOString(),
+      stepType: 'processing',
+    };
+
+    // Parse the structured output
+    const structuredOutput = resultMessage.structured_output as Record<string, unknown> | undefined;
+
+    if (!structuredOutput) {
+      try {
+        const parsed = JSON.parse(resultMessage.result);
+        return this.buildReviewResult(parsed, params, model, startTime, resultMessage);
+      } catch {
+        throw new Error('Review agent did not produce structured output and result text is not valid JSON');
+      }
+    }
+
+    return this.buildReviewResult(structuredOutput, params, model, startTime, resultMessage);
+  }
+
+  /**
+   * Cancel the current validation or review.
    */
   cancel(): void {
     if (this.abortController) {
@@ -400,6 +627,35 @@ export class ClaudeAgentProvider {
       this.abortController.abort();
       this.abortController = null;
     }
+  }
+
+  /**
+   * Build a full ReviewResult from the agent's structured output.
+   */
+  private buildReviewResult(
+    output: Record<string, unknown>,
+    params: ReviewParams,
+    model: string,
+    startTime: number,
+    resultMessage: SDKResultSuccess
+  ): ReviewResult {
+    const findings = (output['findings'] || []) as ReviewResult['findings'];
+    const verdict = (output['verdict'] || 'No verdict provided') as string;
+    const qualityScore = (output['qualityScore'] || 5) as number;
+
+    return {
+      prNumber: params.prNumber,
+      prTitle: params.prTitle,
+      repositoryFullName: params.repoName,
+      findings,
+      verdict,
+      qualityScore,
+      reviewedAt: new Date().toISOString(),
+      providerType: 'claude' as const,
+      model,
+      costUsd: resultMessage.total_cost_usd || 0,
+      durationMs: Date.now() - startTime,
+    };
   }
 
   /**

@@ -68,6 +68,7 @@ export const ReviewEvents = {
   PROGRESS: 'review:progress',
   COMPLETE: 'review:complete',
   ERROR: 'review:error',
+  QUEUE_UPDATE: 'review:queue-update',
 } as const;
 
 // ============================================

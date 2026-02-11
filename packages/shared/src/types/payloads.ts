@@ -16,6 +16,7 @@ import type {
 import type { ProviderStatus } from './provider';
 import type { LogEntry } from '../logger';
 import type { ValidationStep, ValidationResult, ValidationQueueItem, ValidationHistoryEntry } from './validation';
+import type { ReviewResult, ReviewQueueItem } from './review';
 
 // ============================================
 // Generic Response Types
@@ -316,8 +317,14 @@ export interface ReviewProgressResponse {
  */
 export interface ReviewCompleteResponse {
   prNumber: number;
-  // ReviewResult type will be defined in plan 02
-  result: unknown;
+  result: ReviewResult;
+}
+
+/**
+ * Review queue state update
+ */
+export interface ReviewQueueUpdateResponse {
+  queue: ReviewQueueItem[];
 }
 
 /**
