@@ -92,6 +92,21 @@ export interface PullRequestAuthor {
 }
 
 /**
+ * Pull request label (same shape as IssueLabel)
+ */
+export type PullRequestLabel = IssueLabel;
+
+/**
+ * CI status check rollup state
+ */
+export type StatusCheckRollup = 'SUCCESS' | 'FAILURE' | 'PENDING' | 'ERROR' | null;
+
+/**
+ * PR review decision state
+ */
+export type ReviewDecision = 'APPROVED' | 'CHANGES_REQUESTED' | 'REVIEW_REQUIRED' | null;
+
+/**
  * Pull request information
  */
 export interface PullRequest {
@@ -121,6 +136,24 @@ export interface PullRequest {
 
   /** Whether PR is a draft */
   isDraft: boolean;
+
+  /** PR labels */
+  labels: PullRequestLabel[];
+
+  /** Lines added */
+  additions: number;
+
+  /** Lines deleted */
+  deletions: number;
+
+  /** Number of changed files */
+  changedFiles: number;
+
+  /** CI status check rollup */
+  statusCheckRollup?: StatusCheckRollup;
+
+  /** Review decision */
+  reviewDecision?: ReviewDecision;
 
   /** Created timestamp */
   createdAt: string;

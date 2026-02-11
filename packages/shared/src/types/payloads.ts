@@ -265,6 +265,70 @@ export interface GithubIssueResponse {
 }
 
 // ============================================
+// GitHub PR Diff Payloads
+// ============================================
+
+/**
+ * Payload for getting a PR diff
+ */
+export interface GithubPrDiffPayload {
+  projectPath: string;
+  prNumber: number;
+}
+
+/**
+ * Response for a PR diff
+ */
+export interface GithubPrDiffResponse {
+  diff: string;
+  error?: string;
+}
+
+// ============================================
+// Review Payloads (for plan 02)
+// ============================================
+
+/**
+ * Payload to start a PR review
+ */
+export interface ReviewStartPayload {
+  projectPath: string;
+  prNumber: number;
+}
+
+/**
+ * Payload to cancel a running PR review
+ */
+export interface ReviewCancelPayload {
+  prNumber: number;
+}
+
+/**
+ * Progress update during PR review
+ */
+export interface ReviewProgressResponse {
+  prNumber: number;
+  step: ValidationStep;
+}
+
+/**
+ * PR review completed successfully
+ */
+export interface ReviewCompleteResponse {
+  prNumber: number;
+  // ReviewResult type will be defined in plan 02
+  result: unknown;
+}
+
+/**
+ * PR review failed with error
+ */
+export interface ReviewErrorResponse {
+  prNumber: number;
+  error: string;
+}
+
+// ============================================
 // Validation Payloads
 // ============================================
 

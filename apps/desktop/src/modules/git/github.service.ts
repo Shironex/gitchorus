@@ -16,6 +16,8 @@ import type {
   GhCliDetectionMethod,
   PullRequest,
   PullRequestState,
+  StatusCheckRollup,
+  ReviewDecision,
   ListPullRequestsOptions,
   CreatePullRequestOptions,
   Issue,
@@ -356,7 +358,7 @@ export class GithubService {
       'pr',
       'list',
       '--json',
-      'number,title,body,state,author,url,headRefName,baseRefName,isDraft,createdAt,updatedAt,mergedAt',
+      'number,title,body,state,author,url,headRefName,baseRefName,isDraft,labels,additions,deletions,changedFiles,statusCheckRollup,reviewDecision,createdAt,updatedAt,mergedAt',
     ];
 
     if (options?.state && options.state !== 'all') {
@@ -458,7 +460,7 @@ export class GithubService {
         'view',
         prNumber.toString(),
         '--json',
-        'number,title,body,state,author,url,headRefName,baseRefName,isDraft,createdAt,updatedAt,mergedAt',
+        'number,title,body,state,author,url,headRefName,baseRefName,isDraft,labels,additions,deletions,changedFiles,statusCheckRollup,reviewDecision,createdAt,updatedAt,mergedAt',
       ]);
 
       const data = JSON.parse(stdout);
@@ -587,9 +589,64 @@ export class GithubService {
   }
 
   /**
+   * Get PR diff using gh CLI
+   */
+  async getPrDiff(repoPath: string, prNumber: number): Promise<string> {
+    try {
+      const { stdout } = await this.execGh(repoPath, [
+        'pr',
+        'diff',
+        prNumber.toString(),
+      ]);
+
+      if (stdout.trim()) {
+        return stdout;
+      }
+    } catch (error) {
+      this.logger.debug(`gh pr diff failed for #${prNumber}, falling back to git diff:`, error);
+    }
+
+    // Fallback: get PR info and use local git diff
+    try {
+      const pr = await this.getPullRequest(repoPath, prNumber);
+      if (!pr) {
+        throw new Error(`PR #${prNumber} not found`);
+      }
+
+      const { stdout } = await execFileAsync('git', [
+        'diff',
+        `${pr.baseRefName}...${pr.headRefName}`,
+      ], {
+        cwd: repoPath,
+        maxBuffer: 10 * 1024 * 1024, // 10MB
+        timeout: GH_TIMEOUT_MS,
+      });
+
+      return stdout;
+    } catch (fallbackError) {
+      this.logger.error(`git diff fallback also failed for PR #${prNumber}:`, fallbackError);
+      throw new Error(`Failed to get diff for PR #${prNumber}`);
+    }
+  }
+
+  /**
    * Map raw gh CLI JSON output to a typed PullRequest object
    */
   private mapPullRequest(pr: Record<string, unknown>): PullRequest {
+    // Parse statusCheckRollup - gh CLI returns it as a string or nested object
+    let statusCheckRollup: StatusCheckRollup = null;
+    const rawRollup = pr.statusCheckRollup as string | undefined;
+    if (rawRollup === 'SUCCESS' || rawRollup === 'FAILURE' || rawRollup === 'PENDING' || rawRollup === 'ERROR') {
+      statusCheckRollup = rawRollup;
+    }
+
+    // Parse reviewDecision
+    let reviewDecision: ReviewDecision = null;
+    const rawDecision = pr.reviewDecision as string | undefined;
+    if (rawDecision === 'APPROVED' || rawDecision === 'CHANGES_REQUESTED' || rawDecision === 'REVIEW_REQUIRED') {
+      reviewDecision = rawDecision;
+    }
+
     return {
       number: pr.number as number,
       title: pr.title as string,
@@ -605,6 +662,15 @@ export class GithubService {
       headRefName: pr.headRefName as string,
       baseRefName: pr.baseRefName as string,
       isDraft: (pr.isDraft as boolean) || false,
+      labels: ((pr.labels as Array<Record<string, unknown>>) || []).map(label => ({
+        name: label.name as string,
+        color: label.color as string | undefined,
+      })),
+      additions: (pr.additions as number) || 0,
+      deletions: (pr.deletions as number) || 0,
+      changedFiles: (pr.changedFiles as number) || 0,
+      statusCheckRollup,
+      reviewDecision,
       createdAt: pr.createdAt as string,
       updatedAt: pr.updatedAt as string,
       mergedAt: (pr.mergedAt as string) || undefined,

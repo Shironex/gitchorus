@@ -45,6 +45,8 @@ import {
   GithubListCommentsResponse,
   GithubUpdateCommentPayload,
   GithubUpdateCommentResponse,
+  GithubPrDiffPayload,
+  GithubPrDiffResponse,
   GitEvents,
   GithubEvents,
   RepositoryEvents,
@@ -512,6 +514,36 @@ export class GitGateway implements OnGatewayInit {
         pullRequest: null,
         error: message,
       };
+    }
+  }
+
+  @SkipThrottle()
+  @RequiresGhCli()
+  @SubscribeMessage(GithubEvents.PR_DIFF)
+  async handleGithubPRDiff(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: GithubPrDiffPayload
+  ): Promise<GithubPrDiffResponse> {
+    try {
+      const { projectPath, prNumber } = payload;
+      const pathError = this.validatePath(projectPath);
+
+      if (pathError) {
+        return { diff: '', error: pathError };
+      }
+
+      if (!prNumber) {
+        return { diff: '', error: 'PR number is required' };
+      }
+
+      const diff = await this.githubService.getPrDiff(projectPath, prNumber);
+
+      return { diff };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error getting PR diff: ${message}`);
+
+      return { diff: '', error: message };
     }
   }
 

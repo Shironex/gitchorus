@@ -26,6 +26,7 @@ export const GithubEvents = {
   REPO_INFO: 'github:repo-info',
   PRS: 'github:prs',
   PR: 'github:pr',
+  PR_DIFF: 'github:pr-diff',
   CREATE_PR: 'github:create-pr',
   ISSUES: 'github:issues',
   ISSUE: 'github:issue',
@@ -56,6 +57,17 @@ export const ValidationEvents = {
   HISTORY_GET: 'validation:history-get',
   HISTORY_DELETE: 'validation:history-delete',
   LOG_ENTRIES: 'validation:log-entries',
+} as const;
+
+// ============================================
+// Review Events
+// ============================================
+export const ReviewEvents = {
+  START: 'review:start',
+  CANCEL: 'review:cancel',
+  PROGRESS: 'review:progress',
+  COMPLETE: 'review:complete',
+  ERROR: 'review:error',
 } as const;
 
 // ============================================
