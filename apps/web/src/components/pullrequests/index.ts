@@ -2,3 +2,5 @@ export { PRListView } from './PRListView';
 export { PRCard } from './PRCard';
 export { PRFilters } from './PRFilters';
 export { EmptyPRsState } from './EmptyPRsState';
+export { ReviewView } from './ReviewView';
+export { ReviewProgress } from './ReviewProgress';

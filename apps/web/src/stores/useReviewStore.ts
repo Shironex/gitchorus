@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { createLogger } from '@gitchorus/shared';
-import type { PullRequest } from '@gitchorus/shared';
+import type { PullRequest, ValidationStep, ReviewResult, ReviewStatus as SharedReviewStatus } from '@gitchorus/shared';
 
 const logger = createLogger('ReviewStore');
 
@@ -12,10 +12,10 @@ const logger = createLogger('ReviewStore');
 export type PRSortBy = 'updated' | 'created' | 'comments';
 
 // ============================================
-// Review Status
+// Review Status (re-export shared type)
 // ============================================
 
-export type ReviewStatus = 'idle' | 'running' | 'completed' | 'failed';
+export type ReviewStatus = SharedReviewStatus;
 
 // ============================================
 // State Interface
@@ -34,8 +34,14 @@ interface ReviewState {
   sortBy: PRSortBy;
   /** Filter by PR state */
   filterState: 'open' | 'closed' | 'all';
-  /** Review status per PR number (for plan 02) */
+  /** Review status per PR number */
   reviewStatus: Map<number, ReviewStatus>;
+  /** Review progress steps per PR number */
+  reviewSteps: Map<number, ValidationStep[]>;
+  /** Review results per PR number */
+  reviewResults: Map<number, ReviewResult>;
+  /** Review errors per PR number */
+  reviewErrors: Map<number, string>;
 }
 
 // ============================================
@@ -57,6 +63,14 @@ interface ReviewActions {
   setError: (error: string | null) => void;
   /** Set review status for a PR */
   setReviewStatus: (prNumber: number, status: ReviewStatus) => void;
+  /** Add a review progress step */
+  addReviewStep: (prNumber: number, step: ValidationStep) => void;
+  /** Set review result for a PR */
+  setReviewResult: (prNumber: number, result: ReviewResult) => void;
+  /** Set review error for a PR */
+  setReviewError: (prNumber: number, error: string) => void;
+  /** Clear review state for a PR (steps, result, error) */
+  clearReview: (prNumber: number) => void;
   /** Clear all PR data */
   clearPullRequests: () => void;
 }
@@ -82,6 +96,9 @@ export const useReviewStore = create<ReviewStore>()(
       sortBy: 'updated',
       filterState: 'open',
       reviewStatus: new Map(),
+      reviewSteps: new Map(),
+      reviewResults: new Map(),
+      reviewErrors: new Map(),
 
       // Actions
       setPullRequests: (pullRequests: PullRequest[]) => {
@@ -128,6 +145,61 @@ export const useReviewStore = create<ReviewStore>()(
         );
       },
 
+      addReviewStep: (prNumber: number, step: ValidationStep) => {
+        set(
+          (state) => {
+            const updated = new Map(state.reviewSteps);
+            const existing = updated.get(prNumber) || [];
+            updated.set(prNumber, [...existing, step]);
+            return { reviewSteps: updated };
+          },
+          undefined,
+          'review/addReviewStep'
+        );
+      },
+
+      setReviewResult: (prNumber: number, result: ReviewResult) => {
+        logger.info(`Review complete for PR #${prNumber}: ${result.verdict}`);
+        set(
+          (state) => {
+            const updated = new Map(state.reviewResults);
+            updated.set(prNumber, result);
+            return { reviewResults: updated };
+          },
+          undefined,
+          'review/setReviewResult'
+        );
+      },
+
+      setReviewError: (prNumber: number, error: string) => {
+        logger.warn(`Review error for PR #${prNumber}: ${error}`);
+        set(
+          (state) => {
+            const updated = new Map(state.reviewErrors);
+            updated.set(prNumber, error);
+            return { reviewErrors: updated };
+          },
+          undefined,
+          'review/setReviewError'
+        );
+      },
+
+      clearReview: (prNumber: number) => {
+        set(
+          (state) => {
+            const steps = new Map(state.reviewSteps);
+            const results = new Map(state.reviewResults);
+            const errors = new Map(state.reviewErrors);
+            steps.delete(prNumber);
+            results.delete(prNumber);
+            errors.delete(prNumber);
+            return { reviewSteps: steps, reviewResults: results, reviewErrors: errors };
+          },
+          undefined,
+          'review/clearReview'
+        );
+      },
+
       clearPullRequests: () => {
         logger.info('Clearing pull requests');
         set(
@@ -137,6 +209,9 @@ export const useReviewStore = create<ReviewStore>()(
             error: null,
             selectedPrNumber: null,
             reviewStatus: new Map(),
+            reviewSteps: new Map(),
+            reviewResults: new Map(),
+            reviewErrors: new Map(),
           },
           undefined,
           'review/clearPullRequests'

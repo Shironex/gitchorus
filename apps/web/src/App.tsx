@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppInitialization } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useValidationSocket } from '@/hooks/useValidation';
+import { useReviewSocket } from '@/hooks/useReview';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import { TopBar, WelcomeView, TabBar } from '@/components/shared';
 import type { AppTab } from '@/components/shared';
@@ -12,8 +13,9 @@ import { PRListView } from '@/components/pullrequests';
 function App() {
   useAppInitialization();
   useUpdateToast();
-  // Initialize validation socket listeners at app level (call exactly once)
+  // Initialize socket listeners at app level (call exactly once)
   useValidationSocket();
+  useReviewSocket();
 
   const repositoryPath = useRepositoryStore(state => state.repositoryPath);
   const isConnected = repositoryPath !== null;

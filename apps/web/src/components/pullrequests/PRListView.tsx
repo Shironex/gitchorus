@@ -8,6 +8,7 @@ import { useReviewStore, selectSortedPRs } from '@/stores/useReviewStore';
 import { PRCard } from './PRCard';
 import { PRFilters } from './PRFilters';
 import { EmptyPRsState } from './EmptyPRsState';
+import { ReviewView } from './ReviewView';
 
 interface PRListViewProps {
   className?: string;
@@ -43,8 +44,8 @@ function PRCardSkeleton() {
  * followed by sort/filter controls and a scrollable list of PR cards.
  * Shows loading skeletons while fetching and an empty state when no PRs exist.
  *
- * When a PR is selected (selectedPrNumber !== null), shows a placeholder
- * review view that plan 02 will replace with the actual review interface.
+ * When a PR is selected (selectedPrNumber !== null), shows the full-width
+ * ReviewView with streaming progress and review results.
  */
 export function PRListView({ className }: PRListViewProps) {
   const { loading, error, refresh } = usePullRequests();
@@ -60,105 +61,91 @@ export function PRListView({ className }: PRListViewProps) {
     return sortedPRs.find((pr) => pr.number === selectedPrNumber) ?? null;
   }, [sortedPRs, selectedPrNumber, hasSelection]);
 
+  // Full-width ReviewView when a PR is selected
+  if (hasSelection && selectedPR) {
+    return (
+      <div className={cn('h-full', className)}>
+        <ReviewView pr={selectedPR} />
+      </div>
+    );
+  }
+
   return (
-    <div className={cn('flex h-full', className)}>
-      {/* PR list panel */}
-      <div className={cn(
-        'flex flex-col h-full',
-        hasSelection ? 'w-1/2 border-r' : 'w-full'
-      )}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">Pull Requests</h2>
-            {totalPRs > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {totalPRs}
-              </Badge>
-            )}
-          </div>
+    <div className={cn('flex flex-col h-full', className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">Pull Requests</h2>
+          {totalPRs > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {totalPRs}
+            </Badge>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={() => refresh()}
+          disabled={loading}
+          title="Refresh pull requests"
+        >
+          <RefreshCw size={16} className={cn(loading && 'animate-spin')} />
+        </Button>
+      </div>
+
+      {/* Filters */}
+      <div className="px-4 pb-3">
+        <PRFilters />
+      </div>
+
+      {/* Error state */}
+      {error && (
+        <div className="mx-4 mb-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+          <p className="text-sm text-destructive">{error}</p>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="mt-1 h-7 text-xs text-destructive hover:text-destructive"
             onClick={() => refresh()}
-            disabled={loading}
-            title="Refresh pull requests"
           >
-            <RefreshCw size={16} className={cn(loading && 'animate-spin')} />
+            Try again
           </Button>
         </div>
+      )}
 
-        {/* Filters */}
-        <div className="px-4 pb-3">
-          <PRFilters />
-        </div>
-
-        {/* Error state */}
-        {error && (
-          <div className="mx-4 mb-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-            <p className="text-sm text-destructive">{error}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1 h-7 text-xs text-destructive hover:text-destructive"
-              onClick={() => refresh()}
-            >
-              Try again
-            </Button>
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto px-4 pb-4">
+        {loading && totalPRs === 0 ? (
+          /* Loading skeletons */
+          <div className="space-y-2">
+            <PRCardSkeleton />
+            <PRCardSkeleton />
+            <PRCardSkeleton />
+            <PRCardSkeleton />
+            <PRCardSkeleton />
+          </div>
+        ) : totalPRs === 0 ? (
+          /* Empty state */
+          <EmptyPRsState />
+        ) : (
+          /* PR cards */
+          <div className="space-y-2">
+            {sortedPRs.map((pr) => (
+              <PRCard
+                key={pr.number}
+                pr={pr}
+                isSelected={selectedPrNumber === pr.number}
+                onClick={() =>
+                  setSelectedPr(
+                    selectedPrNumber === pr.number ? null : pr.number
+                  )
+                }
+              />
+            ))}
           </div>
         )}
-
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
-          {loading && totalPRs === 0 ? (
-            /* Loading skeletons */
-            <div className="space-y-2">
-              <PRCardSkeleton />
-              <PRCardSkeleton />
-              <PRCardSkeleton />
-              <PRCardSkeleton />
-              <PRCardSkeleton />
-            </div>
-          ) : totalPRs === 0 ? (
-            /* Empty state */
-            <EmptyPRsState />
-          ) : (
-            /* PR cards */
-            <div className="space-y-2">
-              {sortedPRs.map((pr) => (
-                <PRCard
-                  key={pr.number}
-                  pr={pr}
-                  isSelected={selectedPrNumber === pr.number}
-                  onClick={() =>
-                    setSelectedPr(
-                      selectedPrNumber === pr.number ? null : pr.number
-                    )
-                  }
-                />
-              ))}
-            </div>
-          )}
-        </div>
       </div>
-
-      {/* Review panel (right side, shown when PR selected) */}
-      {hasSelection && selectedPR && (
-        <div className="w-1/2 h-full flex flex-col items-center justify-center p-8 text-center">
-          <div className="max-w-md space-y-3">
-            <h3 className="text-lg font-medium text-foreground">
-              Review: #{selectedPR.number}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              {selectedPR.title}
-            </p>
-            <p className="text-xs text-muted-foreground/70">
-              Review view coming in plan 02 -- AI-powered code review will appear here.
-            </p>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
