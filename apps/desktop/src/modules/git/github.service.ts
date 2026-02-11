@@ -422,7 +422,7 @@ export class GithubService {
       'issue',
       'list',
       '--json',
-      'number,title,body,state,author,url,labels,createdAt,updatedAt,closedAt',
+      'number,title,body,state,author,url,labels,comments,createdAt,updatedAt,closedAt',
     ];
 
     if (options?.state && options.state !== 'all') {
@@ -478,7 +478,7 @@ export class GithubService {
         'view',
         issueNumber.toString(),
         '--json',
-        'number,title,body,state,author,url,labels,createdAt,updatedAt,closedAt',
+        'number,title,body,state,author,url,labels,comments,createdAt,updatedAt,closedAt',
       ]);
 
       const data = JSON.parse(stdout);
@@ -518,6 +518,10 @@ export class GithubService {
    * Map raw gh CLI JSON output to a typed Issue object
    */
   private mapIssue(issue: Record<string, unknown>): Issue {
+    // gh CLI returns comments as an array of comment objects
+    const comments = issue.comments as unknown[] | undefined;
+    const commentsCount = Array.isArray(comments) ? comments.length : 0;
+
     return {
       number: issue.number as number,
       title: issue.title as string,
@@ -532,6 +536,7 @@ export class GithubService {
         name: label.name as string,
         color: label.color as string | undefined,
       })),
+      commentsCount,
       createdAt: issue.createdAt as string,
       updatedAt: issue.updatedAt as string,
       closedAt: (issue.closedAt as string) || undefined,

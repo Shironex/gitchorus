@@ -1,8 +1,9 @@
 import { useAppInitialization } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
-import { TopBar, WelcomeView, RepoInfoView } from '@/components/shared';
+import { TopBar, WelcomeView } from '@/components/shared';
 import { SettingsModal } from '@/components/settings';
+import { IssueListView } from '@/components/issues';
 
 function App() {
   useAppInitialization();
@@ -15,7 +16,7 @@ function App() {
     <div className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden">
       <TopBar />
       <div className="flex-1 overflow-hidden">
-        {isConnected ? <RepoInfoView /> : <WelcomeView />}
+        {isConnected ? <IssueListView /> : <WelcomeView />}
       </div>
       <SettingsModal />
     </div>

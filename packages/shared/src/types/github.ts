@@ -213,6 +213,9 @@ export interface Issue {
   /** Issue labels */
   labels: IssueLabel[];
 
+  /** Number of comments on the issue */
+  commentsCount: number;
+
   /** Created timestamp */
   createdAt: string;
 
