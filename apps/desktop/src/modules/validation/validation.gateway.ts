@@ -20,9 +20,15 @@ import {
   type ValidationCompleteResponse,
   type ValidationErrorResponse,
   type ValidationQueueUpdateResponse,
+  type ValidationHistoryListPayload,
+  type ValidationHistoryListResponse,
+  type ValidationHistoryGetPayload,
+  type ValidationHistoryGetResponse,
+  type ValidationHistoryDeletePayload,
 } from '@gitchorus/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 import { ValidationService, InternalValidationEvents } from './validation.service';
+import { ValidationHistoryService } from './validation-history.service';
 
 /**
  * WebSocket gateway for validation events.
@@ -40,7 +46,10 @@ export class ValidationGateway implements OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly validationService: ValidationService) {}
+  constructor(
+    private readonly validationService: ValidationService,
+    private readonly historyService: ValidationHistoryService
+  ) {}
 
   afterInit(): void {
     this.logger.log('Initialized');
@@ -92,6 +101,82 @@ export class ValidationGateway implements OnGatewayInit {
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error cancelling validation: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  // ============================================
+  // History handlers
+  // ============================================
+
+  /**
+   * Handle request to list validation history for a repository.
+   */
+  @SubscribeMessage(ValidationEvents.HISTORY_LIST)
+  handleHistoryList(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ValidationHistoryListPayload
+  ): ValidationHistoryListResponse {
+    try {
+      const { repositoryFullName, limit } = payload;
+
+      if (!repositoryFullName) {
+        return { entries: [], error: 'repositoryFullName is required' };
+      }
+
+      const entries = this.historyService.list({ repositoryFullName, limit });
+      return { entries };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error listing history: ${message}`);
+      return { entries: [], error: message };
+    }
+  }
+
+  /**
+   * Handle request to get the latest validation for a specific issue.
+   */
+  @SubscribeMessage(ValidationEvents.HISTORY_GET)
+  handleHistoryGet(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ValidationHistoryGetPayload
+  ): ValidationHistoryGetResponse {
+    try {
+      const { repositoryFullName, issueNumber } = payload;
+
+      if (!repositoryFullName || !issueNumber) {
+        return { entry: null, error: 'repositoryFullName and issueNumber are required' };
+      }
+
+      const entry = this.historyService.getLatestForIssue(repositoryFullName, issueNumber);
+      return { entry };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error getting history entry: ${message}`);
+      return { entry: null, error: message };
+    }
+  }
+
+  /**
+   * Handle request to delete a validation history entry.
+   */
+  @SubscribeMessage(ValidationEvents.HISTORY_DELETE)
+  handleHistoryDelete(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ValidationHistoryDeletePayload
+  ): { success: boolean; error?: string } {
+    try {
+      const { id } = payload;
+
+      if (!id) {
+        return { success: false, error: 'id is required' };
+      }
+
+      const deleted = this.historyService.delete(id);
+      return { success: deleted, error: deleted ? undefined : 'Entry not found' };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error deleting history entry: ${message}`);
       return { success: false, error: message };
     }
   }

@@ -52,6 +52,9 @@ export const ValidationEvents = {
   COMPLETE: 'validation:complete',
   ERROR: 'validation:error',
   QUEUE_UPDATE: 'validation:queue-update',
+  HISTORY_LIST: 'validation:history-list',
+  HISTORY_GET: 'validation:history-get',
+  HISTORY_DELETE: 'validation:history-delete',
 } as const;
 
 // ============================================

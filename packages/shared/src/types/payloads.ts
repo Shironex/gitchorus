@@ -14,7 +14,7 @@ import type {
   IssueComment,
 } from './github';
 import type { ProviderStatus } from './provider';
-import type { ValidationStep, ValidationResult, ValidationQueueItem } from './validation';
+import type { ValidationStep, ValidationResult, ValidationQueueItem, ValidationHistoryEntry } from './validation';
 
 // ============================================
 // Generic Response Types
@@ -315,6 +315,49 @@ export interface ValidationErrorResponse {
  */
 export interface ValidationQueueUpdateResponse {
   queue: ValidationQueueItem[];
+}
+
+// ============================================
+// Validation History Payloads
+// ============================================
+
+/**
+ * Payload to list validation history for a repository
+ */
+export interface ValidationHistoryListPayload {
+  repositoryFullName: string;
+  limit?: number;
+}
+
+/**
+ * Response for listing validation history
+ */
+export interface ValidationHistoryListResponse {
+  entries: ValidationHistoryEntry[];
+  error?: string;
+}
+
+/**
+ * Payload to get the latest validation for a specific issue
+ */
+export interface ValidationHistoryGetPayload {
+  issueNumber: number;
+  repositoryFullName: string;
+}
+
+/**
+ * Response for getting a specific validation history entry
+ */
+export interface ValidationHistoryGetResponse {
+  entry: ValidationHistoryEntry | null;
+  error?: string;
+}
+
+/**
+ * Payload to delete a validation history entry
+ */
+export interface ValidationHistoryDeletePayload {
+  id: string;
 }
 
 // ============================================

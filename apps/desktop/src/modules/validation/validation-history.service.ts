@@ -1,0 +1,172 @@
+import { Injectable } from '@nestjs/common';
+import Store from 'electron-store';
+import { createLogger } from '@gitchorus/shared';
+import type {
+  ValidationResult,
+  ValidationHistoryEntry,
+  ValidationHistoryFilter,
+} from '@gitchorus/shared';
+
+const logger = createLogger('ValidationHistoryService');
+
+/** Maximum number of history entries to retain */
+const MAX_HISTORY_ENTRIES = 500;
+
+/** Store key for validation history */
+const STORE_KEY = 'validationHistory';
+
+/**
+ * Generate a unique ID for a history entry.
+ * Uses timestamp + issue number + random suffix for uniqueness.
+ */
+function generateId(issueNumber: number): string {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substring(2, 8);
+  return `vh-${issueNumber}-${timestamp}-${random}`;
+}
+
+/**
+ * Service for persisting validation results locally using electron-store.
+ *
+ * Stores validation history entries that survive app restarts.
+ * Entries are capped at MAX_HISTORY_ENTRIES (500) to prevent unbounded growth.
+ */
+@Injectable()
+export class ValidationHistoryService {
+  private readonly store: Store;
+
+  constructor() {
+    this.store = new Store();
+    logger.info('Initialized with electron-store persistence');
+  }
+
+  /**
+   * Save a validation result to history.
+   * Generates a unique ID and caps storage at MAX_HISTORY_ENTRIES.
+   */
+  save(result: ValidationResult): ValidationHistoryEntry {
+    const entries = this.getAllEntries();
+
+    const entry: ValidationHistoryEntry = {
+      ...result,
+      id: generateId(result.issueNumber),
+    };
+
+    // Prepend new entry (newest first)
+    entries.unshift(entry);
+
+    // Cap at max entries
+    if (entries.length > MAX_HISTORY_ENTRIES) {
+      entries.length = MAX_HISTORY_ENTRIES;
+      logger.debug(`History capped at ${MAX_HISTORY_ENTRIES} entries`);
+    }
+
+    this.store.set(STORE_KEY, entries);
+    logger.info(
+      `Saved validation for issue #${result.issueNumber} (${result.repositoryFullName}), total: ${entries.length}`
+    );
+
+    return entry;
+  }
+
+  /**
+   * List history entries with optional filtering.
+   * Results are sorted by validatedAt descending (newest first).
+   */
+  list(filter: ValidationHistoryFilter = {}): ValidationHistoryEntry[] {
+    let entries = this.getAllEntries();
+
+    // Filter by repository
+    if (filter.repositoryFullName) {
+      entries = entries.filter(
+        (e) => e.repositoryFullName === filter.repositoryFullName
+      );
+    }
+
+    // Filter by issue number
+    if (filter.issueNumber !== undefined) {
+      entries = entries.filter((e) => e.issueNumber === filter.issueNumber);
+    }
+
+    // Sort by validatedAt descending
+    entries.sort(
+      (a, b) =>
+        new Date(b.validatedAt).getTime() - new Date(a.validatedAt).getTime()
+    );
+
+    // Apply limit
+    if (filter.limit && filter.limit > 0) {
+      entries = entries.slice(0, filter.limit);
+    }
+
+    return entries;
+  }
+
+  /**
+   * Get the latest validation result for a specific issue in a repository.
+   */
+  getLatestForIssue(
+    repositoryFullName: string,
+    issueNumber: number
+  ): ValidationHistoryEntry | null {
+    const entries = this.list({
+      repositoryFullName,
+      issueNumber,
+      limit: 1,
+    });
+
+    return entries[0] || null;
+  }
+
+  /**
+   * Delete a specific history entry by ID.
+   * Returns true if the entry was found and deleted.
+   */
+  delete(id: string): boolean {
+    const entries = this.getAllEntries();
+    const index = entries.findIndex((e) => e.id === id);
+
+    if (index === -1) {
+      logger.debug(`History entry not found: ${id}`);
+      return false;
+    }
+
+    entries.splice(index, 1);
+    this.store.set(STORE_KEY, entries);
+    logger.info(`Deleted history entry: ${id}`);
+    return true;
+  }
+
+  /**
+   * Clear all history entries, optionally filtered by repository.
+   */
+  clear(repositoryFullName?: string): void {
+    if (repositoryFullName) {
+      const entries = this.getAllEntries().filter(
+        (e) => e.repositoryFullName !== repositoryFullName
+      );
+      this.store.set(STORE_KEY, entries);
+      logger.info(`Cleared history for ${repositoryFullName}`);
+    } else {
+      this.store.set(STORE_KEY, []);
+      logger.info('Cleared all history');
+    }
+  }
+
+  /**
+   * Get all entries from the store.
+   * Returns an empty array if no entries exist or data is invalid.
+   */
+  private getAllEntries(): ValidationHistoryEntry[] {
+    try {
+      const data = this.store.get(STORE_KEY);
+      if (Array.isArray(data)) {
+        return data as ValidationHistoryEntry[];
+      }
+      return [];
+    } catch (error) {
+      logger.error('Failed to read history from store:', error);
+      return [];
+    }
+  }
+}

@@ -154,3 +154,28 @@ export interface ValidationQueueItem {
   /** ISO timestamp when validation completed/failed */
   completedAt?: string;
 }
+
+// ============================================
+// History Types
+// ============================================
+
+/**
+ * A persisted validation result with a unique ID.
+ * Stored locally via electron-store for history viewing.
+ */
+export type ValidationHistoryEntry = ValidationResult & {
+  /** Unique identifier for this history entry */
+  id: string;
+};
+
+/**
+ * Filter options for querying validation history
+ */
+export interface ValidationHistoryFilter {
+  /** Filter by repository full name (owner/repo) */
+  repositoryFullName?: string;
+  /** Filter by specific issue number */
+  issueNumber?: number;
+  /** Maximum number of entries to return */
+  limit?: number;
+}

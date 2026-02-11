@@ -11,6 +11,7 @@ import type {
 } from '@gitchorus/shared';
 import { GithubService } from '../git/github.service';
 import { ProviderRegistry } from '../provider/provider.registry';
+import { ValidationHistoryService } from './validation-history.service';
 
 const logger = createLogger('ValidationService');
 
@@ -48,7 +49,8 @@ export class ValidationService {
   constructor(
     private readonly providerRegistry: ProviderRegistry,
     private readonly githubService: GithubService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly historyService: ValidationHistoryService
   ) {}
 
   /**
@@ -199,6 +201,9 @@ export class ValidationService {
       if (!result) {
         throw new Error('Validation completed without producing a result');
       }
+
+      // Save to history for local persistence
+      this.historyService.save(result);
 
       // Update queue item with result
       this.updateQueueItem(issueNumber, {
