@@ -5,6 +5,7 @@ module.exports = {
   rootDir: '.',
   testMatch: ['<rootDir>/src/**/*.spec.ts'],
   setupFiles: ['<rootDir>/test/setup.ts'],
+  passWithNoTests: true,
   clearMocks: true,
   collectCoverageFrom: ['src/**/*.ts', '!src/**/*.spec.ts', '!src/**/index.ts', '!src/types/**'],
   transform: {

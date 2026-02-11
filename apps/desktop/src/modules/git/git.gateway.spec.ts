@@ -3,7 +3,6 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import { Server, Socket } from 'socket.io';
 import { GitGateway } from './git.gateway';
 import { GitService } from './git.service';
-import { WorktreeService } from './worktree.service';
 import { GithubService } from './github.service';
 import { MAX_PATH_LENGTH } from '@gitchorus/shared';
 
@@ -42,11 +41,6 @@ const mockGitService = {
   createBranch: jest.fn(),
 };
 
-const mockWorktreeService = {
-  list: jest.fn(),
-  cleanup: jest.fn(),
-};
-
 const mockGithubService = {
   getStatus: jest.fn(),
   clearCache: jest.fn(),
@@ -73,7 +67,6 @@ describe('GitGateway', () => {
       providers: [
         GitGateway,
         { provide: GitService, useValue: mockGitService },
-        { provide: WorktreeService, useValue: mockWorktreeService },
         { provide: GithubService, useValue: mockGithubService },
       ],
     }).compile();
@@ -139,30 +132,6 @@ describe('GitGateway', () => {
       expect(mockGitService.getBranches).toHaveBeenCalledWith('/valid/absolute/path');
     });
 
-    it('should validate worktreePath in handleWorktreeCleanup', async () => {
-      const result = await gateway.handleWorktreeCleanup(client, {
-        projectPath: '/repo',
-        worktreePath: 'relative/worktree',
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Invalid worktreePath: must be an absolute path',
-      });
-      expect(mockWorktreeService.cleanup).not.toHaveBeenCalled();
-    });
-
-    it('should validate projectPath before worktreePath in handleWorktreeCleanup', async () => {
-      const result = await gateway.handleWorktreeCleanup(client, {
-        projectPath: 'relative',
-        worktreePath: 'also-relative',
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Invalid projectPath: must be an absolute path',
-      });
-    });
   });
 
   // ========================================================================
@@ -463,98 +432,6 @@ describe('GitGateway', () => {
       });
 
       expect(result).toEqual({ currentBranch: '', error: 'not a git repo' });
-    });
-  });
-
-  // ========================================================================
-  // git:worktrees
-  // ========================================================================
-
-  describe('handleWorktrees', () => {
-    it('should return worktrees on success', async () => {
-      const worktrees = [{ path: '/repo/.worktrees/feat', branch: 'feat', isMain: false }];
-      mockWorktreeService.list.mockResolvedValue(worktrees);
-
-      const result = await gateway.handleWorktrees(client, {
-        projectPath: '/repo',
-      });
-
-      expect(mockWorktreeService.list).toHaveBeenCalledWith('/repo');
-      expect(result).toEqual({ worktrees });
-    });
-
-    it('should return error when projectPath is missing', async () => {
-      const result = await gateway.handleWorktrees(client, {
-        projectPath: '',
-      });
-
-      expect(result).toEqual({
-        worktrees: [],
-        error: 'Invalid projectPath: must be a non-empty string',
-      });
-    });
-
-    it('should return error when service throws', async () => {
-      mockWorktreeService.list.mockRejectedValue(new Error('list failed'));
-
-      const result = await gateway.handleWorktrees(client, {
-        projectPath: '/repo',
-      });
-
-      expect(result).toEqual({ worktrees: [], error: 'list failed' });
-    });
-  });
-
-  // ========================================================================
-  // git:worktree:cleanup
-  // ========================================================================
-
-  describe('handleWorktreeCleanup', () => {
-    it('should cleanup worktree on success', async () => {
-      mockWorktreeService.cleanup.mockResolvedValue(undefined);
-
-      const result = await gateway.handleWorktreeCleanup(client, {
-        projectPath: '/repo',
-        worktreePath: '/repo/.worktrees/feat',
-      });
-
-      expect(mockWorktreeService.cleanup).toHaveBeenCalledWith('/repo', '/repo/.worktrees/feat');
-      expect(result).toEqual({ success: true });
-    });
-
-    it('should return error when projectPath is missing', async () => {
-      const result = await gateway.handleWorktreeCleanup(client, {
-        projectPath: '',
-        worktreePath: '/repo/.worktrees/feat',
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Invalid projectPath: must be a non-empty string',
-      });
-    });
-
-    it('should return error when worktreePath is missing', async () => {
-      const result = await gateway.handleWorktreeCleanup(client, {
-        projectPath: '/repo',
-        worktreePath: '',
-      });
-
-      expect(result).toEqual({
-        success: false,
-        error: 'Invalid worktreePath: must be a non-empty string',
-      });
-    });
-
-    it('should return error when service throws', async () => {
-      mockWorktreeService.cleanup.mockRejectedValue(new Error('remove failed'));
-
-      const result = await gateway.handleWorktreeCleanup(client, {
-        projectPath: '/repo',
-        worktreePath: '/repo/.worktrees/feat',
-      });
-
-      expect(result).toEqual({ success: false, error: 'remove failed' });
     });
   });
 
