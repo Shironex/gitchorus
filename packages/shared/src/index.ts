@@ -7,6 +7,12 @@ export * from './types/git';
 // GitHub types
 export * from './types/github';
 
+// Provider types
+export * from './types/provider';
+
+// Validation types
+export * from './types/validation';
+
 // Repository types
 export * from './types/repository';
 

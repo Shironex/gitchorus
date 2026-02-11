@@ -12,6 +12,8 @@ import type {
   PullRequest,
   Issue,
 } from './github';
+import type { ProviderStatus } from './provider';
+import type { ValidationStep, ValidationResult, ValidationQueueItem } from './validation';
 
 // ============================================
 // Generic Response Types
@@ -257,5 +259,92 @@ export interface GithubIssuesResponse {
  */
 export interface GithubIssueResponse {
   issue: Issue | null;
+  error?: string;
+}
+
+// ============================================
+// Validation Payloads
+// ============================================
+
+/**
+ * Payload to start a validation
+ */
+export interface ValidationStartPayload {
+  projectPath: string;
+  issueNumber: number;
+}
+
+/**
+ * Payload to cancel a running validation
+ */
+export interface ValidationCancelPayload {
+  issueNumber: number;
+}
+
+// ============================================
+// Validation Responses
+// ============================================
+
+/**
+ * Progress update during validation
+ */
+export interface ValidationProgressResponse {
+  issueNumber: number;
+  step: ValidationStep;
+}
+
+/**
+ * Validation completed successfully
+ */
+export interface ValidationCompleteResponse {
+  issueNumber: number;
+  result: ValidationResult;
+}
+
+/**
+ * Validation failed with error
+ */
+export interface ValidationErrorResponse {
+  issueNumber: number;
+  error: string;
+}
+
+/**
+ * Queue state update
+ */
+export interface ValidationQueueUpdateResponse {
+  queue: ValidationQueueItem[];
+}
+
+// ============================================
+// Provider Responses
+// ============================================
+
+/**
+ * Status of all registered providers
+ */
+export interface ProviderStatusResponse {
+  providers: ProviderStatus[];
+}
+
+// ============================================
+// GitHub Comment Payloads
+// ============================================
+
+/**
+ * Payload to create a comment on an issue
+ */
+export interface GithubCreateCommentPayload {
+  projectPath: string;
+  issueNumber: number;
+  body: string;
+}
+
+/**
+ * Response for creating an issue comment
+ */
+export interface GithubCreateCommentResponse {
+  success: boolean;
+  commentUrl?: string;
   error?: string;
 }

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ThrottlerModule } from '@nestjs/throttler';
 import { GitModule } from './git';
+import { ProviderModule } from './provider';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { GitModule } from './git';
       },
     ]),
     GitModule,
+    ProviderModule,
   ],
   controllers: [],
   providers: [],

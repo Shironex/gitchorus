@@ -40,6 +40,26 @@ export const RepositoryEvents = {
 } as const;
 
 // ============================================
+// Validation Events
+// ============================================
+export const ValidationEvents = {
+  START: 'validation:start',
+  CANCEL: 'validation:cancel',
+  PROGRESS: 'validation:progress',
+  COMPLETE: 'validation:complete',
+  ERROR: 'validation:error',
+  QUEUE_UPDATE: 'validation:queue-update',
+} as const;
+
+// ============================================
+// Provider Events
+// ============================================
+export const ProviderEvents = {
+  STATUS: 'provider:status',
+  CLAUDE_CLI_STATUS: 'provider:claude-cli-status',
+} as const;
+
+// ============================================
 // System Events
 // ============================================
 export const SystemEvents = {

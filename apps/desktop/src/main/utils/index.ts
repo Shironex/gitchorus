@@ -19,3 +19,14 @@ export {
   checkGhAuth,
   getGhCliStatus,
 } from './github-detection';
+
+// Claude CLI detection
+export {
+  getClaudeConfigDir,
+  getClaudeCredentialPaths,
+  getClaudeCliPaths,
+  findClaudeCli,
+  getClaudeCliVersion,
+  checkClaudeAuth,
+  getClaudeCliStatus,
+} from './claude-detection';
