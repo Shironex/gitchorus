@@ -1,7 +1,7 @@
 <a name="top"></a>
 
 <div align="center">
-  <!-- <img src="assets/icon.png" alt="GitChorus" width="128" height="128" /> -->
+  <img src="assets/icon.png" alt="GitChorus" width="128" height="128" />
   <h1>GitChorus</h1>
   <p><strong>AI-powered code review and issue validation for your repositories</strong></p>
 
