@@ -8,3 +8,4 @@ export { useClickOutside } from './useClickOutside';
 export { useValidation, useValidationSocket } from './useValidation';
 export { useReview, useReviewSocket } from './useReview';
 export { useSettings } from './useSettings';
+export { useSplashScreen } from './useSplashScreen';

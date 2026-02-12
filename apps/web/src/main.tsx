@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { ErrorBoundary } from '@/components';
+import { SplashScreen } from '@/components/splash';
 import { Toaster } from '@/components/ui/sonner';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useConnectionStore } from '@/stores';
@@ -17,6 +18,7 @@ createRoot(rootElement).render(
   <StrictMode>
     <ErrorBoundary>
       <TooltipProvider delayDuration={300}>
+        <SplashScreen />
         <App />
         <Toaster />
       </TooltipProvider>
