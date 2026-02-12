@@ -50,4 +50,4 @@ Thumbs.db
 .cache/
 .mcp.json
 .claude/*
-!.claude/skills/
+!.claude/skills/address-pr-comments
