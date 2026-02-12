@@ -4,7 +4,7 @@ import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores';
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog';
 import { SettingsNavigation } from './SettingsNavigation';
-import { AppearanceSection, GithubSection, GeneralSection } from './sections';
+import { AppearanceSection, GithubSection, GeneralSection, ProviderSection, ReviewPreferencesSection } from './sections';
 
 export function SettingsModal() {
   const isOpen = useSettingsStore(state => state.isOpen);
@@ -17,6 +17,10 @@ export function SettingsModal() {
     switch (activeSection) {
       case 'appearance':
         return <AppearanceSection />;
+      case 'provider':
+        return <ProviderSection />;
+      case 'review-preferences':
+        return <ReviewPreferencesSection />;
       case 'github':
         return <GithubSection />;
       case 'general':

@@ -1,5 +1,5 @@
 import type { ComponentType } from 'react';
-import { Palette, Info, Github } from 'lucide-react';
+import { Palette, Info, Github, Bot, SlidersHorizontal } from 'lucide-react';
 import type { SettingsSectionId } from '@gitchorus/shared';
 
 export interface NavigationItem {
@@ -17,6 +17,13 @@ export interface NavigationGroup {
  * Navigation groups for the settings sidebar
  */
 export const NAV_GROUPS: NavigationGroup[] = [
+  {
+    label: 'Analysis',
+    items: [
+      { id: 'provider', label: 'AI Provider', icon: Bot },
+      { id: 'review-preferences', label: 'Review Preferences', icon: SlidersHorizontal },
+    ],
+  },
   {
     label: 'Integrations',
     items: [{ id: 'github', label: 'GitHub CLI', icon: Github }],

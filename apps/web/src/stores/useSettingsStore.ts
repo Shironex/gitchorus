@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
-import type { Theme, SettingsSectionId, GhCliStatus } from '@gitchorus/shared';
+import type { Theme, SettingsSectionId, GhCliStatus, ReviewConfig } from '@gitchorus/shared';
 import { createLogger } from '@gitchorus/shared';
 import { themeOptions } from '@/lib/theme';
 import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
@@ -29,6 +29,10 @@ interface SettingsState extends SettingsModalState {
   isGithubCliLoading: boolean;
   /** Preview theme (for hover preview) */
   previewTheme: Theme | null;
+  /** Review configuration (global) */
+  reviewConfig: ReviewConfig | null;
+  /** Whether review config is loading */
+  isReviewConfigLoading: boolean;
 }
 
 /**
@@ -51,6 +55,10 @@ interface SettingsActions {
   setGithubCliStatus: (status: GhCliStatus | null) => void;
   /** Set GitHub CLI loading state */
   setGithubCliLoading: (loading: boolean) => void;
+  /** Set review config from backend */
+  setReviewConfig: (config: ReviewConfig) => void;
+  /** Set review config loading */
+  setReviewConfigLoading: (loading: boolean) => void;
 }
 
 /**
@@ -100,6 +108,8 @@ export const useSettingsStore = create<SettingsStore>()(
         githubCliStatus: null,
         isGithubCliLoading: false,
         previewTheme: null,
+        reviewConfig: null,
+        isReviewConfigLoading: false,
 
         // Actions
         openSettings: (section?: SettingsSectionId) => {
@@ -166,6 +176,18 @@ export const useSettingsStore = create<SettingsStore>()(
         setGithubCliLoading: (loading: boolean) => {
           set({ isGithubCliLoading: loading }, undefined, 'settings/setGithubCliLoading');
         },
+
+        setReviewConfig: (config: ReviewConfig) => {
+          set(
+            { reviewConfig: config, isReviewConfigLoading: false },
+            undefined,
+            'settings/setReviewConfig'
+          );
+        },
+
+        setReviewConfigLoading: (loading: boolean) => {
+          set({ isReviewConfigLoading: loading }, undefined, 'settings/setReviewConfigLoading');
+        },
       };
     },
     { name: 'settings' }
@@ -181,3 +203,5 @@ export const selectPreviewTheme = (state: SettingsStore) => state.previewTheme;
 export const selectEffectiveTheme = (state: SettingsStore) => state.previewTheme ?? state.theme;
 export const selectGithubCliStatus = (state: SettingsStore) => state.githubCliStatus;
 export const selectGithubCliLoading = (state: SettingsStore) => state.isGithubCliLoading;
+export const selectReviewConfig = (state: SettingsStore) => state.reviewConfig;
+export const selectReviewConfigLoading = (state: SettingsStore) => state.isReviewConfigLoading;
