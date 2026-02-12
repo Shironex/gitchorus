@@ -3,8 +3,9 @@ import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import type { PullRequest } from '@gitchorus/shared';
 import { usePullRequests } from '@/hooks/usePullRequests';
-import { useReviewStore, selectSortedPRs } from '@/stores/useReviewStore';
+import { useReviewStore } from '@/stores/useReviewStore';
 import { PRCard } from './PRCard';
 import { PRFilters } from './PRFilters';
 import { EmptyPRsState } from './EmptyPRsState';
@@ -49,9 +50,29 @@ function PRCardSkeleton() {
  */
 export function PRListView({ className }: PRListViewProps) {
   const { loading, error, refresh } = usePullRequests();
-  const sortedPRs = useReviewStore(selectSortedPRs);
+  const pullRequests = useReviewStore((state) => state.pullRequests);
+  const sortBy = useReviewStore((state) => state.sortBy);
   const selectedPrNumber = useReviewStore((state) => state.selectedPrNumber);
   const setSelectedPr = useReviewStore((state) => state.setSelectedPr);
+
+  // Sort in useMemo to avoid creating new array references in the selector
+  // (selectSortedPRs creates a new array every call, causing infinite re-renders)
+  const sortedPRs = useMemo(() => {
+    const sorted = [...pullRequests];
+    switch (sortBy) {
+      case 'updated':
+        sorted.sort((a: PullRequest, b: PullRequest) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        break;
+      case 'created':
+        sorted.sort((a: PullRequest, b: PullRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        break;
+      case 'comments':
+        sorted.sort((a: PullRequest, b: PullRequest) => b.changedFiles - a.changedFiles);
+        break;
+    }
+    return sorted;
+  }, [pullRequests, sortBy]);
+
   const totalPRs = sortedPRs.length;
 
   const hasSelection = selectedPrNumber !== null;
