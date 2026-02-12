@@ -74,11 +74,17 @@ function applyThemeToDOM(theme: Theme) {
   const root = document.documentElement;
   const allThemeClasses = themeOptions.map(t => t.value);
 
-  // Remove all theme classes
-  root.classList.remove(...allThemeClasses);
+  // Remove all theme classes and the 'dark' class
+  root.classList.remove(...allThemeClasses, 'dark');
 
   // Add new theme class
   root.classList.add(theme);
+
+  // Add 'dark' class for dark themes (needed by Shiki CSS and Tailwind dark: variant)
+  const themeOption = themeOptions.find(t => t.value === theme);
+  if (themeOption?.isDark) {
+    root.classList.add('dark');
+  }
 }
 
 // Default theme
