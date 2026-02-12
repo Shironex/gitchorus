@@ -194,9 +194,7 @@ export function PRListView({ className }: PRListViewProps) {
                   <PRCard
                     pr={pr}
                     isSelected={selectedPrNumber === pr.number}
-                    onClick={() =>
-                      setSelectedPr(selectedPrNumber === pr.number ? null : pr.number)
-                    }
+                    onClick={() => setSelectedPr(selectedPrNumber === pr.number ? null : pr.number)}
                   />
                 </div>
               );

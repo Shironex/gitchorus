@@ -185,9 +185,7 @@ export function IssueListView({ className }: IssueListViewProps) {
                       issue={issue}
                       isSelected={selectedIssueNumber === issue.number}
                       onClick={() =>
-                        setSelectedIssue(
-                          selectedIssueNumber === issue.number ? null : issue.number
-                        )
+                        setSelectedIssue(selectedIssueNumber === issue.number ? null : issue.number)
                       }
                     />
                   </div>
