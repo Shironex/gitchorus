@@ -52,7 +52,7 @@ function CustomTooltip({ active, payload }: { active?: boolean; payload?: Toolti
  * Shows PR quality scores over time with a time range selector.
  * Uses CSS variables for theme-aware colors.
  */
-export function QualityChart({ data, timeRange, setTimeRange }: QualityChartProps) {
+export default function QualityChart({ data, timeRange, setTimeRange }: QualityChartProps) {
   return (
     <div className="rounded-xl border border-border/50 bg-card/50 p-6">
       {/* Header */}

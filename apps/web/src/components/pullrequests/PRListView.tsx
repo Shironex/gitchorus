@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -83,6 +84,17 @@ export function PRListView({ className }: PRListViewProps) {
 
   const hasSelection = selectedPrNumber !== null;
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: sortedPRs.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 82,
+    gap: 8,
+    overscan: 5,
+    getItemKey: useCallback((index: number) => sortedPRs[index].number, [sortedPRs]),
+  });
+
   const selectedPR = useMemo(() => {
     if (!hasSelection) return null;
     return sortedPRs.find(pr => pr.number === selectedPrNumber) ?? null;
@@ -142,7 +154,7 @@ export function PRListView({ className }: PRListViewProps) {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 pb-4">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4">
         {loading && totalPRs === 0 ? (
           /* Loading skeletons */
           <div className="space-y-2">
@@ -156,16 +168,39 @@ export function PRListView({ className }: PRListViewProps) {
           /* Empty state */
           <EmptyPRsState />
         ) : (
-          /* PR cards */
-          <div className="space-y-2">
-            {sortedPRs.map(pr => (
-              <PRCard
-                key={pr.number}
-                pr={pr}
-                isSelected={selectedPrNumber === pr.number}
-                onClick={() => setSelectedPr(selectedPrNumber === pr.number ? null : pr.number)}
-              />
-            ))}
+          /* Virtualized PR cards */
+          <div
+            style={{
+              height: virtualizer.getTotalSize(),
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {virtualizer.getVirtualItems().map(virtualItem => {
+              const pr = sortedPRs[virtualItem.index];
+              return (
+                <div
+                  key={virtualItem.key}
+                  data-index={virtualItem.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <PRCard
+                    pr={pr}
+                    isSelected={selectedPrNumber === pr.number}
+                    onClick={() =>
+                      setSelectedPr(selectedPrNumber === pr.number ? null : pr.number)
+                    }
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
