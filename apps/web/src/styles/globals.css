@@ -120,6 +120,15 @@
   --animate-slide-up: slideUp 0.2s ease-out;
   --animate-slide-down: slideDown 0.2s ease-out;
   --animate-pulse-subtle: pulseSubtle 2s ease-in-out infinite;
+  --animate-hero-enter: heroEnter 0.2s ease-out;
+  --animate-hero-exit: heroExit 0.15s ease-in forwards;
+  --animate-scan-line: scanLine 2.5s ease-in-out infinite;
+  --animate-float: float 3s ease-in-out infinite;
+  --animate-cursor-blink: cursorBlink 0.8s step-end infinite;
+  --animate-gear-cw: gearCW 3s linear infinite;
+  --animate-gear-ccw: gearCCW 3s linear infinite;
+  --animate-pulse-node: pulseNode 2s ease-in-out infinite;
+  --animate-draw-check: drawCheck 0.5s ease-out forwards;
 
   @keyframes fadeIn {
     0% {
@@ -156,6 +165,98 @@
     }
     50% {
       opacity: 0.7;
+    }
+  }
+  /* drawLine: used by InitIllustration. Each SVG element sets its own
+     stroke-dashoffset inline — the animation only specifies the 'to' state. */
+  @keyframes drawLine {
+    to {
+      stroke-dashoffset: 0;
+    }
+  }
+  @keyframes heroEnter {
+    from {
+      opacity: 0;
+      transform: scale(0.95) translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: scale(1) translateY(0);
+    }
+  }
+  @keyframes heroExit {
+    from {
+      opacity: 1;
+      transform: scale(1);
+    }
+    to {
+      opacity: 0;
+      transform: scale(0.95);
+    }
+  }
+  @keyframes scanLine {
+    0%,
+    100% {
+      transform: translateY(0);
+    }
+    50% {
+      transform: translateY(100px);
+    }
+  }
+  @keyframes float {
+    0%,
+    100% {
+      transform: translateY(0) translateX(0);
+    }
+    25% {
+      transform: translateY(-6px) translateX(3px);
+    }
+    75% {
+      transform: translateY(6px) translateX(-3px);
+    }
+  }
+  @keyframes cursorBlink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+  @keyframes gearCW {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  @keyframes gearCCW {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(-360deg);
+    }
+  }
+  @keyframes pulseNode {
+    0%,
+    100% {
+      transform: scale(1);
+      opacity: 0.6;
+    }
+    50% {
+      transform: scale(1.15);
+      opacity: 1;
+    }
+  }
+  @keyframes drawCheck {
+    from {
+      stroke-dashoffset: 40;
+    }
+    to {
+      stroke-dashoffset: 0;
     }
   }
 }
@@ -385,4 +486,14 @@
 /* Retro theme - no border radius */
 .retro * {
   border-radius: 0 !important;
+}
+
+/* Reduced motion: disable agent activity animations */
+@media (prefers-reduced-motion: reduce) {
+  .agent-illustration,
+  .agent-illustration * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

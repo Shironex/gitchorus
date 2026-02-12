@@ -1,40 +1,28 @@
 import { useState } from 'react';
-import { X, ChevronDown, ChevronRight } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { ChevronDown, ChevronRight } from 'lucide-react';
 import { ValidationStepLog } from '@/components/validation/ValidationStepLog';
+import { AgentActivityHero } from '@/components/agent-activity';
 import type { ValidationStep } from '@gitchorus/shared';
 
 interface ReviewProgressProps {
   steps: ValidationStep[];
   isRunning: boolean;
-  onCancel: () => void;
 }
 
 /**
- * Streaming progress log for PR review.
+ * Streaming progress display for PR review.
  *
- * Reuses the ValidationStepLog component for the step-by-step activity display.
- * Shows a cancel button while review is running.
- * Collapses into "Activity Log" after review completes.
+ * While running: shows the AgentActivityHero with animated illustrations.
+ * After completion: shows a collapsible activity log.
  */
-export function ReviewProgress({ steps, isRunning, onCancel }: ReviewProgressProps) {
+export function ReviewProgress({ steps, isRunning }: ReviewProgressProps) {
   const [logExpanded, setLogExpanded] = useState(false);
 
   const hasSteps = steps.length > 0;
 
-  // While running: show open log with cancel button
+  // While running: show the agent activity hero
   if (isRunning) {
-    return (
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h4 className="text-xs font-medium text-foreground">Review Progress</h4>
-          <Button size="sm" variant="outline" className="h-6 text-xs gap-1" onClick={onCancel}>
-            <X size={12} /> Cancel
-          </Button>
-        </div>
-        {hasSteps && <ValidationStepLog steps={steps} isRunning={true} />}
-      </div>
-    );
+    return <AgentActivityHero steps={steps} isRunning={true} />;
   }
 
   // After completion: collapsible activity log
