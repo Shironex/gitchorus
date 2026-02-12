@@ -18,15 +18,15 @@ const logger = createLogger('useIssues');
  * Provides a refetch function for manual refresh.
  */
 export function useIssues() {
-  const repositoryPath = useRepositoryStore((state) => state.repositoryPath);
-  const githubInfo = useRepositoryStore((state) => state.githubInfo);
-  const setIssues = useIssueStore((state) => state.setIssues);
-  const setLoading = useIssueStore((state) => state.setLoading);
-  const setError = useIssueStore((state) => state.setError);
-  const clearIssues = useIssueStore((state) => state.clearIssues);
-  const issues = useIssueStore((state) => state.issues);
-  const isLoading = useIssueStore((state) => state.isLoading);
-  const error = useIssueStore((state) => state.error);
+  const repositoryPath = useRepositoryStore(state => state.repositoryPath);
+  const githubInfo = useRepositoryStore(state => state.githubInfo);
+  const setIssues = useIssueStore(state => state.setIssues);
+  const setLoading = useIssueStore(state => state.setLoading);
+  const setError = useIssueStore(state => state.setError);
+  const clearIssues = useIssueStore(state => state.clearIssues);
+  const issues = useIssueStore(state => state.issues);
+  const isLoading = useIssueStore(state => state.isLoading);
+  const error = useIssueStore(state => state.error);
 
   // Track whether we've already fetched for this repo
   const fetchedForPath = useRef<string | null>(null);

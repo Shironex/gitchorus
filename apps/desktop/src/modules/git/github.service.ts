@@ -4,12 +4,7 @@ import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
 import { join } from 'path';
-import {
-  GH_TIMEOUT_MS,
-  createLogger,
-  normalizePath,
-  extractErrorMessage,
-} from '@gitchorus/shared';
+import { GH_TIMEOUT_MS, createLogger, normalizePath, extractErrorMessage } from '@gitchorus/shared';
 import type {
   GhCliStatus,
   GhCliAuthStatus,
@@ -513,9 +508,7 @@ export class GithubService {
     const output = (stdout + stderr).trim();
     // Try to extract a URL from the output
     const urlMatch = output.match(/(https:\/\/github\.com\/[^\s]+)/);
-    const url = urlMatch
-      ? urlMatch[1]
-      : `https://github.com/issues/${issueNumber}`;
+    const url = urlMatch ? urlMatch[1] : `https://github.com/issues/${issueNumber}`;
 
     return { url };
   }
@@ -523,10 +516,7 @@ export class GithubService {
   /**
    * List comments on an issue.
    */
-  async listComments(
-    repoPath: string,
-    issueNumber: number
-  ): Promise<IssueComment[]> {
+  async listComments(repoPath: string, issueNumber: number): Promise<IssueComment[]> {
     try {
       const { stdout } = await this.execGh(repoPath, [
         'issue',
@@ -543,7 +533,7 @@ export class GithubService {
       const data = JSON.parse(stdout);
       const comments = (data.comments || []) as Array<Record<string, unknown>>;
 
-      return comments.map((comment) => ({
+      return comments.map(comment => ({
         id: String(comment.id ?? ''),
         author: {
           login: ((comment.author as Record<string, unknown>)?.login as string) || 'unknown',
@@ -562,11 +552,7 @@ export class GithubService {
    * Update an existing comment on an issue.
    * Uses the gh api command to PATCH the comment.
    */
-  async updateComment(
-    repoPath: string,
-    commentId: string,
-    body: string
-  ): Promise<{ url: string }> {
+  async updateComment(repoPath: string, commentId: string, body: string): Promise<{ url: string }> {
     // First, get the repo info to construct the API path
     const repoInfo = await this.getRepoInfo(repoPath);
     if (!repoInfo) {
@@ -584,7 +570,8 @@ export class GithubService {
       '.html_url',
     ]);
 
-    const url = stdout.trim() || `https://github.com/${repoInfo.fullName}/issues/comments/${commentId}`;
+    const url =
+      stdout.trim() || `https://github.com/${repoInfo.fullName}/issues/comments/${commentId}`;
     return { url };
   }
 
@@ -600,7 +587,7 @@ export class GithubService {
     prNumber: number,
     body: string,
     event: 'REQUEST_CHANGES' | 'COMMENT',
-    comments: Array<{ path: string; line: number; body: string }>,
+    comments: Array<{ path: string; line: number; body: string }>
   ): Promise<{ url: string; postedComments: number; skippedComments: number }> {
     const repoInfo = await this.getRepoInfo(repoPath);
     if (!repoInfo) {
@@ -625,58 +612,64 @@ export class GithubService {
       body: string;
       event: string;
       comments: Array<{ path: string; line: number; body: string }>;
-    },
+    }
   ): Promise<{ url: string; postedComments: number; skippedComments: number }> {
     const inputJson = JSON.stringify(payload);
 
     try {
-      const child = require('child_process').spawn('gh', [
-        'api',
-        `repos/${repoFullName}/pulls/${prNumber}/reviews`,
-        '-X',
-        'POST',
-        '--input',
-        '-',
-      ], {
-        cwd: repoPath,
-        env: { ...process.env, ...GH_ENV },
-        stdio: ['pipe', 'pipe', 'pipe'],
-      });
+      const child = require('child_process').spawn(
+        'gh',
+        ['api', `repos/${repoFullName}/pulls/${prNumber}/reviews`, '-X', 'POST', '--input', '-'],
+        {
+          cwd: repoPath,
+          env: { ...process.env, ...GH_ENV },
+          stdio: ['pipe', 'pipe', 'pipe'],
+        }
+      );
 
       // Write JSON to stdin
       child.stdin.write(inputJson);
       child.stdin.end();
 
-      const result = await new Promise<{ stdout: string; stderr: string; code: number }>((resolve, reject) => {
-        let stdout = '';
-        let stderr = '';
+      const result = await new Promise<{ stdout: string; stderr: string; code: number }>(
+        (resolve, reject) => {
+          let stdout = '';
+          let stderr = '';
 
-        child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
-        child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+          child.stdout.on('data', (d: Buffer) => {
+            stdout += d.toString();
+          });
+          child.stderr.on('data', (d: Buffer) => {
+            stderr += d.toString();
+          });
 
-        const timeout = setTimeout(() => {
-          child.kill();
-          reject(new Error('PR review creation timed out'));
-        }, GH_TIMEOUT_MS);
+          const timeout = setTimeout(() => {
+            child.kill();
+            reject(new Error('PR review creation timed out'));
+          }, GH_TIMEOUT_MS);
 
-        child.on('close', (code: number) => {
-          clearTimeout(timeout);
-          resolve({ stdout, stderr, code });
-        });
+          child.on('close', (code: number) => {
+            clearTimeout(timeout);
+            resolve({ stdout, stderr, code });
+          });
 
-        child.on('error', (err: Error) => {
-          clearTimeout(timeout);
-          reject(err);
-        });
-      });
+          child.on('error', (err: Error) => {
+            clearTimeout(timeout);
+            reject(err);
+          });
+        }
+      );
 
       if (result.code !== 0) {
         // Check for 422 (validation error -- inline comment on line not in diff)
         const errorOutput = result.stderr + result.stdout;
-        if (errorOutput.includes('422') || errorOutput.includes('pull_request_review_thread.path')) {
+        if (
+          errorOutput.includes('422') ||
+          errorOutput.includes('pull_request_review_thread.path')
+        ) {
           // Try without inline comments -- post as summary-only review
           this.logger.warn(
-            `Some inline comments failed for PR #${prNumber}, retrying without inline comments`,
+            `Some inline comments failed for PR #${prNumber}, retrying without inline comments`
           );
           return this.createPrReviewSummaryOnly(
             repoPath,
@@ -684,7 +677,7 @@ export class GithubService {
             prNumber,
             payload.body,
             payload.event,
-            payload.comments.length,
+            payload.comments.length
           );
         }
         throw new Error(`Failed to create PR review: ${errorOutput}`);
@@ -692,7 +685,9 @@ export class GithubService {
 
       // Parse response
       const data = JSON.parse(result.stdout);
-      const url = data.html_url || `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
+      const url =
+        data.html_url ||
+        `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
 
       return {
         url,
@@ -704,7 +699,9 @@ export class GithubService {
       if (error instanceof Error && error.message.startsWith('Failed to create PR review')) {
         throw error;
       }
-      throw new Error(`Failed to create PR review: ${error instanceof Error ? error.message : String(error)}`);
+      throw new Error(
+        `Failed to create PR review: ${error instanceof Error ? error.message : String(error)}`
+      );
     }
   }
 
@@ -717,7 +714,7 @@ export class GithubService {
     prNumber: number,
     body: string,
     event: string,
-    totalComments: number,
+    totalComments: number
   ): Promise<{ url: string; postedComments: number; skippedComments: number }> {
     const { stdout } = await this.execGh(repoPath, [
       'api',
@@ -731,7 +728,9 @@ export class GithubService {
     ]);
 
     const data = JSON.parse(stdout);
-    const url = data.html_url || `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
+    const url =
+      data.html_url ||
+      `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
 
     return {
       url,
@@ -745,11 +744,7 @@ export class GithubService {
    */
   async getPrDiff(repoPath: string, prNumber: number): Promise<string> {
     try {
-      const { stdout } = await this.execGh(repoPath, [
-        'pr',
-        'diff',
-        prNumber.toString(),
-      ]);
+      const { stdout } = await this.execGh(repoPath, ['pr', 'diff', prNumber.toString()]);
 
       if (stdout.trim()) {
         return stdout;
@@ -765,14 +760,15 @@ export class GithubService {
         throw new Error(`PR #${prNumber} not found`);
       }
 
-      const { stdout } = await execFileAsync('git', [
-        'diff',
-        `${pr.baseRefName}...${pr.headRefName}`,
-      ], {
-        cwd: repoPath,
-        maxBuffer: 10 * 1024 * 1024, // 10MB
-        timeout: GH_TIMEOUT_MS,
-      });
+      const { stdout } = await execFileAsync(
+        'git',
+        ['diff', `${pr.baseRefName}...${pr.headRefName}`],
+        {
+          cwd: repoPath,
+          maxBuffer: 10 * 1024 * 1024, // 10MB
+          timeout: GH_TIMEOUT_MS,
+        }
+      );
 
       return stdout;
     } catch (fallbackError) {
@@ -788,14 +784,23 @@ export class GithubService {
     // Parse statusCheckRollup - gh CLI returns it as a string or nested object
     let statusCheckRollup: StatusCheckRollup = null;
     const rawRollup = pr.statusCheckRollup as string | undefined;
-    if (rawRollup === 'SUCCESS' || rawRollup === 'FAILURE' || rawRollup === 'PENDING' || rawRollup === 'ERROR') {
+    if (
+      rawRollup === 'SUCCESS' ||
+      rawRollup === 'FAILURE' ||
+      rawRollup === 'PENDING' ||
+      rawRollup === 'ERROR'
+    ) {
       statusCheckRollup = rawRollup;
     }
 
     // Parse reviewDecision
     let reviewDecision: ReviewDecision = null;
     const rawDecision = pr.reviewDecision as string | undefined;
-    if (rawDecision === 'APPROVED' || rawDecision === 'CHANGES_REQUESTED' || rawDecision === 'REVIEW_REQUIRED') {
+    if (
+      rawDecision === 'APPROVED' ||
+      rawDecision === 'CHANGES_REQUESTED' ||
+      rawDecision === 'REVIEW_REQUIRED'
+    ) {
       reviewDecision = rawDecision;
     }
 

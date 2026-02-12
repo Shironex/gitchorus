@@ -32,34 +32,29 @@ import type { ValidationStatus } from '@gitchorus/shared';
  * After completion, the step log collapses into an "Activity Log" section.
  */
 export function ValidationPanel() {
-  const {
-    startValidation,
-    cancelValidation,
-    pushToGithub,
-    updateGithubComment,
-    listComments,
-  } = useValidation();
+  const { startValidation, cancelValidation, pushToGithub, updateGithubComment, listComments } =
+    useValidation();
 
-  const selectedIssueNumber = useIssueStore((state) => state.selectedIssueNumber);
-  const issues = useIssueStore((state) => state.issues);
+  const selectedIssueNumber = useIssueStore(state => state.selectedIssueNumber);
+  const issues = useIssueStore(state => state.issues);
 
-  const queue = useValidationStore((state) => state.queue);
-  const steps = useValidationStore((state) =>
+  const queue = useValidationStore(state => state.queue);
+  const steps = useValidationStore(state =>
     selectedIssueNumber ? state.steps.get(selectedIssueNumber) : undefined
   );
-  const liveResult = useValidationStore((state) =>
+  const liveResult = useValidationStore(state =>
     selectedIssueNumber ? state.results.get(selectedIssueNumber) : undefined
   );
-  const error = useValidationStore((state) =>
+  const error = useValidationStore(state =>
     selectedIssueNumber ? state.errors.get(selectedIssueNumber) : undefined
   );
 
   // Get latest validation (live or history) for display and staleness — inline to avoid new closure per render
-  const latestValidation = useValidationStore((state) => {
+  const latestValidation = useValidationStore(state => {
     if (selectedIssueNumber === null) return undefined;
     const live = state.results.get(selectedIssueNumber);
     if (live) return live;
-    return state.history.find((e) => e.issueNumber === selectedIssueNumber);
+    return state.history.find(e => e.issueNumber === selectedIssueNumber);
   });
 
   // Use live result if available, otherwise fall back to history
@@ -68,10 +63,10 @@ export function ValidationPanel() {
 
   // Push modal state
   const [showPushModal, setShowPushModal] = useState(false);
-  const pushStatus = useValidationStore((state) =>
+  const pushStatus = useValidationStore(state =>
     selectedIssueNumber ? state.pushStatus.get(selectedIssueNumber) || 'idle' : 'idle'
   );
-  const postedUrl = useValidationStore((state) =>
+  const postedUrl = useValidationStore(state =>
     selectedIssueNumber ? state.postedCommentUrls.get(selectedIssueNumber) : undefined
   );
 
@@ -91,7 +86,7 @@ export function ValidationPanel() {
     );
   }
 
-  const issue = issues.find((i) => i.number === selectedIssueNumber);
+  const issue = issues.find(i => i.number === selectedIssueNumber);
   if (!issue) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
@@ -101,7 +96,7 @@ export function ValidationPanel() {
   }
 
   // Get queue status for this issue
-  const queueItem = queue.find((q) => q.issueNumber === selectedIssueNumber);
+  const queueItem = queue.find(q => q.issueNumber === selectedIssueNumber);
   const status: ValidationStatus = queueItem?.status || 'idle';
   const isRunning = status === 'running';
   const isQueued = status === 'queued';
@@ -113,7 +108,8 @@ export function ValidationPanel() {
   const canRevalidate = isCompleted || isFailed || isCancelled || isFromHistory;
 
   // Staleness detection: issue updated after last validation
-  const isStale = !!result && new Date(issue.updatedAt).getTime() > new Date(result.validatedAt).getTime();
+  const isStale =
+    !!result && new Date(issue.updatedAt).getTime() > new Date(result.validatedAt).getTime();
 
   // Whether to show step log as active (open, not collapsible) or as collapsible
   const hasSteps = steps && steps.length > 0;
@@ -181,7 +177,10 @@ export function ValidationPanel() {
         {isStale && hasResult && !isRunning && !isQueued && (
           <div className="rounded-lg border p-3 border-amber-500/30 bg-amber-500/5">
             <div className="flex items-start gap-2">
-              <AlertTriangle size={14} className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+              <AlertTriangle
+                size={14}
+                className="text-amber-600 dark:text-amber-400 mt-0.5 shrink-0"
+              />
               <div className="flex-1">
                 <p className="text-xs font-medium text-amber-600 dark:text-amber-400">
                   Results may be outdated
@@ -265,7 +264,9 @@ export function ValidationPanel() {
               {pushStatus === 'posted' && postedUrl ? (
                 <div className="flex items-center gap-2 py-2">
                   <Check size={14} className="text-green-500" />
-                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">Posted</span>
+                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                    Posted
+                  </span>
                   <a
                     href={postedUrl}
                     target="_blank"

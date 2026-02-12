@@ -18,41 +18,40 @@ let highlighterInstance: HighlighterGeneric<BundledLanguage, BundledTheme> | nul
 async function getHighlighter() {
   if (highlighterInstance) return highlighterInstance;
   if (!highlighterPromise) {
-    highlighterPromise = Promise.all([
-      import('shiki'),
-      import('shiki/engine/javascript'),
-    ]).then(async ([{ createHighlighter }, { createJavaScriptRegexEngine }]) => {
-      const instance = await createHighlighter({
-        themes: ['github-light', 'github-dark'],
-        langs: [
-          'typescript',
-          'javascript',
-          'python',
-          'rust',
-          'go',
-          'java',
-          'css',
-          'html',
-          'json',
-          'markdown',
-          'yaml',
-          'bash',
-          'sql',
-          'ruby',
-          'swift',
-          'kotlin',
-          'c',
-          'cpp',
-          'csharp',
-          'php',
-          'tsx',
-          'jsx',
-        ],
-        engine: createJavaScriptRegexEngine(),
-      });
-      highlighterInstance = instance;
-      return instance;
-    });
+    highlighterPromise = Promise.all([import('shiki'), import('shiki/engine/javascript')]).then(
+      async ([{ createHighlighter }, { createJavaScriptRegexEngine }]) => {
+        const instance = await createHighlighter({
+          themes: ['github-light', 'github-dark'],
+          langs: [
+            'typescript',
+            'javascript',
+            'python',
+            'rust',
+            'go',
+            'java',
+            'css',
+            'html',
+            'json',
+            'markdown',
+            'yaml',
+            'bash',
+            'sql',
+            'ruby',
+            'swift',
+            'kotlin',
+            'c',
+            'cpp',
+            'csharp',
+            'php',
+            'tsx',
+            'jsx',
+          ],
+          engine: createJavaScriptRegexEngine(),
+        });
+        highlighterInstance = instance;
+        return instance;
+      }
+    );
   }
   return highlighterPromise;
 }
@@ -191,7 +190,11 @@ export function Markdown({ children, className, size = 'sm' }: MarkdownProps) {
   // so fenced code blocks get shiki highlighting.
   const components = useMemo(
     () => ({
-      code({ className: codeClassName, children: codeChildren, ...rest }: ComponentPropsWithoutRef<'code'>) {
+      code({
+        className: codeClassName,
+        children: codeChildren,
+        ...rest
+      }: ComponentPropsWithoutRef<'code'>) {
         // react-markdown adds className="language-xxx" for fenced code blocks
         const match = /language-(\w+)/.exec(codeClassName ?? '');
 
@@ -202,7 +205,10 @@ export function Markdown({ children, className, size = 'sm' }: MarkdownProps) {
 
         // Inline code
         return (
-          <code className={cn('text-chart-2 bg-muted px-1.5 py-0.5 rounded font-mono', codeClassName)} {...rest}>
+          <code
+            className={cn('text-chart-2 bg-muted px-1.5 py-0.5 rounded font-mono', codeClassName)}
+            {...rest}
+          >
             {codeChildren}
           </code>
         );
@@ -213,7 +219,7 @@ export function Markdown({ children, className, size = 'sm' }: MarkdownProps) {
         return <>{preChildren}</>;
       },
     }),
-    [highlighter],
+    [highlighter]
   );
 
   return (
@@ -240,7 +246,7 @@ export function Markdown({ children, className, size = 'sm' }: MarkdownProps) {
         '[&_blockquote]:border-l-2 [&_blockquote]:border-primary/40 [&_blockquote]:pl-3 [&_blockquote]:my-2 [&_blockquote]:italic [&_blockquote]:text-muted-foreground',
         // Size variant styles
         ...sizeStyles[size],
-        className,
+        className
       )}
     >
       <ReactMarkdown

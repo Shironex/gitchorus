@@ -36,20 +36,20 @@ export function useDashboard() {
   const [timeRange, setTimeRange] = useState<TimeRange>('30d');
 
   // Read from stores
-  const issues = useIssueStore((state) => state.issues);
-  const pullRequests = useReviewStore((state) => state.pullRequests);
-  const reviewResults = useReviewStore((state) => state.reviewResults);
-  const validationHistory = useValidationStore((state) => state.history);
-  const validationResults = useValidationStore((state) => state.results);
+  const issues = useIssueStore(state => state.issues);
+  const pullRequests = useReviewStore(state => state.pullRequests);
+  const reviewResults = useReviewStore(state => state.reviewResults);
+  const validationHistory = useValidationStore(state => state.history);
+  const validationResults = useValidationStore(state => state.results);
 
   // Compute stats
   const stats = useMemo<DashboardStats>(() => {
     const openIssues = issues.length;
-    const openPrs = pullRequests.filter((pr) => pr.state === 'open').length;
+    const openPrs = pullRequests.filter(pr => pr.state === 'open').length;
     const totalValidations = validationHistory.length + validationResults.size;
     const totalReviews = reviewResults.size;
 
-    const scores = Array.from(reviewResults.values()).map((r) => r.qualityScore);
+    const scores = Array.from(reviewResults.values()).map(r => r.qualityScore);
     const avgQualityScore =
       scores.length > 0
         ? Math.round((scores.reduce((a, b) => a + b, 0) / scores.length) * 10) / 10

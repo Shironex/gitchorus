@@ -1,7 +1,13 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { createLogger } from '@gitchorus/shared';
-import type { PullRequest, ValidationStep, ReviewResult, ReviewHistoryEntry, ReviewStatus as SharedReviewStatus } from '@gitchorus/shared';
+import type {
+  PullRequest,
+  ValidationStep,
+  ReviewResult,
+  ReviewHistoryEntry,
+  ReviewStatus as SharedReviewStatus,
+} from '@gitchorus/shared';
 
 const logger = createLogger('ReviewStore');
 
@@ -97,7 +103,7 @@ type ReviewStore = ReviewState & ReviewActions;
 
 export const useReviewStore = create<ReviewStore>()(
   devtools(
-    (set) => ({
+    set => ({
       // Initial state
       pullRequests: [],
       loading: false,
@@ -115,11 +121,7 @@ export const useReviewStore = create<ReviewStore>()(
       // Actions
       setPullRequests: (pullRequests: PullRequest[]) => {
         logger.info(`Loaded ${pullRequests.length} pull requests`);
-        set(
-          { pullRequests, loading: false, error: null },
-          undefined,
-          'review/setPullRequests'
-        );
+        set({ pullRequests, loading: false, error: null }, undefined, 'review/setPullRequests');
       },
 
       setSelectedPr: (prNumber: number | null) => {
@@ -147,7 +149,7 @@ export const useReviewStore = create<ReviewStore>()(
 
       setReviewStatus: (prNumber: number, status: ReviewStatus) => {
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.reviewStatus);
             updated.set(prNumber, status);
             return { reviewStatus: updated };
@@ -159,7 +161,7 @@ export const useReviewStore = create<ReviewStore>()(
 
       addReviewStep: (prNumber: number, step: ValidationStep) => {
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.reviewSteps);
             const existing = updated.get(prNumber) || [];
             updated.set(prNumber, [...existing, step]);
@@ -173,7 +175,7 @@ export const useReviewStore = create<ReviewStore>()(
       setReviewResult: (prNumber: number, result: ReviewResult) => {
         logger.info(`Review complete for PR #${prNumber}: ${result.verdict}`);
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.reviewResults);
             updated.set(prNumber, result);
             return { reviewResults: updated };
@@ -186,7 +188,7 @@ export const useReviewStore = create<ReviewStore>()(
       setReviewError: (prNumber: number, error: string) => {
         logger.warn(`Review error for PR #${prNumber}: ${error}`);
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.reviewErrors);
             updated.set(prNumber, error);
             return { reviewErrors: updated };
@@ -198,7 +200,7 @@ export const useReviewStore = create<ReviewStore>()(
 
       clearReview: (prNumber: number) => {
         set(
-          (state) => {
+          state => {
             const steps = new Map(state.reviewSteps);
             const results = new Map(state.reviewResults);
             const errors = new Map(state.reviewErrors);
@@ -227,8 +229,8 @@ export const useReviewStore = create<ReviewStore>()(
 
       removeHistoryEntry: (id: string) => {
         set(
-          (state) => ({
-            reviewHistory: state.reviewHistory.filter((e) => e.id !== id),
+          state => ({
+            reviewHistory: state.reviewHistory.filter(e => e.id !== id),
           }),
           undefined,
           'review/removeHistoryEntry'
@@ -308,5 +310,5 @@ export const selectSortedPRs = (state: ReviewStore): PullRequest[] => {
  */
 export const selectSelectedPR = (state: ReviewStore): PullRequest | undefined => {
   if (state.selectedPrNumber === null) return undefined;
-  return state.pullRequests.find((pr) => pr.number === state.selectedPrNumber);
+  return state.pullRequests.find(pr => pr.number === state.selectedPrNumber);
 };

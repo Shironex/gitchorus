@@ -102,7 +102,7 @@ export function PRCard({ pr, isSelected, onClick }: PRCardProps) {
         {/* Footer: labels + metadata */}
         <div className="flex items-center gap-2 mt-2.5 flex-wrap">
           {/* Labels */}
-          {pr.labels.map((label) => (
+          {pr.labels.map(label => (
             <Badge
               key={label.name}
               variant="outline"
@@ -147,14 +147,10 @@ export function PRCard({ pr, isSelected, onClick }: PRCardProps) {
           )}
 
           {/* Author */}
-          <span className="text-xs text-muted-foreground">
-            {pr.author.login}
-          </span>
+          <span className="text-xs text-muted-foreground">{pr.author.login}</span>
 
           {/* Age */}
-          <span className="text-xs text-muted-foreground">
-            {formatRelativeTime(pr.updatedAt)}
-          </span>
+          <span className="text-xs text-muted-foreground">{formatRelativeTime(pr.updatedAt)}</span>
         </div>
       </CardContent>
     </Card>

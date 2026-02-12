@@ -41,11 +41,7 @@ export function DashboardView({ onNavigateToIssue, onNavigateToPR }: DashboardVi
         <StatsCards stats={stats} />
 
         {/* Quality Score Chart */}
-        <QualityChart
-          data={qualityChartData}
-          timeRange={timeRange}
-          setTimeRange={setTimeRange}
-        />
+        <QualityChart data={qualityChartData} timeRange={timeRange} setTimeRange={setTimeRange} />
 
         {/* Activity Feed */}
         <ActivityFeed items={activityItems} onNavigate={handleNavigate} />

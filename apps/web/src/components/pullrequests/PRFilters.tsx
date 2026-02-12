@@ -25,22 +25,20 @@ const STATE_OPTIONS: { value: 'open' | 'closed' | 'all'; label: string }[] = [
 export function PRFilters() {
   const sortBy = useReviewStore(selectPRSortBy);
   const filterState = useReviewStore(selectPRFilterState);
-  const setSortBy = useReviewStore((state) => state.setSortBy);
-  const setFilterState = useReviewStore((state) => state.setFilterState);
+  const setSortBy = useReviewStore(state => state.setSortBy);
+  const setFilterState = useReviewStore(state => state.setFilterState);
 
   return (
     <div className="flex items-center gap-2">
       {/* Sort toggle group */}
       <div className="flex items-center rounded-lg border border-border/60 overflow-hidden">
-        {SORT_OPTIONS.map((option) => (
+        {SORT_OPTIONS.map(option => (
           <button
             key={option.value}
             className={cn(
               'px-3 py-1.5 text-xs font-medium transition-colors',
               'hover:bg-muted/80',
-              sortBy === option.value
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground'
+              sortBy === option.value ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
             )}
             onClick={() => setSortBy(option.value)}
           >
@@ -51,15 +49,13 @@ export function PRFilters() {
 
       {/* State filter toggle group */}
       <div className="flex items-center rounded-lg border border-border/60 overflow-hidden">
-        {STATE_OPTIONS.map((option) => (
+        {STATE_OPTIONS.map(option => (
           <button
             key={option.value}
             className={cn(
               'px-3 py-1.5 text-xs font-medium transition-colors',
               'hover:bg-muted/80',
-              filterState === option.value
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground'
+              filterState === option.value ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
             )}
             onClick={() => setFilterState(option.value)}
           >

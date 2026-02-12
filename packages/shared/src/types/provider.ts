@@ -87,10 +87,7 @@ export interface BaseProvider {
    */
   validate(
     params: ValidationParams
-  ): AsyncGenerator<
-    import('./validation').ValidationStep,
-    import('./validation').ValidationResult
-  >;
+  ): AsyncGenerator<import('./validation').ValidationStep, import('./validation').ValidationResult>;
 }
 
 // ============================================

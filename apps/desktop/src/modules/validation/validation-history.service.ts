@@ -78,21 +78,16 @@ export class ValidationHistoryService {
 
     // Filter by repository
     if (filter.repositoryFullName) {
-      entries = entries.filter(
-        (e) => e.repositoryFullName === filter.repositoryFullName
-      );
+      entries = entries.filter(e => e.repositoryFullName === filter.repositoryFullName);
     }
 
     // Filter by issue number
     if (filter.issueNumber !== undefined) {
-      entries = entries.filter((e) => e.issueNumber === filter.issueNumber);
+      entries = entries.filter(e => e.issueNumber === filter.issueNumber);
     }
 
     // Sort by validatedAt descending
-    entries.sort(
-      (a, b) =>
-        new Date(b.validatedAt).getTime() - new Date(a.validatedAt).getTime()
-    );
+    entries.sort((a, b) => new Date(b.validatedAt).getTime() - new Date(a.validatedAt).getTime());
 
     // Apply limit
     if (filter.limit && filter.limit > 0) {
@@ -124,7 +119,7 @@ export class ValidationHistoryService {
    */
   delete(id: string): boolean {
     const entries = this.getAllEntries();
-    const index = entries.findIndex((e) => e.id === id);
+    const index = entries.findIndex(e => e.id === id);
 
     if (index === -1) {
       logger.debug(`History entry not found: ${id}`);
@@ -142,9 +137,7 @@ export class ValidationHistoryService {
    */
   clear(repositoryFullName?: string): void {
     if (repositoryFullName) {
-      const entries = this.getAllEntries().filter(
-        (e) => e.repositoryFullName !== repositoryFullName
-      );
+      const entries = this.getAllEntries().filter(e => e.repositoryFullName !== repositoryFullName);
       this.store.set(STORE_KEY, entries);
       logger.info(`Cleared history for ${repositoryFullName}`);
     } else {

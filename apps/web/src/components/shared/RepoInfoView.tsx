@@ -39,9 +39,7 @@ export function RepoInfoView({ className }: RepoInfoViewProps) {
                 <GitBranch size={24} className="text-primary" />
               </div>
               <div className="min-w-0">
-                <h2 className="text-xl font-semibold text-foreground truncate">
-                  {repositoryName}
-                </h2>
+                <h2 className="text-xl font-semibold text-foreground truncate">{repositoryName}</h2>
                 <p className="text-sm text-muted-foreground">Connected repository</p>
               </div>
             </div>
@@ -83,7 +81,9 @@ export function RepoInfoView({ className }: RepoInfoViewProps) {
                   <FolderOpen size={18} className="text-foreground/70 shrink-0" />
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground">Local path</p>
-                    <p className="text-sm text-foreground/80 truncate font-mono">{repositoryPath}</p>
+                    <p className="text-sm text-foreground/80 truncate font-mono">
+                      {repositoryPath}
+                    </p>
                   </div>
                 </div>
               )}

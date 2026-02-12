@@ -131,7 +131,6 @@ describe('GitGateway', () => {
       expect(result.error).toBeUndefined();
       expect(mockGitService.getBranches).toHaveBeenCalledWith('/valid/absolute/path');
     });
-
   });
 
   // ========================================================================

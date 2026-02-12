@@ -61,27 +61,34 @@ interface IssueCardProps {
  * Per design decision: minimal metadata (title, labels, age only).
  * Validation status is read from the validation store (queue state).
  */
-export function IssueCard({ issue, isSelected, onClick, validationStatus: propStatus }: IssueCardProps) {
+export function IssueCard({
+  issue,
+  isSelected,
+  onClick,
+  validationStatus: propStatus,
+}: IssueCardProps) {
   // Read status from the validation store queue, falling back to prop
-  const queueItem = useValidationStore((state) =>
-    state.queue.find((q) => q.issueNumber === issue.number)
+  const queueItem = useValidationStore(state =>
+    state.queue.find(q => q.issueNumber === issue.number)
   );
   const storeStatus = queueItem?.status;
   // Also check if there's a result stored (completed validation not yet in queue)
-  const hasResult = useValidationStore((state) => state.results.has(issue.number));
+  const hasResult = useValidationStore(state => state.results.has(issue.number));
 
   // Check latest validation for staleness detection — inline to avoid creating new closure each render
-  const latestValidation = useValidationStore((state) => {
+  const latestValidation = useValidationStore(state => {
     const liveResult = state.results.get(issue.number);
     if (liveResult) return liveResult;
-    return state.history.find((e) => e.issueNumber === issue.number);
+    return state.history.find(e => e.issueNumber === issue.number);
   });
 
   const effectiveStatus = storeStatus || propStatus || (hasResult ? 'completed' : undefined);
   const validationBadge = effectiveStatus ? getValidationBadge(effectiveStatus) : null;
 
   // Staleness: issue was updated after the last validation
-  const isStale = !!latestValidation && new Date(issue.updatedAt).getTime() > new Date(latestValidation.validatedAt).getTime();
+  const isStale =
+    !!latestValidation &&
+    new Date(issue.updatedAt).getTime() > new Date(latestValidation.validatedAt).getTime();
 
   return (
     <Card
@@ -125,7 +132,7 @@ export function IssueCard({ issue, isSelected, onClick, validationStatus: propSt
         {/* Footer: labels + metadata */}
         <div className="flex items-center gap-2 mt-2.5 flex-wrap">
           {/* Labels */}
-          {issue.labels.map((label) => (
+          {issue.labels.map(label => (
             <Badge
               key={label.name}
               variant="outline"

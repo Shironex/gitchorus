@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  createLogger,
-} from '@gitchorus/shared';
+import { createLogger } from '@gitchorus/shared';
 import type {
   Logger,
   ValidationStep,
@@ -121,9 +119,7 @@ export class ReviewService {
    */
   private async processQueue(): Promise<void> {
     // Find the next queued item
-    const nextItem = Array.from(this.reviewQueue.values()).find(
-      (item) => item.status === 'queued'
-    );
+    const nextItem = Array.from(this.reviewQueue.values()).find(item => item.status === 'queued');
 
     if (!nextItem || !this.projectPath) {
       this.currentReview = null;
@@ -228,8 +224,7 @@ export class ReviewService {
         result,
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const isCancelled = errorMessage.includes('cancelled') || errorMessage.includes('aborted');
 
       const status: ReviewStatus = isCancelled ? 'cancelled' : 'failed';
@@ -252,10 +247,7 @@ export class ReviewService {
   /**
    * Update a queue item's fields.
    */
-  private updateQueueItem(
-    prNumber: number,
-    updates: Partial<ReviewQueueItem>
-  ): void {
+  private updateQueueItem(prNumber: number, updates: Partial<ReviewQueueItem>): void {
     const existing = this.reviewQueue.get(prNumber);
     if (existing) {
       this.reviewQueue.set(prNumber, { ...existing, ...updates });

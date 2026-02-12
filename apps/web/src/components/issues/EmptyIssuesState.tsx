@@ -11,12 +11,7 @@ interface EmptyIssuesStateProps {
  */
 export function EmptyIssuesState({ className }: EmptyIssuesStateProps) {
   return (
-    <div
-      className={cn(
-        'flex flex-col items-center justify-center py-16 px-4',
-        className
-      )}
-    >
+    <div className={cn('flex flex-col items-center justify-center py-16 px-4', className)}>
       <div className="w-16 h-16 rounded-2xl bg-primary/10 border border-primary/20 flex items-center justify-center mb-4">
         <CircleCheck size={32} className="text-primary" />
       </div>

@@ -1,8 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  createLogger,
-} from '@gitchorus/shared';
+import { createLogger } from '@gitchorus/shared';
 import type {
   Logger,
   ValidationStep,
@@ -128,7 +126,7 @@ export class ValidationService {
   private async processQueue(): Promise<void> {
     // Find the next queued item
     const nextItem = Array.from(this.validationQueue.values()).find(
-      (item) => item.status === 'queued'
+      item => item.status === 'queued'
     );
 
     if (!nextItem || !this.projectPath) {
@@ -229,8 +227,7 @@ export class ValidationService {
         result,
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
       const isCancelled = errorMessage.includes('cancelled') || errorMessage.includes('aborted');
 
       const status: ValidationStatus = isCancelled ? 'cancelled' : 'failed';
@@ -254,10 +251,7 @@ export class ValidationService {
   /**
    * Update a queue item's fields.
    */
-  private updateQueueItem(
-    issueNumber: number,
-    updates: Partial<ValidationQueueItem>
-  ): void {
+  private updateQueueItem(issueNumber: number, updates: Partial<ValidationQueueItem>): void {
     const existing = this.validationQueue.get(issueNumber);
     if (existing) {
       this.validationQueue.set(issueNumber, { ...existing, ...updates });

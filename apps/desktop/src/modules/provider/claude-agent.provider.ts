@@ -139,7 +139,10 @@ const REVIEW_OUTPUT_SCHEMA = {
         type: 'object',
         properties: {
           severity: { type: 'string', enum: ['critical', 'major', 'minor', 'nit'] },
-          category: { type: 'string', enum: ['security', 'logic', 'performance', 'style', 'codebase-fit'] },
+          category: {
+            type: 'string',
+            enum: ['security', 'logic', 'performance', 'style', 'codebase-fit'],
+          },
           file: { type: 'string' },
           line: { type: 'number' },
           codeSnippet: { type: 'string' },
@@ -147,7 +150,16 @@ const REVIEW_OUTPUT_SCHEMA = {
           suggestedFix: { type: 'string' },
           title: { type: 'string' },
         },
-        required: ['severity', 'category', 'file', 'line', 'codeSnippet', 'explanation', 'suggestedFix', 'title'],
+        required: [
+          'severity',
+          'category',
+          'file',
+          'line',
+          'codeSnippet',
+          'explanation',
+          'suggestedFix',
+          'title',
+        ],
       },
     },
     verdict: { type: 'string' },
@@ -221,9 +233,7 @@ function truncate(str: string, maxLen: number): string {
  * Parse tool_use content blocks from an SDK assistant message
  * and yield detailed progress steps.
  */
-function* parseAssistantToolUseBlocks(
-  message: SDKAssistantMessage
-): Generator<ValidationStep> {
+function* parseAssistantToolUseBlocks(message: SDKAssistantMessage): Generator<ValidationStep> {
   const content = message.message?.content;
   if (!Array.isArray(content)) return;
 
@@ -347,13 +357,14 @@ export class ClaudeAgentProvider {
    * If params.fileTransport is provided, creates a logger with file transport
    * for writing structured logs to disk.
    */
-  async *validate(
-    params: ValidationParams
-  ): AsyncGenerator<ValidationStep, ValidationResult> {
+  async *validate(params: ValidationParams): AsyncGenerator<ValidationStep, ValidationResult> {
     const startTime = Date.now();
     const settingsConfig = this.settingsService.getConfig();
     const model = params.config?.model || settingsConfig.model || DEFAULT_MODEL;
-    const maxTurns = params.config?.maxTurns || REVIEW_DEPTH_CONFIG[settingsConfig.validationDepth].validationMaxTurns || DEFAULT_MAX_TURNS;
+    const maxTurns =
+      params.config?.maxTurns ||
+      REVIEW_DEPTH_CONFIG[settingsConfig.validationDepth].validationMaxTurns ||
+      DEFAULT_MAX_TURNS;
 
     // Create logger — with file transport if provided
     const logger = createLogger('ClaudeAgentProvider', {
@@ -477,7 +488,9 @@ export class ClaudeAgentProvider {
         const parsed = JSON.parse(resultMessage.result);
         return this.buildValidationResult(parsed, params, model, startTime, resultMessage);
       } catch {
-        throw new Error('Agent did not produce structured output and result text is not valid JSON');
+        throw new Error(
+          'Agent did not produce structured output and result text is not valid JSON'
+        );
       }
     }
 
@@ -490,13 +503,14 @@ export class ClaudeAgentProvider {
    * This is an async generator that yields ValidationStep events
    * for progress tracking and returns the final ReviewResult.
    */
-  async *review(
-    params: ReviewParams
-  ): AsyncGenerator<ValidationStep, ReviewResult> {
+  async *review(params: ReviewParams): AsyncGenerator<ValidationStep, ReviewResult> {
     const startTime = Date.now();
     const settingsConfig = this.settingsService.getConfig();
     const model = params.config?.model || settingsConfig.model || DEFAULT_MODEL;
-    const maxTurns = params.config?.maxTurns || REVIEW_DEPTH_CONFIG[settingsConfig.reviewDepth].reviewMaxTurns || DEFAULT_REVIEW_MAX_TURNS;
+    const maxTurns =
+      params.config?.maxTurns ||
+      REVIEW_DEPTH_CONFIG[settingsConfig.reviewDepth].reviewMaxTurns ||
+      DEFAULT_REVIEW_MAX_TURNS;
 
     // Create logger -- with file transport if provided
     const logger = createLogger('ClaudeAgentProvider', {
@@ -615,7 +629,9 @@ export class ClaudeAgentProvider {
         const parsed = JSON.parse(resultMessage.result);
         return this.buildReviewResult(parsed, params, model, startTime, resultMessage);
       } catch {
-        throw new Error('Review agent did not produce structured output and result text is not valid JSON');
+        throw new Error(
+          'Review agent did not produce structured output and result text is not valid JSON'
+        );
       }
     }
 

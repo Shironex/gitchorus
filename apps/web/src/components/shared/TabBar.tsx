@@ -22,15 +22,13 @@ const TABS: { value: AppTab; label: string }[] = [
 export function TabBar({ activeTab, onTabChange, className }: TabBarProps) {
   return (
     <div className={cn('flex border-b border-border', className)}>
-      {TABS.map((tab) => (
+      {TABS.map(tab => (
         <button
           key={tab.value}
           className={cn(
             'px-4 py-2.5 text-sm font-medium transition-colors relative',
             'hover:text-foreground',
-            activeTab === tab.value
-              ? 'text-foreground'
-              : 'text-muted-foreground'
+            activeTab === tab.value ? 'text-foreground' : 'text-muted-foreground'
           )}
           onClick={() => onTabChange(tab.value)}
         >

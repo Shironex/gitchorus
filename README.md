@@ -39,19 +39,19 @@ Unlike generic AI chat tools, GitChorus actually reads your codebase. The AI age
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Issue Validation** | AI agent reads your codebase to validate bug reports and assess feature requests with structured analysis |
-| **PR Code Review** | Comprehensive review with severity-categorized findings, code evidence, and suggested fixes |
-| **Streaming Progress** | Watch the AI agent work in real-time — see which files it reads, which tools it uses |
-| **GitHub Integration** | Push validation summaries and review findings to GitHub with one click (inline PR comments included) |
-| **Review History** | All validation and review results are persisted locally and survive app restarts |
-| **Dashboard** | Overview of open issues, PRs, quality score trends, and recent activity |
-| **Provider Abstraction** | Claude SDK as default provider, with architecture ready for Codex, Gemini, and other CLI-based providers |
-| **Configurable** | Choose your model, review depth, default review action, and more from project settings |
-| **Dark/Light Themes** | Multiple theme options with syntax-highlighted code blocks via shiki |
-| **Cross-Platform** | Native support for macOS, Windows, and Linux via Electron |
-| **Auto-Updates** | Built-in update detection and in-app installation |
+| Feature                  | Description                                                                                               |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- |
+| **Issue Validation**     | AI agent reads your codebase to validate bug reports and assess feature requests with structured analysis |
+| **PR Code Review**       | Comprehensive review with severity-categorized findings, code evidence, and suggested fixes               |
+| **Streaming Progress**   | Watch the AI agent work in real-time — see which files it reads, which tools it uses                      |
+| **GitHub Integration**   | Push validation summaries and review findings to GitHub with one click (inline PR comments included)      |
+| **Review History**       | All validation and review results are persisted locally and survive app restarts                          |
+| **Dashboard**            | Overview of open issues, PRs, quality score trends, and recent activity                                   |
+| **Provider Abstraction** | Claude SDK as default provider, with architecture ready for Codex, Gemini, and other CLI-based providers  |
+| **Configurable**         | Choose your model, review depth, default review action, and more from project settings                    |
+| **Dark/Light Themes**    | Multiple theme options with syntax-highlighted code blocks via shiki                                      |
+| **Cross-Platform**       | Native support for macOS, Windows, and Linux via Electron                                                 |
+| **Auto-Updates**         | Built-in update detection and in-app installation                                                         |
 
 ## How It Works
 
@@ -174,18 +174,18 @@ gitchorus/
 
 ## Tech Stack
 
-| Layer | Technology |
-|-------|------------|
-| Desktop | Electron 40 |
-| Backend | NestJS 10, EventEmitter2 |
-| Frontend | React 18, Zustand 5 |
-| AI Provider | Claude Agent SDK |
-| Styling | Tailwind CSS 4 |
-| Markdown | ReactMarkdown, shiki (syntax highlighting) |
-| Charts | Recharts |
-| Build | Vite, esbuild |
-| IPC | Socket.io |
-| Persistence | electron-store |
+| Layer       | Technology                                 |
+| ----------- | ------------------------------------------ |
+| Desktop     | Electron 40                                |
+| Backend     | NestJS 10, EventEmitter2                   |
+| Frontend    | React 18, Zustand 5                        |
+| AI Provider | Claude Agent SDK                           |
+| Styling     | Tailwind CSS 4                             |
+| Markdown    | ReactMarkdown, shiki (syntax highlighting) |
+| Charts      | Recharts                                   |
+| Build       | Vite, esbuild                              |
+| IPC         | Socket.io                                  |
+| Persistence | electron-store                             |
 
 ## Contributing
 

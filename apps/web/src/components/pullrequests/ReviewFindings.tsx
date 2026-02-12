@@ -13,10 +13,7 @@ type ReviewAction = 'REQUEST_CHANGES' | 'COMMENT';
 
 interface ReviewFindingsProps {
   result: ReviewResult;
-  onPushToGithub: (
-    selectedFindings: ReviewFinding[],
-    reviewAction: ReviewAction,
-  ) => void;
+  onPushToGithub: (selectedFindings: ReviewFinding[], reviewAction: ReviewAction) => void;
 }
 
 // ============================================
@@ -56,10 +53,7 @@ const severityCountBg: Record<ReviewSeverity, string> = {
  */
 export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) {
   // All findings selected by default
-  const allIndices = useMemo(
-    () => new Set(result.findings.map((_, i) => i)),
-    [result.findings],
-  );
+  const allIndices = useMemo(() => new Set(result.findings.map((_, i) => i)), [result.findings]);
   const [selectedFindings, setSelectedFindings] = useState<Set<number>>(allIndices);
   const [actionOverride, setActionOverride] = useState<ReviewAction | null>(null);
   const [showActionDropdown, setShowActionDropdown] = useState(false);
@@ -100,7 +94,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
 
   // Toggle individual finding
   const toggleFinding = useCallback((index: number) => {
-    setSelectedFindings((prev) => {
+    setSelectedFindings(prev => {
       const next = new Set(prev);
       if (next.has(index)) {
         next.delete(index);
@@ -117,7 +111,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
       const group = groupedFindings.get(severity);
       if (!group || group.length === 0) return;
 
-      setSelectedFindings((prev) => {
+      setSelectedFindings(prev => {
         const next = new Set(prev);
         const allSelected = group.every(({ index }) => next.has(index));
 
@@ -135,7 +129,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
         return next;
       });
     },
-    [groupedFindings],
+    [groupedFindings]
   );
 
   // Check if all findings in a severity group are selected
@@ -145,7 +139,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
       if (!group || group.length === 0) return false;
       return group.every(({ index }) => selectedFindings.has(index));
     },
-    [groupedFindings, selectedFindings],
+    [groupedFindings, selectedFindings]
   );
 
   // Check if some (but not all) findings in a severity group are selected
@@ -156,7 +150,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
       const selectedInGroup = group.filter(({ index }) => selectedFindings.has(index));
       return selectedInGroup.length > 0 && selectedInGroup.length < group.length;
     },
-    [groupedFindings, selectedFindings],
+    [groupedFindings, selectedFindings]
   );
 
   if (result.findings.length === 0) {
@@ -178,12 +172,12 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
           {/* Review action indicator */}
           <div className="relative">
             <button
-              onClick={() => setShowActionDropdown((p) => !p)}
+              onClick={() => setShowActionDropdown(p => !p)}
               className={cn(
                 'flex items-center gap-1 px-2 py-1 rounded border text-xs font-medium transition-colors',
                 reviewAction === 'REQUEST_CHANGES'
                   ? 'border-orange-500/30 text-orange-600 dark:text-orange-400 bg-orange-500/5'
-                  : 'border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/5',
+                  : 'border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/5'
               )}
             >
               {reviewAction === 'REQUEST_CHANGES' ? 'Request Changes' : 'Comment'}
@@ -194,7 +188,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
                 <button
                   className={cn(
                     'w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors',
-                    reviewAction === 'REQUEST_CHANGES' && 'font-medium text-foreground',
+                    reviewAction === 'REQUEST_CHANGES' && 'font-medium text-foreground'
                   )}
                   onClick={() => {
                     setActionOverride('REQUEST_CHANGES');
@@ -206,7 +200,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
                 <button
                   className={cn(
                     'w-full text-left px-3 py-1.5 text-xs hover:bg-muted transition-colors',
-                    reviewAction === 'COMMENT' && 'font-medium text-foreground',
+                    reviewAction === 'COMMENT' && 'font-medium text-foreground'
                   )}
                   onClick={() => {
                     setActionOverride('COMMENT');
@@ -232,7 +226,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
       </div>
 
       {/* Severity groups */}
-      {SEVERITY_ORDER.map((severity) => {
+      {SEVERITY_ORDER.map(severity => {
         const group = groupedFindings.get(severity);
         if (!group || group.length === 0) return null;
 
@@ -247,17 +241,14 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
                 <input
                   type="checkbox"
                   checked={allSelected}
-                  ref={(el) => {
+                  ref={el => {
                     if (el) el.indeterminate = indeterminate;
                   }}
                   onChange={() => toggleSeverityGroup(severity)}
                   className="h-4 w-4 rounded border-input text-primary accent-primary focus:ring-primary"
                 />
                 <span
-                  className={cn(
-                    'text-sm font-semibold capitalize',
-                    severityHeaderColors[severity],
-                  )}
+                  className={cn('text-sm font-semibold capitalize', severityHeaderColors[severity])}
                 >
                   {severity}
                 </span>
@@ -265,7 +256,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
               <span
                 className={cn(
                   'text-[10px] font-bold px-1.5 py-0.5 rounded-full',
-                  severityCountBg[severity],
+                  severityCountBg[severity]
                 )}
               >
                 {group.length}

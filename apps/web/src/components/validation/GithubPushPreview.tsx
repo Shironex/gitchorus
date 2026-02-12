@@ -1,12 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import {
-  ExternalLink,
-  Send,
-  Loader2,
-  RefreshCw,
-  Pencil,
-  Eye,
-} from 'lucide-react';
+import { ExternalLink, Send, Loader2, RefreshCw, Pencil, Eye } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import {
@@ -76,14 +69,16 @@ const GITCHORUS_MARKER = '<!-- gitchorus-validation -->';
 function buildCommentBody(
   result: ValidationResult,
   toggles: SectionToggles,
-  sectionEdits?: SectionEdits,
+  sectionEdits?: SectionEdits
 ): string {
   const isFeature = result.issueType === 'feature';
   const lines: string[] = [GITCHORUS_MARKER];
 
   // Header
   const typeLabel = isFeature ? 'Feature Feasibility' : 'Bug Validation';
-  lines.push(`## ${typeLabel}: ${result.verdict.charAt(0).toUpperCase() + result.verdict.slice(1)} (${result.confidence}% confidence)`);
+  lines.push(
+    `## ${typeLabel}: ${result.verdict.charAt(0).toUpperCase() + result.verdict.slice(1)} (${result.confidence}% confidence)`
+  );
   lines.push('');
 
   // Verdict section
@@ -144,7 +139,9 @@ function buildCommentBody(
   // Affected files
   if (toggles.affectedFiles && result.affectedFiles.length > 0) {
     lines.push('<details>');
-    lines.push(`<summary><strong>Affected Files (${result.affectedFiles.length})</strong></summary>`);
+    lines.push(
+      `<summary><strong>Affected Files (${result.affectedFiles.length})</strong></summary>`
+    );
     lines.push('');
     for (const file of result.affectedFiles) {
       lines.push(`- \`${file.path}\` - ${file.reason}`);
@@ -160,7 +157,8 @@ function buildCommentBody(
 
   // Reasoning
   if (toggles.reasoning) {
-    const reasoningText = sectionEdits?.reasoning ?? (result as BugValidation | FeatureValidation).reasoning;
+    const reasoningText =
+      sectionEdits?.reasoning ?? (result as BugValidation | FeatureValidation).reasoning;
     lines.push('<details>');
     lines.push('<summary><strong>Reasoning</strong></summary>');
     lines.push('');
@@ -248,8 +246,10 @@ export function GithubPushPreview({
   onUpdate,
   onListComments,
 }: GithubPushPreviewProps) {
-  const pushStatus = useValidationStore((state) => state.pushStatus.get(issueNumber) || 'idle') as PushStatus;
-  const setPushStatus = useValidationStore((state) => state.setPushStatus);
+  const pushStatus = useValidationStore(
+    state => state.pushStatus.get(issueNumber) || 'idle'
+  ) as PushStatus;
+  const setPushStatus = useValidationStore(state => state.setPushStatus);
 
   const [toggles, setToggles] = useState<SectionToggles>({
     verdict: true,
@@ -269,7 +269,7 @@ export function GithubPushPreview({
   // Build comment body with current toggles and edits
   const commentBody = useMemo(
     () => buildCommentBody(result, toggles, sectionEdits),
-    [result, toggles, sectionEdits],
+    [result, toggles, sectionEdits]
   );
 
   // Check for prior GitChorus comments when modal opens
@@ -277,7 +277,7 @@ export function GithubPushPreview({
     setCheckingPrior(true);
     try {
       const comments = await onListComments(issueNumber);
-      const gitchorusComment = comments.find((c) => c.body.includes(GITCHORUS_MARKER));
+      const gitchorusComment = comments.find(c => c.body.includes(GITCHORUS_MARKER));
       if (gitchorusComment) {
         setPriorComment(gitchorusComment);
       }
@@ -301,11 +301,11 @@ export function GithubPushPreview({
   }, [open]);
 
   const handleToggle = (key: keyof SectionToggles) => {
-    setToggles((prev) => ({ ...prev, [key]: !prev[key] }));
+    setToggles(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
   const handleSectionEdit = (key: keyof SectionEdits, value: string) => {
-    setSectionEdits((prev) => ({ ...prev, [key]: value }));
+    setSectionEdits(prev => ({ ...prev, [key]: value }));
   };
 
   const handlePushNew = async () => {
@@ -387,9 +387,7 @@ export function GithubPushPreview({
                         <span className="font-medium text-foreground">{result.verdict}</span> at{' '}
                         {result.confidence}% confidence
                       </p>
-                      <p>
-                        Complexity: {result.complexity.replace('-', ' ')}
-                      </p>
+                      <p>Complexity: {result.complexity.replace('-', ' ')}</p>
                       {isFeature && (result as FeatureValidation).effortEstimate && (
                         <p>Effort: {(result as FeatureValidation).effortEstimate}</p>
                       )}
@@ -405,7 +403,7 @@ export function GithubPushPreview({
                     <textarea
                       className="w-full min-h-[80px] p-2.5 text-xs font-mono bg-muted/50 border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary"
                       value={sectionEdits.approach ?? result.suggestedApproach}
-                      onChange={(e) => handleSectionEdit('approach', e.target.value)}
+                      onChange={e => handleSectionEdit('approach', e.target.value)}
                     />
                   </SectionRow>
 
@@ -439,8 +437,11 @@ export function GithubPushPreview({
                   >
                     <textarea
                       className="w-full min-h-[80px] p-2.5 text-xs font-mono bg-muted/50 border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary"
-                      value={sectionEdits.reasoning ?? (result as BugValidation | FeatureValidation).reasoning}
-                      onChange={(e) => handleSectionEdit('reasoning', e.target.value)}
+                      value={
+                        sectionEdits.reasoning ??
+                        (result as BugValidation | FeatureValidation).reasoning
+                      }
+                      onChange={e => handleSectionEdit('reasoning', e.target.value)}
                     />
                   </SectionRow>
 
@@ -457,7 +458,7 @@ export function GithubPushPreview({
                           sectionEdits.featureDetails ??
                           buildFeatureDetailsText(result as FeatureValidation)
                         }
-                        onChange={(e) => handleSectionEdit('featureDetails', e.target.value)}
+                        onChange={e => handleSectionEdit('featureDetails', e.target.value)}
                       />
                     </SectionRow>
                   )}

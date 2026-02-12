@@ -25,22 +25,20 @@ export function IssueFilters() {
   const sortBy = useIssueStore(selectSortBy);
   const filterLabels = useIssueStore(selectFilterLabels);
   const availableLabels = useIssueStore(selectAvailableLabels);
-  const setSortBy = useIssueStore((state) => state.setSortBy);
-  const toggleLabelFilter = useIssueStore((state) => state.toggleLabelFilter);
+  const setSortBy = useIssueStore(state => state.setSortBy);
+  const toggleLabelFilter = useIssueStore(state => state.toggleLabelFilter);
 
   return (
     <div className="flex items-center gap-2">
       {/* Sort toggle group */}
       <div className="flex items-center rounded-lg border border-border/60 overflow-hidden">
-        {SORT_OPTIONS.map((option) => (
+        {SORT_OPTIONS.map(option => (
           <button
             key={option.value}
             className={cn(
               'px-3 py-1.5 text-xs font-medium transition-colors',
               'hover:bg-muted/80',
-              sortBy === option.value
-                ? 'bg-primary/10 text-primary'
-                : 'text-muted-foreground'
+              sortBy === option.value ? 'bg-primary/10 text-primary' : 'text-muted-foreground'
             )}
             onClick={() => setSortBy(option.value)}
           >
@@ -65,7 +63,7 @@ export function IssueFilters() {
           </PopoverTrigger>
           <PopoverContent className="w-56 p-2" align="start">
             <div className="space-y-1">
-              {availableLabels.map((label) => {
+              {availableLabels.map(label => {
                 const isActive = filterLabels.includes(label.name);
                 return (
                   <button
@@ -80,9 +78,7 @@ export function IssueFilters() {
                     <div
                       className={cn(
                         'w-3.5 h-3.5 rounded-sm border flex items-center justify-center',
-                        isActive
-                          ? 'bg-primary border-primary'
-                          : 'border-border'
+                        isActive ? 'bg-primary border-primary' : 'border-border'
                       )}
                     >
                       {isActive && <Check size={10} className="text-primary-foreground" />}

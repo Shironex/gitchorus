@@ -1,9 +1,9 @@
 /**
  * Git Gateway Integration Tests
  *
- * Tests git branch, commit, checkout, and worktree operations
+ * Tests git branch, commit, and checkout operations
  * with a real NestJS application and real socket.io connections.
- * GitService, WorktreeService, and GithubService are mocked at the service boundary.
+ * GitService and GithubService are mocked at the service boundary.
  */
 import { Module, INestApplication } from '@nestjs/common';
 import { Socket } from 'socket.io-client';
@@ -15,7 +15,6 @@ import {
 } from '../../../test/integration/helpers/socket-client';
 import { GitGateway } from './git.gateway';
 import { GitService } from './git.service';
-import { WorktreeService } from './worktree.service';
 import { GithubService } from './github.service';
 
 describe('GitGateway (integration)', () => {
@@ -39,12 +38,6 @@ describe('GitGateway (integration)', () => {
       createBranch: jest.fn().mockResolvedValue(undefined),
     };
 
-    const mockWorktreeService = {
-      list: jest.fn().mockResolvedValue([]),
-      prepare: jest.fn().mockResolvedValue('/tmp/worktree'),
-      cleanup: jest.fn().mockResolvedValue(undefined),
-    };
-
     const mockGithubService = {
       getStatus: jest.fn().mockResolvedValue({
         installed: true,
@@ -65,7 +58,6 @@ describe('GitGateway (integration)', () => {
       providers: [
         GitGateway,
         { provide: GitService, useValue: mockGitService },
-        { provide: WorktreeService, useValue: mockWorktreeService },
         { provide: GithubService, useValue: mockGithubService },
       ],
     })

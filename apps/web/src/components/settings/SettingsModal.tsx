@@ -4,7 +4,13 @@ import { cn } from '@/lib/utils';
 import { useSettingsStore } from '@/stores';
 import { Dialog, DialogOverlay, DialogPortal, DialogTitle } from '@/components/ui/dialog';
 import { SettingsNavigation } from './SettingsNavigation';
-import { AppearanceSection, GithubSection, GeneralSection, ProviderSection, ReviewPreferencesSection } from './sections';
+import {
+  AppearanceSection,
+  GithubSection,
+  GeneralSection,
+  ProviderSection,
+  ReviewPreferencesSection,
+} from './sections';
 
 export function SettingsModal() {
   const isOpen = useSettingsStore(state => state.isOpen);

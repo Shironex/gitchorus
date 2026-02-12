@@ -78,9 +78,7 @@ export function FindingCard({ finding, index, selected, onToggle }: FindingCardP
   const lang = detectLanguage(finding.file);
 
   // Wrap code in a fenced code block for Markdown component's shiki rendering
-  const codeSnippetMd = finding.codeSnippet
-    ? `\`\`\`${lang}\n${finding.codeSnippet}\n\`\`\``
-    : '';
+  const codeSnippetMd = finding.codeSnippet ? `\`\`\`${lang}\n${finding.codeSnippet}\n\`\`\`` : '';
 
   const suggestedFixMd = finding.suggestedFix
     ? `\`\`\`${lang}\n${finding.suggestedFix}\n\`\`\``
@@ -90,7 +88,7 @@ export function FindingCard({ finding, index, selected, onToggle }: FindingCardP
     <div
       className={cn(
         'rounded-lg border p-3 bg-card transition-colors',
-        selected ? 'border-primary/30 bg-primary/[0.02]' : 'hover:bg-muted/30',
+        selected ? 'border-primary/30 bg-primary/[0.02]' : 'hover:bg-muted/30'
       )}
     >
       <div className="flex items-start gap-3">
@@ -113,7 +111,7 @@ export function FindingCard({ finding, index, selected, onToggle }: FindingCardP
               <span
                 className={cn(
                   'text-[10px] px-1.5 py-0.5 rounded-full border font-semibold uppercase tracking-wide',
-                  severityColors[finding.severity],
+                  severityColors[finding.severity]
                 )}
               >
                 {finding.severity}
@@ -122,7 +120,7 @@ export function FindingCard({ finding, index, selected, onToggle }: FindingCardP
               <span
                 className={cn(
                   'text-[10px] px-1.5 py-0.5 rounded-full border font-medium capitalize',
-                  categoryColors[finding.category],
+                  categoryColors[finding.category]
                 )}
               >
                 {finding.category}
@@ -130,14 +128,14 @@ export function FindingCard({ finding, index, selected, onToggle }: FindingCardP
             </div>
 
             {/* Title */}
-            <h5 className="text-sm font-medium text-foreground leading-snug">
-              {finding.title}
-            </h5>
+            <h5 className="text-sm font-medium text-foreground leading-snug">{finding.title}</h5>
 
             {/* File path + line */}
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-mono">
               <FileCode2 size={12} className="shrink-0" />
-              <span className="truncate">{finding.file}:{finding.line}</span>
+              <span className="truncate">
+                {finding.file}:{finding.line}
+              </span>
             </div>
           </div>
 

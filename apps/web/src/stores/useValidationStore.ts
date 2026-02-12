@@ -85,7 +85,7 @@ type ValidationStore = ValidationState & ValidationActions;
 
 export const useValidationStore = create<ValidationStore>()(
   devtools(
-    (set) => ({
+    set => ({
       // Initial state
       queue: [],
       steps: new Map(),
@@ -105,7 +105,7 @@ export const useValidationStore = create<ValidationStore>()(
 
       addStep: (issueNumber: number, step: ValidationStep) => {
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.steps);
             const existing = updated.get(issueNumber) || [];
             updated.set(issueNumber, [...existing, step]);
@@ -117,9 +117,11 @@ export const useValidationStore = create<ValidationStore>()(
       },
 
       setResult: (issueNumber: number, result: ValidationResult) => {
-        logger.info(`Validation result for #${issueNumber}: ${result.verdict} (${result.confidence}%)`);
+        logger.info(
+          `Validation result for #${issueNumber}: ${result.verdict} (${result.confidence}%)`
+        );
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.results);
             updated.set(issueNumber, result);
             return { results: updated };
@@ -132,7 +134,7 @@ export const useValidationStore = create<ValidationStore>()(
       setError: (issueNumber: number, error: string) => {
         logger.warn(`Validation error for #${issueNumber}: ${error}`);
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.errors);
             updated.set(issueNumber, error);
             return { errors: updated };
@@ -144,7 +146,7 @@ export const useValidationStore = create<ValidationStore>()(
 
       clearSteps: (issueNumber: number) => {
         set(
-          (state) => {
+          state => {
             const updatedSteps = new Map(state.steps);
             updatedSteps.delete(issueNumber);
             const updatedErrors = new Map(state.errors);
@@ -167,7 +169,7 @@ export const useValidationStore = create<ValidationStore>()(
 
       setPushStatus: (issueNumber: number, status: PushStatus) => {
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.pushStatus);
             updated.set(issueNumber, status);
             return { pushStatus: updated };
@@ -179,7 +181,7 @@ export const useValidationStore = create<ValidationStore>()(
 
       setPostedCommentUrl: (issueNumber: number, url: string) => {
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.postedCommentUrls);
             updated.set(issueNumber, url);
             return { postedCommentUrls: updated };
@@ -191,7 +193,7 @@ export const useValidationStore = create<ValidationStore>()(
 
       setPostedCommentId: (issueNumber: number, commentId: string) => {
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.postedCommentIds);
             updated.set(issueNumber, commentId);
             return { postedCommentIds: updated };
@@ -212,8 +214,8 @@ export const useValidationStore = create<ValidationStore>()(
 
       removeHistoryEntry: (id: string) => {
         set(
-          (state) => ({
-            history: state.history.filter((e) => e.id !== id),
+          state => ({
+            history: state.history.filter(e => e.id !== id),
           }),
           undefined,
           'validation/removeHistoryEntry'
@@ -248,43 +250,57 @@ export const useValidationStore = create<ValidationStore>()(
 // ============================================
 
 /** Get queue status for a specific issue */
-export const selectQueueStatus = (issueNumber: number) => (state: ValidationStore): ValidationStatus | undefined => {
-  const item = state.queue.find((q) => q.issueNumber === issueNumber);
-  return item?.status;
-};
+export const selectQueueStatus =
+  (issueNumber: number) =>
+  (state: ValidationStore): ValidationStatus | undefined => {
+    const item = state.queue.find(q => q.issueNumber === issueNumber);
+    return item?.status;
+  };
 
 /** Get steps for a specific issue */
-export const selectSteps = (issueNumber: number) => (state: ValidationStore): ValidationStep[] => {
-  return state.steps.get(issueNumber) || [];
-};
+export const selectSteps =
+  (issueNumber: number) =>
+  (state: ValidationStore): ValidationStep[] => {
+    return state.steps.get(issueNumber) || [];
+  };
 
 /** Get result for a specific issue */
-export const selectResult = (issueNumber: number) => (state: ValidationStore): ValidationResult | undefined => {
-  return state.results.get(issueNumber);
-};
+export const selectResult =
+  (issueNumber: number) =>
+  (state: ValidationStore): ValidationResult | undefined => {
+    return state.results.get(issueNumber);
+  };
 
 /** Get error for a specific issue */
-export const selectValidationError = (issueNumber: number) => (state: ValidationStore): string | undefined => {
-  return state.errors.get(issueNumber);
-};
+export const selectValidationError =
+  (issueNumber: number) =>
+  (state: ValidationStore): string | undefined => {
+    return state.errors.get(issueNumber);
+  };
 
 /** Get push status for a specific issue */
-export const selectPushStatus = (issueNumber: number) => (state: ValidationStore): PushStatus => {
-  return state.pushStatus.get(issueNumber) || 'idle';
-};
+export const selectPushStatus =
+  (issueNumber: number) =>
+  (state: ValidationStore): PushStatus => {
+    return state.pushStatus.get(issueNumber) || 'idle';
+  };
 
 /** Get posted comment URL for a specific issue */
-export const selectPostedCommentUrl = (issueNumber: number) => (state: ValidationStore): string | undefined => {
-  return state.postedCommentUrls.get(issueNumber);
-};
+export const selectPostedCommentUrl =
+  (issueNumber: number) =>
+  (state: ValidationStore): string | undefined => {
+    return state.postedCommentUrls.get(issueNumber);
+  };
 
 /** Get the latest validation for an issue — checks live results first, then history */
-export const selectLatestValidationForIssue = (issueNumber: number) => (state: ValidationStore): ValidationResult | ValidationHistoryEntry | undefined => {
-  // Live result takes priority
-  const liveResult = state.results.get(issueNumber);
-  if (liveResult) return liveResult;
+export const selectLatestValidationForIssue =
+  (issueNumber: number) =>
+  (state: ValidationStore): ValidationResult | ValidationHistoryEntry | undefined => {
+    // Live result takes priority
+    const liveResult = state.results.get(issueNumber);
+    if (liveResult) return liveResult;
 
-  // Fall back to history
-  const historyEntry = state.history.find((e) => e.issueNumber === issueNumber);
-  return historyEntry;
-};
+    // Fall back to history
+    const historyEntry = state.history.find(e => e.issueNumber === issueNumber);
+    return historyEntry;
+  };

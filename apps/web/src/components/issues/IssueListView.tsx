@@ -46,21 +46,19 @@ function IssueCardSkeleton() {
  */
 export function IssueListView({ className }: IssueListViewProps) {
   const { isLoading, error, refetch } = useIssues();
-  const issues = useIssueStore((state) => state.issues);
-  const sortBy = useIssueStore((state) => state.sortBy);
-  const filterLabels = useIssueStore((state) => state.filterLabels);
-  const selectedIssueNumber = useIssueStore((state) => state.selectedIssueNumber);
-  const setSelectedIssue = useIssueStore((state) => state.setSelectedIssue);
+  const issues = useIssueStore(state => state.issues);
+  const sortBy = useIssueStore(state => state.sortBy);
+  const filterLabels = useIssueStore(state => state.filterLabels);
+  const selectedIssueNumber = useIssueStore(state => state.selectedIssueNumber);
+  const setSelectedIssue = useIssueStore(state => state.setSelectedIssue);
   const totalIssues = issues.length;
 
   // Memoize filtered+sorted issues to avoid creating new arrays on every render
   const filteredIssues = useMemo(() => {
     let filtered = issues;
     if (filterLabels.length > 0) {
-      filtered = filtered.filter((issue) =>
-        filterLabels.some((filterLabel) =>
-          issue.labels.some((label) => label.name === filterLabel)
-        )
+      filtered = filtered.filter(issue =>
+        filterLabels.some(filterLabel => issue.labels.some(label => label.name === filterLabel))
       );
     }
     const sorted = [...filtered];
@@ -83,10 +81,7 @@ export function IssueListView({ className }: IssueListViewProps) {
   return (
     <div className={cn('flex h-full', className)}>
       {/* Issue list panel */}
-      <div className={cn(
-        'flex flex-col h-full',
-        hasSelection ? 'w-1/2 border-r' : 'w-full'
-      )}>
+      <div className={cn('flex flex-col h-full', hasSelection ? 'w-1/2 border-r' : 'w-full')}>
         {/* Header */}
         <div className="flex items-center justify-between px-4 pt-4 pb-2">
           <div className="flex items-center gap-2">
@@ -148,22 +143,18 @@ export function IssueListView({ className }: IssueListViewProps) {
           ) : filteredIssues.length === 0 ? (
             /* Filtered empty */
             <div className="flex flex-col items-center justify-center py-12">
-              <p className="text-sm text-muted-foreground">
-                No issues match the selected filters.
-              </p>
+              <p className="text-sm text-muted-foreground">No issues match the selected filters.</p>
             </div>
           ) : (
             /* Issue cards */
             <div className="space-y-2">
-              {filteredIssues.map((issue) => (
+              {filteredIssues.map(issue => (
                 <IssueCard
                   key={issue.number}
                   issue={issue}
                   isSelected={selectedIssueNumber === issue.number}
                   onClick={() =>
-                    setSelectedIssue(
-                      selectedIssueNumber === issue.number ? null : issue.number
-                    )
+                    setSelectedIssue(selectedIssueNumber === issue.number ? null : issue.number)
                   }
                 />
               ))}

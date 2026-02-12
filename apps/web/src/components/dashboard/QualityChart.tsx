@@ -33,19 +33,15 @@ interface TooltipPayloadItem {
   payload: { date: string; score: number; prNumber: number };
 }
 
-function CustomTooltip({
-  active,
-  payload,
-}: {
-  active?: boolean;
-  payload?: TooltipPayloadItem[];
-}) {
+function CustomTooltip({ active, payload }: { active?: boolean; payload?: TooltipPayloadItem[] }) {
   if (!active || !payload || payload.length === 0) return null;
 
   const data = payload[0].payload;
   return (
     <div className="rounded-lg border border-border bg-popover px-3 py-2 text-sm shadow-md">
-      <p className="font-medium text-foreground">PR #{data.prNumber}: {data.score}/10</p>
+      <p className="font-medium text-foreground">
+        PR #{data.prNumber}: {data.score}/10
+      </p>
       <p className="text-xs text-muted-foreground">{formatDate(data.date)}</p>
     </div>
   );
@@ -68,7 +64,7 @@ export function QualityChart({ data, timeRange, setTimeRange }: QualityChartProp
 
         {/* Time range selector */}
         <div className="flex items-center gap-1">
-          {TIME_RANGES.map((range) => (
+          {TIME_RANGES.map(range => (
             <button
               key={range.value}
               className={cn(
@@ -96,11 +92,7 @@ export function QualityChart({ data, timeRange, setTimeRange }: QualityChartProp
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 5, right: 10, left: -10, bottom: 5 }}>
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="var(--color-border)"
-                opacity={0.3}
-              />
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--color-border)" opacity={0.3} />
               <XAxis
                 dataKey="date"
                 tickFormatter={formatDate}
@@ -122,7 +114,12 @@ export function QualityChart({ data, timeRange, setTimeRange }: QualityChartProp
                 stroke="var(--color-primary)"
                 strokeWidth={2}
                 dot={{ r: 4, fill: 'var(--color-primary)', stroke: 'var(--color-card)' }}
-                activeDot={{ r: 6, fill: 'var(--color-primary)', stroke: 'var(--color-card)', strokeWidth: 2 }}
+                activeDot={{
+                  r: 6,
+                  fill: 'var(--color-primary)',
+                  stroke: 'var(--color-card)',
+                  strokeWidth: 2,
+                }}
               />
             </LineChart>
           </ResponsiveContainer>

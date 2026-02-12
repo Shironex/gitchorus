@@ -84,7 +84,7 @@ function extractUniqueLabels(issues: Issue[]): IssueLabel[] {
 
 export const useIssueStore = create<IssueStore>()(
   devtools(
-    (set) => ({
+    set => ({
       // Initial state
       issues: [],
       isLoading: false,
@@ -127,10 +127,10 @@ export const useIssueStore = create<IssueStore>()(
 
       toggleLabelFilter: (labelName: string) => {
         set(
-          (state) => {
+          state => {
             const current = state.filterLabels;
             const updated = current.includes(labelName)
-              ? current.filter((l) => l !== labelName)
+              ? current.filter(l => l !== labelName)
               : [...current, labelName];
             return { filterLabels: updated };
           },
@@ -162,7 +162,7 @@ export const useIssueStore = create<IssueStore>()(
 
       setValidationStatus: (issueNumber: number, status: ValidationStatus) => {
         set(
-          (state) => {
+          state => {
             const updated = new Map(state.validationStatuses);
             updated.set(issueNumber, status);
             return { validationStatuses: updated };
@@ -213,10 +213,8 @@ export const selectFilteredSortedIssues = (state: IssueStore): Issue[] => {
 
   // Apply label filter
   if (state.filterLabels.length > 0) {
-    filtered = filtered.filter((issue) =>
-      state.filterLabels.some((filterLabel) =>
-        issue.labels.some((label) => label.name === filterLabel)
-      )
+    filtered = filtered.filter(issue =>
+      state.filterLabels.some(filterLabel => issue.labels.some(label => label.name === filterLabel))
     );
   }
 

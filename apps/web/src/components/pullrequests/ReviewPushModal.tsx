@@ -74,7 +74,7 @@ export function ReviewPushModal({
   const summaryBody = useMemo(() => {
     const findingSummaryParts = selectedFindings.map(
       (f, i) =>
-        `${i + 1}. **[${f.severity.toUpperCase()} - ${f.category}]** ${f.title} (\`${f.file}:${f.line}\`)`,
+        `${i + 1}. **[${f.severity.toUpperCase()} - ${f.category}]** ${f.title} (\`${f.file}:${f.line}\`)`
     );
 
     return [
@@ -104,7 +104,7 @@ export function ReviewPushModal({
         selectedFindings,
         verdict,
         qualityScore,
-        reviewAction,
+        reviewAction
       );
 
       setResultUrl(result.url ?? null);
@@ -158,7 +158,8 @@ export function ReviewPushModal({
               {skippedCount > 0 && (
                 <p className="flex items-center gap-1 text-yellow-600 dark:text-yellow-400">
                   <AlertTriangle size={12} />
-                  {skippedCount} comment{skippedCount !== 1 ? 's' : ''} could not be placed inline and were included in the summary
+                  {skippedCount} comment{skippedCount !== 1 ? 's' : ''} could not be placed inline
+                  and were included in the summary
                 </p>
               )}
             </div>
@@ -184,13 +185,15 @@ export function ReviewPushModal({
                     'px-2 py-1 rounded border font-medium',
                     reviewAction === 'REQUEST_CHANGES'
                       ? 'border-orange-500/30 text-orange-600 dark:text-orange-400 bg-orange-500/5'
-                      : 'border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/5',
+                      : 'border-blue-500/30 text-blue-600 dark:text-blue-400 bg-blue-500/5'
                   )}
                 >
-                  Review action: {reviewAction === 'REQUEST_CHANGES' ? 'Request Changes' : 'Comment'}
+                  Review action:{' '}
+                  {reviewAction === 'REQUEST_CHANGES' ? 'Request Changes' : 'Comment'}
                 </span>
                 <span className="text-muted-foreground">
-                  Posting {selectedFindings.length} inline comment{selectedFindings.length !== 1 ? 's' : ''} + 1 summary review
+                  Posting {selectedFindings.length} inline comment
+                  {selectedFindings.length !== 1 ? 's' : ''} + 1 summary review
                 </span>
               </div>
 
@@ -221,10 +224,14 @@ export function ReviewPushModal({
                         <span
                           className={cn(
                             'text-[10px] px-1.5 py-0.5 rounded-full border font-semibold uppercase tracking-wide',
-                            finding.severity === 'critical' && 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
-                            finding.severity === 'major' && 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
-                            finding.severity === 'minor' && 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
-                            finding.severity === 'nit' && 'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20',
+                            finding.severity === 'critical' &&
+                              'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
+                            finding.severity === 'major' &&
+                              'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+                            finding.severity === 'minor' &&
+                              'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400 border-yellow-500/20',
+                            finding.severity === 'nit' &&
+                              'bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20'
                           )}
                         >
                           {finding.severity}

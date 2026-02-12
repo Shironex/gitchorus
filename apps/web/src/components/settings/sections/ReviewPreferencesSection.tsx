@@ -8,11 +8,20 @@ import { useSettings } from '@/hooks/useSettings';
 const DEPTH_OPTIONS: ReviewDepth[] = ['quick', 'standard', 'thorough'];
 
 /** Review action labels */
-const REVIEW_ACTION_OPTIONS: { value: DefaultReviewAction; label: string; description: string }[] = [
-  { value: 'COMMENT', label: 'Comment', description: 'Leave feedback without explicit approval or rejection' },
-  { value: 'REQUEST_CHANGES', label: 'Request Changes', description: 'Request changes before the PR can be merged' },
-  { value: 'APPROVE', label: 'Approve', description: 'Approve the PR with review comments' },
-];
+const REVIEW_ACTION_OPTIONS: { value: DefaultReviewAction; label: string; description: string }[] =
+  [
+    {
+      value: 'COMMENT',
+      label: 'Comment',
+      description: 'Leave feedback without explicit approval or rejection',
+    },
+    {
+      value: 'REQUEST_CHANGES',
+      label: 'Request Changes',
+      description: 'Request changes before the PR can be merged',
+    },
+    { value: 'APPROVE', label: 'Approve', description: 'Approve the PR with review comments' },
+  ];
 
 export function ReviewPreferencesSection() {
   const { config, loading, updateConfig } = useSettings();
@@ -61,10 +70,12 @@ export function ReviewPreferencesSection() {
       <div className="space-y-3">
         <div>
           <h3 className="text-sm font-medium text-foreground">Validation Depth</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Controls analysis depth for issue validation</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Controls analysis depth for issue validation
+          </p>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          {DEPTH_OPTIONS.map((depth) => {
+          {DEPTH_OPTIONS.map(depth => {
             const depthConfig = REVIEW_DEPTH_CONFIG[depth];
             const isSelected = validationDepth === depth;
             return (
@@ -82,7 +93,9 @@ export function ReviewPreferencesSection() {
                   <span className="text-sm font-medium text-foreground">{depthConfig.label}</span>
                   {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">{depthConfig.description}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {depthConfig.description}
+                </p>
               </button>
             );
           })}
@@ -93,10 +106,12 @@ export function ReviewPreferencesSection() {
       <div className="space-y-3">
         <div>
           <h3 className="text-sm font-medium text-foreground">Review Depth</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Controls analysis depth for PR review</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Controls analysis depth for PR review
+          </p>
         </div>
         <div className="grid grid-cols-3 gap-2">
-          {DEPTH_OPTIONS.map((depth) => {
+          {DEPTH_OPTIONS.map(depth => {
             const depthConfig = REVIEW_DEPTH_CONFIG[depth];
             const isSelected = reviewDepth === depth;
             return (
@@ -114,7 +129,9 @@ export function ReviewPreferencesSection() {
                   <span className="text-sm font-medium text-foreground">{depthConfig.label}</span>
                   {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
                 </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">{depthConfig.description}</p>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {depthConfig.description}
+                </p>
               </button>
             );
           })}
@@ -125,10 +142,12 @@ export function ReviewPreferencesSection() {
       <div className="space-y-3">
         <div>
           <h3 className="text-sm font-medium text-foreground">Default Review Action</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">Default action when pushing review to GitHub</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Default action when pushing review to GitHub
+          </p>
         </div>
         <div className="space-y-2">
-          {REVIEW_ACTION_OPTIONS.map((option) => {
+          {REVIEW_ACTION_OPTIONS.map(option => {
             const isSelected = defaultReviewAction === option.value;
             return (
               <button

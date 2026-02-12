@@ -1,11 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import Store from 'electron-store';
 import { createLogger } from '@gitchorus/shared';
-import type {
-  ReviewResult,
-  ReviewHistoryEntry,
-  ReviewHistoryFilter,
-} from '@gitchorus/shared';
+import type { ReviewResult, ReviewHistoryEntry, ReviewHistoryFilter } from '@gitchorus/shared';
 
 const logger = createLogger('ReviewHistoryService');
 
@@ -78,21 +74,16 @@ export class ReviewHistoryService {
 
     // Filter by repository
     if (filter.repositoryFullName) {
-      entries = entries.filter(
-        (e) => e.repositoryFullName === filter.repositoryFullName
-      );
+      entries = entries.filter(e => e.repositoryFullName === filter.repositoryFullName);
     }
 
     // Filter by PR number
     if (filter.prNumber !== undefined) {
-      entries = entries.filter((e) => e.prNumber === filter.prNumber);
+      entries = entries.filter(e => e.prNumber === filter.prNumber);
     }
 
     // Sort by reviewedAt descending
-    entries.sort(
-      (a, b) =>
-        new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime()
-    );
+    entries.sort((a, b) => new Date(b.reviewedAt).getTime() - new Date(a.reviewedAt).getTime());
 
     // Apply limit
     if (filter.limit && filter.limit > 0) {
@@ -105,10 +96,7 @@ export class ReviewHistoryService {
   /**
    * Get the latest review result for a specific PR in a repository.
    */
-  getLatestForPR(
-    repositoryFullName: string,
-    prNumber: number
-  ): ReviewHistoryEntry | null {
+  getLatestForPR(repositoryFullName: string, prNumber: number): ReviewHistoryEntry | null {
     const entries = this.list({
       repositoryFullName,
       prNumber,
@@ -124,7 +112,7 @@ export class ReviewHistoryService {
    */
   delete(id: string): boolean {
     const entries = this.getAllEntries();
-    const index = entries.findIndex((e) => e.id === id);
+    const index = entries.findIndex(e => e.id === id);
 
     if (index === -1) {
       logger.debug(`History entry not found: ${id}`);
@@ -142,9 +130,7 @@ export class ReviewHistoryService {
    */
   clear(repositoryFullName?: string): void {
     if (repositoryFullName) {
-      const entries = this.getAllEntries().filter(
-        (e) => e.repositoryFullName !== repositoryFullName
-      );
+      const entries = this.getAllEntries().filter(e => e.repositoryFullName !== repositoryFullName);
       this.store.set(STORE_KEY, entries);
       logger.info(`Cleared history for ${repositoryFullName}`);
     } else {

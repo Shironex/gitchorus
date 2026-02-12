@@ -38,15 +38,15 @@ const logger = createLogger('useValidation');
  * Multiple calls will result in duplicate event handling.
  */
 export function useValidationSocket() {
-  const updateQueue = useValidationStore((state) => state.updateQueue);
-  const addStep = useValidationStore((state) => state.addStep);
-  const setResult = useValidationStore((state) => state.setResult);
-  const setError = useValidationStore((state) => state.setError);
-  const setHistory = useValidationStore((state) => state.setHistory);
-  const setHistoryLoading = useValidationStore((state) => state.setHistoryLoading);
-  const setValidationStatus = useIssueStore((state) => state.setValidationStatus);
+  const updateQueue = useValidationStore(state => state.updateQueue);
+  const addStep = useValidationStore(state => state.addStep);
+  const setResult = useValidationStore(state => state.setResult);
+  const setError = useValidationStore(state => state.setError);
+  const setHistory = useValidationStore(state => state.setHistory);
+  const setHistoryLoading = useValidationStore(state => state.setHistoryLoading);
+  const setValidationStatus = useIssueStore(state => state.setValidationStatus);
 
-  const repositoryFullName = useRepositoryStore((state) => state.githubInfo)?.fullName || null;
+  const repositoryFullName = useRepositoryStore(state => state.githubInfo)?.fullName || null;
   const prevRepoRef = useRef<string | null>(null);
 
   const fetchHistoryInternal = useCallback(
@@ -67,8 +67,7 @@ export function useValidationSocket() {
           setHistory(response.entries);
         }
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to fetch history';
+        const message = err instanceof Error ? err.message : 'Failed to fetch history';
         logger.error('Failed to fetch history:', message);
         setHistory([]);
       }
@@ -97,12 +96,8 @@ export function useValidationSocket() {
     const onError = (data: ValidationErrorResponse) => {
       logger.warn(`Error #${data.issueNumber}: ${data.error}`);
       setError(data.issueNumber, data.error);
-      const isCancelled =
-        data.error.includes('cancelled') || data.error.includes('aborted');
-      setValidationStatus(
-        data.issueNumber,
-        isCancelled ? 'cancelled' : 'failed'
-      );
+      const isCancelled = data.error.includes('cancelled') || data.error.includes('aborted');
+      setValidationStatus(data.issueNumber, isCancelled ? 'cancelled' : 'failed');
     };
 
     const onQueueUpdate = (data: ValidationQueueUpdateResponse) => {
@@ -125,14 +120,7 @@ export function useValidationSocket() {
       socket.off(ValidationEvents.ERROR, onError);
       socket.off(ValidationEvents.QUEUE_UPDATE, onQueueUpdate);
     };
-  }, [
-    addStep,
-    setResult,
-    setError,
-    updateQueue,
-    setValidationStatus,
-    fetchHistoryInternal,
-  ]);
+  }, [addStep, setResult, setError, updateQueue, setValidationStatus, fetchHistoryInternal]);
 
   // Fetch history when repository changes
   useEffect(() => {
@@ -150,17 +138,17 @@ export function useValidationSocket() {
  * Does NOT set up socket listeners — use useValidationSocket() for that.
  */
 export function useValidation() {
-  const repositoryPath = useRepositoryStore((state) => state.repositoryPath);
+  const repositoryPath = useRepositoryStore(state => state.repositoryPath);
 
-  const clearSteps = useValidationStore((state) => state.clearSteps);
-  const setError = useValidationStore((state) => state.setError);
-  const setPushStatus = useValidationStore((state) => state.setPushStatus);
-  const setPostedCommentUrl = useValidationStore((state) => state.setPostedCommentUrl);
-  const setPostedCommentId = useValidationStore((state) => state.setPostedCommentId);
-  const setHistory = useValidationStore((state) => state.setHistory);
-  const setHistoryLoading = useValidationStore((state) => state.setHistoryLoading);
-  const removeHistoryEntry = useValidationStore((state) => state.removeHistoryEntry);
-  const setValidationStatus = useIssueStore((state) => state.setValidationStatus);
+  const clearSteps = useValidationStore(state => state.clearSteps);
+  const setError = useValidationStore(state => state.setError);
+  const setPushStatus = useValidationStore(state => state.setPushStatus);
+  const setPostedCommentUrl = useValidationStore(state => state.setPostedCommentUrl);
+  const setPostedCommentId = useValidationStore(state => state.setPostedCommentId);
+  const setHistory = useValidationStore(state => state.setHistory);
+  const setHistoryLoading = useValidationStore(state => state.setHistoryLoading);
+  const removeHistoryEntry = useValidationStore(state => state.removeHistoryEntry);
+  const setValidationStatus = useIssueStore(state => state.setValidationStatus);
 
   const startValidation = useCallback(
     async (issueNumber: number) => {
@@ -171,16 +159,15 @@ export function useValidation() {
       setValidationStatus(issueNumber, 'queued');
 
       try {
-        await emitAsync<
-          ValidationStartPayload,
-          { success: boolean; error?: string }
-        >(ValidationEvents.START, {
-          projectPath: repositoryPath,
-          issueNumber,
-        });
+        await emitAsync<ValidationStartPayload, { success: boolean; error?: string }>(
+          ValidationEvents.START,
+          {
+            projectPath: repositoryPath,
+            issueNumber,
+          }
+        );
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to start validation';
+        const message = err instanceof Error ? err.message : 'Failed to start validation';
         logger.error('Failed to start validation:', message);
         setError(issueNumber, message);
         setValidationStatus(issueNumber, 'failed');
@@ -189,21 +176,17 @@ export function useValidation() {
     [repositoryPath, clearSteps, setError, setValidationStatus]
   );
 
-  const cancelValidation = useCallback(
-    async (issueNumber: number) => {
-      try {
-        await emitAsync<
-          ValidationCancelPayload,
-          { success: boolean; error?: string }
-        >(ValidationEvents.CANCEL, { issueNumber });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to cancel validation';
-        logger.error('Failed to cancel validation:', message);
-      }
-    },
-    []
-  );
+  const cancelValidation = useCallback(async (issueNumber: number) => {
+    try {
+      await emitAsync<ValidationCancelPayload, { success: boolean; error?: string }>(
+        ValidationEvents.CANCEL,
+        { issueNumber }
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to cancel validation';
+      logger.error('Failed to cancel validation:', message);
+    }
+  }, []);
 
   const pushToGithub = useCallback(
     async (issueNumber: number, body: string): Promise<string | null> => {
@@ -212,14 +195,14 @@ export function useValidation() {
       setPushStatus(issueNumber, 'pushing');
 
       try {
-        const response = await emitAsync<
-          GithubCreateCommentPayload,
-          GithubCreateCommentResponse
-        >(GithubEvents.CREATE_COMMENT, {
-          projectPath: repositoryPath,
-          issueNumber,
-          body,
-        });
+        const response = await emitAsync<GithubCreateCommentPayload, GithubCreateCommentResponse>(
+          GithubEvents.CREATE_COMMENT,
+          {
+            projectPath: repositoryPath,
+            issueNumber,
+            body,
+          }
+        );
 
         if (!response.success || !response.commentUrl) {
           throw new Error(response.error || 'Failed to create comment');
@@ -227,13 +210,10 @@ export function useValidation() {
 
         setPushStatus(issueNumber, 'posted');
         setPostedCommentUrl(issueNumber, response.commentUrl);
-        logger.info(
-          `Comment posted for #${issueNumber}: ${response.commentUrl}`
-        );
+        logger.info(`Comment posted for #${issueNumber}: ${response.commentUrl}`);
         return response.commentUrl;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to push to GitHub';
+        const message = err instanceof Error ? err.message : 'Failed to push to GitHub';
         logger.error('Failed to push to GitHub:', message);
         setPushStatus(issueNumber, 'idle');
         return null;
@@ -243,24 +223,20 @@ export function useValidation() {
   );
 
   const updateGithubComment = useCallback(
-    async (
-      issueNumber: number,
-      commentId: string,
-      body: string
-    ): Promise<string | null> => {
+    async (issueNumber: number, commentId: string, body: string): Promise<string | null> => {
       if (!repositoryPath) return null;
 
       setPushStatus(issueNumber, 'pushing');
 
       try {
-        const response = await emitAsync<
-          GithubUpdateCommentPayload,
-          GithubUpdateCommentResponse
-        >(GithubEvents.UPDATE_COMMENT, {
-          projectPath: repositoryPath,
-          commentId,
-          body,
-        });
+        const response = await emitAsync<GithubUpdateCommentPayload, GithubUpdateCommentResponse>(
+          GithubEvents.UPDATE_COMMENT,
+          {
+            projectPath: repositoryPath,
+            commentId,
+            body,
+          }
+        );
 
         if (!response.success || !response.commentUrl) {
           throw new Error(response.error || 'Failed to update comment');
@@ -269,13 +245,10 @@ export function useValidation() {
         setPushStatus(issueNumber, 'posted');
         setPostedCommentUrl(issueNumber, response.commentUrl);
         setPostedCommentId(issueNumber, commentId);
-        logger.info(
-          `Comment updated for #${issueNumber}: ${response.commentUrl}`
-        );
+        logger.info(`Comment updated for #${issueNumber}: ${response.commentUrl}`);
         return response.commentUrl;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to update comment';
+        const message = err instanceof Error ? err.message : 'Failed to update comment';
         logger.error('Failed to update GitHub comment:', message);
         setPushStatus(issueNumber, 'idle');
         return null;
@@ -289,13 +262,13 @@ export function useValidation() {
       if (!repositoryPath) return [];
 
       try {
-        const response = await emitAsync<
-          GithubListCommentsPayload,
-          GithubListCommentsResponse
-        >(GithubEvents.LIST_COMMENTS, {
-          projectPath: repositoryPath,
-          issueNumber,
-        });
+        const response = await emitAsync<GithubListCommentsPayload, GithubListCommentsResponse>(
+          GithubEvents.LIST_COMMENTS,
+          {
+            projectPath: repositoryPath,
+            issueNumber,
+          }
+        );
 
         if (response.error) {
           logger.warn('Error listing comments:', response.error);
@@ -304,8 +277,7 @@ export function useValidation() {
 
         return response.comments;
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to list comments';
+        const message = err instanceof Error ? err.message : 'Failed to list comments';
         logger.error('Failed to list comments:', message);
         return [];
       }
@@ -335,8 +307,7 @@ export function useValidation() {
           setHistory(response.entries);
         }
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to fetch history';
+        const message = err instanceof Error ? err.message : 'Failed to fetch history';
         logger.error('Failed to fetch history:', message);
         setHistory([]);
       }
@@ -361,10 +332,7 @@ export function useValidation() {
           logger.warn('Failed to delete history entry:', response.error);
         }
       } catch (err) {
-        const message =
-          err instanceof Error
-            ? err.message
-            : 'Failed to delete history entry';
+        const message = err instanceof Error ? err.message : 'Failed to delete history entry';
         logger.error('Failed to delete history entry:', message);
       }
     },
@@ -375,42 +343,35 @@ export function useValidation() {
    * Fetch recent backend log entries for the validation log panel.
    * Returns an array of LogEntry objects (future use — plumbing ready).
    */
-  const fetchLogEntries = useCallback(
-    async (limit: number = 100): Promise<LogEntry[]> => {
-      try {
-        const response = await emitAsync<
-          ValidationLogEntriesPayload,
-          ValidationLogEntriesResponse
-        >(ValidationEvents.LOG_ENTRIES, { limit });
+  const fetchLogEntries = useCallback(async (limit: number = 100): Promise<LogEntry[]> => {
+    try {
+      const response = await emitAsync<ValidationLogEntriesPayload, ValidationLogEntriesResponse>(
+        ValidationEvents.LOG_ENTRIES,
+        { limit }
+      );
 
-        if (response.error) {
-          logger.warn('Error fetching log entries:', response.error);
-          return [];
-        }
-
-        return response.entries;
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to fetch log entries';
-        logger.error('Failed to fetch log entries:', message);
+      if (response.error) {
+        logger.warn('Error fetching log entries:', response.error);
         return [];
       }
-    },
-    []
-  );
+
+      return response.entries;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch log entries';
+      logger.error('Failed to fetch log entries:', message);
+      return [];
+    }
+  }, []);
 
   /**
    * Check if a validation result is stale compared to the issue's updatedAt.
    * Returns true if the issue was updated after the validation completed.
    */
-  const isStale = useCallback(
-    (validatedAt: string, issueUpdatedAt: string): boolean => {
-      const validatedTime = new Date(validatedAt).getTime();
-      const updatedTime = new Date(issueUpdatedAt).getTime();
-      return updatedTime > validatedTime;
-    },
-    []
-  );
+  const isStale = useCallback((validatedAt: string, issueUpdatedAt: string): boolean => {
+    const validatedTime = new Date(validatedAt).getTime();
+    const updatedTime = new Date(issueUpdatedAt).getTime();
+    return updatedTime > validatedTime;
+  }, []);
 
   return {
     startValidation,

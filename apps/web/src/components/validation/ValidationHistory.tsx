@@ -48,16 +48,32 @@ function formatTimestamp(dateStr: string): string {
 /**
  * Get verdict display config
  */
-function getVerdictDisplay(verdict: ValidationVerdict): { icon: typeof CheckCircle2; className: string; label: string } {
+function getVerdictDisplay(verdict: ValidationVerdict): {
+  icon: typeof CheckCircle2;
+  className: string;
+  label: string;
+} {
   switch (verdict) {
     case 'confirmed':
-      return { icon: CheckCircle2, className: 'text-green-600 dark:text-green-400', label: 'Confirmed' };
+      return {
+        icon: CheckCircle2,
+        className: 'text-green-600 dark:text-green-400',
+        label: 'Confirmed',
+      };
     case 'likely':
       return { icon: CheckCircle2, className: 'text-blue-600 dark:text-blue-400', label: 'Likely' };
     case 'uncertain':
-      return { icon: HelpCircle, className: 'text-yellow-600 dark:text-yellow-400', label: 'Uncertain' };
+      return {
+        icon: HelpCircle,
+        className: 'text-yellow-600 dark:text-yellow-400',
+        label: 'Uncertain',
+      };
     case 'unlikely':
-      return { icon: AlertTriangle, className: 'text-orange-600 dark:text-orange-400', label: 'Unlikely' };
+      return {
+        icon: AlertTriangle,
+        className: 'text-orange-600 dark:text-orange-400',
+        label: 'Unlikely',
+      };
     case 'invalid':
       return { icon: XCircle, className: 'text-red-600 dark:text-red-400', label: 'Invalid' };
   }
@@ -92,9 +108,7 @@ function HistoryEntryRow({ entry, onSelect, onDelete }: HistoryEntryRowProps) {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-muted-foreground font-mono">#{entry.issueNumber}</span>
-          <span className="text-xs font-medium text-foreground truncate">
-            {entry.issueTitle}
-          </span>
+          <span className="text-xs font-medium text-foreground truncate">{entry.issueTitle}</span>
         </div>
         <div className="flex items-center gap-2 mt-0.5">
           {/* Issue type badge */}
@@ -104,9 +118,7 @@ function HistoryEntryRow({ entry, onSelect, onDelete }: HistoryEntryRowProps) {
           </Badge>
 
           {/* Confidence */}
-          <span className="text-[10px] text-muted-foreground">
-            {entry.confidence}%
-          </span>
+          <span className="text-[10px] text-muted-foreground">{entry.confidence}%</span>
 
           {/* Timestamp */}
           <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground">
@@ -129,7 +141,7 @@ function HistoryEntryRow({ entry, onSelect, onDelete }: HistoryEntryRowProps) {
         variant="ghost"
         size="sm"
         className="h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
-        onClick={(e) => {
+        onClick={e => {
           e.stopPropagation();
           onDelete(entry.id);
         }}
@@ -150,10 +162,10 @@ function HistoryEntryRow({ entry, onSelect, onDelete }: HistoryEntryRowProps) {
  */
 export function ValidationHistory() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const history = useValidationStore((state) => state.history);
-  const historyLoading = useValidationStore((state) => state.historyLoading);
+  const history = useValidationStore(state => state.history);
+  const historyLoading = useValidationStore(state => state.historyLoading);
   const { deleteHistoryEntry } = useValidation();
-  const setSelectedIssue = useIssueStore((s) => s.setSelectedIssue);
+  const setSelectedIssue = useIssueStore(s => s.setSelectedIssue);
 
   const handleSelect = (issueNumber: number) => {
     setSelectedIssue(issueNumber);
@@ -201,7 +213,7 @@ export function ValidationHistory() {
             </div>
           ) : (
             <div className="space-y-0.5 max-h-64 overflow-y-auto">
-              {history.map((entry) => (
+              {history.map(entry => (
                 <HistoryEntryRow
                   key={entry.id}
                   entry={entry}

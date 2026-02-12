@@ -1,9 +1,5 @@
 import { useState } from 'react';
-import {
-  X,
-  ChevronDown,
-  ChevronRight,
-} from 'lucide-react';
+import { X, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { ValidationStepLog } from '@/components/validation/ValidationStepLog';
 import type { ValidationStep } from '@gitchorus/shared';
@@ -32,18 +28,11 @@ export function ReviewProgress({ steps, isRunning, onCancel }: ReviewProgressPro
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <h4 className="text-xs font-medium text-foreground">Review Progress</h4>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-6 text-xs gap-1"
-            onClick={onCancel}
-          >
+          <Button size="sm" variant="outline" className="h-6 text-xs gap-1" onClick={onCancel}>
             <X size={12} /> Cancel
           </Button>
         </div>
-        {hasSteps && (
-          <ValidationStepLog steps={steps} isRunning={true} />
-        )}
+        {hasSteps && <ValidationStepLog steps={steps} isRunning={true} />}
       </div>
     );
   }

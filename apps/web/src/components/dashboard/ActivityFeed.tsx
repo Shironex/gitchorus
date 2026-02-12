@@ -76,9 +76,7 @@ function getTypeLabel(type: ActivityItem['type']): string {
 
 function getStatusBadge(item: ActivityItem) {
   if (item.qualityScore !== undefined) {
-    return (
-      <span className="text-xs font-medium text-amber-500">{item.qualityScore}/10</span>
-    );
+    return <span className="text-xs font-medium text-amber-500">{item.qualityScore}/10</span>;
   }
 
   if (item.verdict) {
@@ -130,7 +128,7 @@ export function ActivityFeed({ items, onNavigate }: ActivityFeedProps) {
         </div>
       ) : (
         <div className="max-h-96 overflow-y-auto -mx-2">
-          {items.map((item) => (
+          {items.map(item => (
             <button
               key={item.id}
               className="w-full text-left flex items-center gap-3 px-2 py-2.5 rounded-lg hover:bg-muted/50 transition-colors"

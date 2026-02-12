@@ -788,7 +788,7 @@ export class GitGateway implements OnGatewayInit {
         prNumber,
         body,
         event,
-        comments || [],
+        comments || []
       );
 
       return {

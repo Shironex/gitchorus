@@ -49,13 +49,13 @@ export function ReviewSummary({ result }: ReviewSummaryProps) {
       acc[f.severity] = (acc[f.severity] || 0) + 1;
       return acc;
     },
-    {} as Record<string, number>,
+    {} as Record<string, number>
   );
 
   // Build finding count summary: "2 Critical, 3 Major, 5 Minor, 1 Nit"
-  const countParts = SEVERITY_ORDER
-    .filter((sev) => findingsBySeverity[sev])
-    .map((sev) => `${findingsBySeverity[sev]} ${sev.charAt(0).toUpperCase() + sev.slice(1)}`);
+  const countParts = SEVERITY_ORDER.filter(sev => findingsBySeverity[sev]).map(
+    sev => `${findingsBySeverity[sev]} ${sev.charAt(0).toUpperCase() + sev.slice(1)}`
+  );
   const countSummary = countParts.length > 0 ? countParts.join(', ') : 'No findings';
 
   return (
@@ -72,9 +72,7 @@ export function ReviewSummary({ result }: ReviewSummaryProps) {
       </div>
 
       {/* Finding count summary */}
-      <div className="text-xs text-muted-foreground">
-        {countSummary}
-      </div>
+      <div className="text-xs text-muted-foreground">{countSummary}</div>
 
       {/* Metadata */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-2">

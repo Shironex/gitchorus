@@ -38,9 +38,7 @@ function App() {
   return (
     <div className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden">
       <TopBar />
-      {isConnected && (
-        <TabBar activeTab={activeTab} onTabChange={setActiveTab} />
-      )}
+      {isConnected && <TabBar activeTab={activeTab} onTabChange={setActiveTab} />}
       <div className="flex-1 overflow-hidden">
         {!isConnected ? (
           <WelcomeView />

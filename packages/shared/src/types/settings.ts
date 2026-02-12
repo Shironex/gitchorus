@@ -54,7 +54,12 @@ export type Theme =
 /**
  * Settings section IDs for navigation
  */
-export type SettingsSectionId = 'appearance' | 'github' | 'general' | 'provider' | 'review-preferences';
+export type SettingsSectionId =
+  | 'appearance'
+  | 'github'
+  | 'general'
+  | 'provider'
+  | 'review-preferences';
 
 /** Review depth levels -- maps to maxTurns and prompt detail */
 export type ReviewDepth = 'quick' | 'standard' | 'thorough';
@@ -63,7 +68,10 @@ export type ReviewDepth = 'quick' | 'standard' | 'thorough';
 export type DefaultReviewAction = 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
 
 /** Claude model options */
-export type ClaudeModel = 'claude-haiku-3-5-20241022' | 'claude-sonnet-4-5-20250929' | 'claude-opus-4-6-20250528';
+export type ClaudeModel =
+  | 'claude-haiku-3-5-20241022'
+  | 'claude-sonnet-4-5-20250929'
+  | 'claude-opus-4-6-20250528';
 
 /** Display labels for Claude models */
 export const CLAUDE_MODEL_LABELS: Record<ClaudeModel, string> = {
@@ -73,10 +81,28 @@ export const CLAUDE_MODEL_LABELS: Record<ClaudeModel, string> = {
 };
 
 /** Review depth display labels and descriptions */
-export const REVIEW_DEPTH_CONFIG: Record<ReviewDepth, { label: string; description: string; validationMaxTurns: number; reviewMaxTurns: number }> = {
-  quick: { label: 'Quick', description: 'Fast scan, surface-level issues only', validationMaxTurns: 15, reviewMaxTurns: 25 },
-  standard: { label: 'Standard', description: 'Balanced analysis with good coverage', validationMaxTurns: 30, reviewMaxTurns: 50 },
-  thorough: { label: 'Thorough', description: 'Deep dive with exhaustive analysis', validationMaxTurns: 50, reviewMaxTurns: 80 },
+export const REVIEW_DEPTH_CONFIG: Record<
+  ReviewDepth,
+  { label: string; description: string; validationMaxTurns: number; reviewMaxTurns: number }
+> = {
+  quick: {
+    label: 'Quick',
+    description: 'Fast scan, surface-level issues only',
+    validationMaxTurns: 15,
+    reviewMaxTurns: 25,
+  },
+  standard: {
+    label: 'Standard',
+    description: 'Balanced analysis with good coverage',
+    validationMaxTurns: 30,
+    reviewMaxTurns: 50,
+  },
+  thorough: {
+    label: 'Thorough',
+    description: 'Deep dive with exhaustive analysis',
+    validationMaxTurns: 50,
+    reviewMaxTurns: 80,
+  },
 };
 
 /** Global review configuration persisted in electron-store */

@@ -82,7 +82,7 @@ export function ProviderSection() {
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-foreground">Model</h3>
         <div className="space-y-2">
-          {MODEL_OPTIONS.map((modelId) => {
+          {MODEL_OPTIONS.map(modelId => {
             const isSelected = selectedModel === modelId;
             return (
               <button

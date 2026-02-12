@@ -6,16 +6,15 @@
  */
 
 import type { BranchInfo, CommitInfo } from './git';
-import type {
-  GhCliStatus,
-  RepoInfo,
-  PullRequest,
-  Issue,
-  IssueComment,
-} from './github';
+import type { GhCliStatus, RepoInfo, PullRequest, Issue, IssueComment } from './github';
 import type { ProviderStatus } from './provider';
 import type { LogEntry } from '../logger';
-import type { ValidationStep, ValidationResult, ValidationQueueItem, ValidationHistoryEntry } from './validation';
+import type {
+  ValidationStep,
+  ValidationResult,
+  ValidationQueueItem,
+  ValidationHistoryEntry,
+} from './validation';
 import type { ReviewResult, ReviewQueueItem, ReviewHistoryEntry } from './review';
 
 // ============================================

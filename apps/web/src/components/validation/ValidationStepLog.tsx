@@ -1,13 +1,5 @@
 import { useEffect, useRef } from 'react';
-import {
-  Loader2,
-  CheckCircle2,
-  FileText,
-  Search,
-  Terminal,
-  Cpu,
-  Settings,
-} from 'lucide-react';
+import { Loader2, CheckCircle2, FileText, Search, Terminal, Cpu, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ValidationStep, ValidationStepType } from '@gitchorus/shared';
 

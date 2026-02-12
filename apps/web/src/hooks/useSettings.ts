@@ -21,10 +21,10 @@ const logger = createLogger('useSettings');
  * and provides updateConfig for auto-save behavior.
  */
 export function useSettings() {
-  const config = useSettingsStore((state) => state.reviewConfig);
-  const loading = useSettingsStore((state) => state.isReviewConfigLoading);
-  const setReviewConfig = useSettingsStore((state) => state.setReviewConfig);
-  const setReviewConfigLoading = useSettingsStore((state) => state.setReviewConfigLoading);
+  const config = useSettingsStore(state => state.reviewConfig);
+  const loading = useSettingsStore(state => state.isReviewConfigLoading);
+  const setReviewConfig = useSettingsStore(state => state.setReviewConfig);
+  const setReviewConfigLoading = useSettingsStore(state => state.setReviewConfigLoading);
   const fetchedRef = useRef(false);
 
   const fetchConfig = useCallback(async () => {

@@ -50,10 +50,10 @@ function PRCardSkeleton() {
  */
 export function PRListView({ className }: PRListViewProps) {
   const { loading, error, refresh } = usePullRequests();
-  const pullRequests = useReviewStore((state) => state.pullRequests);
-  const sortBy = useReviewStore((state) => state.sortBy);
-  const selectedPrNumber = useReviewStore((state) => state.selectedPrNumber);
-  const setSelectedPr = useReviewStore((state) => state.setSelectedPr);
+  const pullRequests = useReviewStore(state => state.pullRequests);
+  const sortBy = useReviewStore(state => state.sortBy);
+  const selectedPrNumber = useReviewStore(state => state.selectedPrNumber);
+  const setSelectedPr = useReviewStore(state => state.setSelectedPr);
 
   // Sort in useMemo to avoid creating new array references in the selector
   // (selectSortedPRs creates a new array every call, causing infinite re-renders)
@@ -61,10 +61,16 @@ export function PRListView({ className }: PRListViewProps) {
     const sorted = [...pullRequests];
     switch (sortBy) {
       case 'updated':
-        sorted.sort((a: PullRequest, b: PullRequest) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+        sorted.sort(
+          (a: PullRequest, b: PullRequest) =>
+            new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+        );
         break;
       case 'created':
-        sorted.sort((a: PullRequest, b: PullRequest) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        sorted.sort(
+          (a: PullRequest, b: PullRequest) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
         break;
       case 'comments':
         sorted.sort((a: PullRequest, b: PullRequest) => b.changedFiles - a.changedFiles);
@@ -79,7 +85,7 @@ export function PRListView({ className }: PRListViewProps) {
 
   const selectedPR = useMemo(() => {
     if (!hasSelection) return null;
-    return sortedPRs.find((pr) => pr.number === selectedPrNumber) ?? null;
+    return sortedPRs.find(pr => pr.number === selectedPrNumber) ?? null;
   }, [sortedPRs, selectedPrNumber, hasSelection]);
 
   // Full-width ReviewView when a PR is selected
@@ -152,16 +158,12 @@ export function PRListView({ className }: PRListViewProps) {
         ) : (
           /* PR cards */
           <div className="space-y-2">
-            {sortedPRs.map((pr) => (
+            {sortedPRs.map(pr => (
               <PRCard
                 key={pr.number}
                 pr={pr}
                 isSelected={selectedPrNumber === pr.number}
-                onClick={() =>
-                  setSelectedPr(
-                    selectedPrNumber === pr.number ? null : pr.number
-                  )
-                }
+                onClick={() => setSelectedPr(selectedPrNumber === pr.number ? null : pr.number)}
               />
             ))}
           </div>

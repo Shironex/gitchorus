@@ -51,7 +51,7 @@ type RepositoryStore = RepositoryState & RepositoryActions;
  */
 export const useRepositoryStore = create<RepositoryStore>()(
   devtools(
-    (set) => ({
+    set => ({
       // Initial state
       repositoryPath: null,
       repositoryName: null,

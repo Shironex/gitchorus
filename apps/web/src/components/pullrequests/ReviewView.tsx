@@ -1,12 +1,5 @@
 import { useState } from 'react';
-import {
-  ArrowLeft,
-  Play,
-  RefreshCw,
-  AlertCircle,
-  Loader2,
-  GitBranch,
-} from 'lucide-react';
+import { ArrowLeft, Play, RefreshCw, AlertCircle, Loader2, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useReviewStore } from '@/stores/useReviewStore';
@@ -34,25 +27,17 @@ type ReviewAction = 'REQUEST_CHANGES' | 'COMMENT';
  */
 export function ReviewView({ pr }: ReviewViewProps) {
   const { startReview, cancelReview } = useReview();
-  const setSelectedPr = useReviewStore((state) => state.setSelectedPr);
+  const setSelectedPr = useReviewStore(state => state.setSelectedPr);
 
   // Push modal state
   const [pushModalOpen, setPushModalOpen] = useState(false);
   const [pushFindings, setPushFindings] = useState<ReviewFinding[]>([]);
   const [pushAction, setPushAction] = useState<ReviewAction>('COMMENT');
 
-  const status = useReviewStore(
-    (state) => state.reviewStatus.get(pr.number) || 'idle'
-  );
-  const steps = useReviewStore(
-    (state) => state.reviewSteps.get(pr.number) ?? EMPTY_STEPS
-  );
-  const result = useReviewStore(
-    (state) => state.reviewResults.get(pr.number)
-  );
-  const error = useReviewStore(
-    (state) => state.reviewErrors.get(pr.number)
-  );
+  const status = useReviewStore(state => state.reviewStatus.get(pr.number) || 'idle');
+  const steps = useReviewStore(state => state.reviewSteps.get(pr.number) ?? EMPTY_STEPS);
+  const result = useReviewStore(state => state.reviewResults.get(pr.number));
+  const error = useReviewStore(state => state.reviewErrors.get(pr.number));
 
   const isRunning = status === 'running';
   const isQueued = status === 'queued';
@@ -111,11 +96,7 @@ export function ReviewView({ pr }: ReviewViewProps) {
           {/* Action buttons */}
           <div className="flex items-center gap-2 shrink-0">
             {(isIdle || canRestart) && (
-              <Button
-                size="sm"
-                className="h-8 gap-1.5"
-                onClick={() => startReview(pr.number)}
-              >
+              <Button size="sm" className="h-8 gap-1.5" onClick={() => startReview(pr.number)}>
                 {canRestart ? (
                   <>
                     <RefreshCw size={14} /> Re-review
@@ -145,11 +126,7 @@ export function ReviewView({ pr }: ReviewViewProps) {
 
         {/* Running: show progress */}
         {isRunning && (
-          <ReviewProgress
-            steps={steps}
-            isRunning={true}
-            onCancel={() => cancelReview(pr.number)}
-          />
+          <ReviewProgress steps={steps} isRunning={true} onCancel={() => cancelReview(pr.number)} />
         )}
 
         {/* Running with no steps yet */}
@@ -162,11 +139,7 @@ export function ReviewView({ pr }: ReviewViewProps) {
 
         {/* Completed: show collapsible log + results */}
         {!isRunning && steps.length > 0 && (
-          <ReviewProgress
-            steps={steps}
-            isRunning={false}
-            onCancel={() => {}}
-          />
+          <ReviewProgress steps={steps} isRunning={false} onCancel={() => {}} />
         )}
 
         {/* Results */}

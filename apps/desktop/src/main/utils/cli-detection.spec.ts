@@ -154,11 +154,7 @@ describe('cli-detection', () => {
     it('should return the first existing path', () => {
       mockExistsSync.mockImplementation((p: string) => p === '/opt/bin/gh');
 
-      const result = findCliInLocalPaths([
-        '/usr/bin/gh',
-        '/opt/bin/gh',
-        '/home/user/gh',
-      ]);
+      const result = findCliInLocalPaths(['/usr/bin/gh', '/opt/bin/gh', '/home/user/gh']);
 
       expect(result).toBe('/opt/bin/gh');
     });

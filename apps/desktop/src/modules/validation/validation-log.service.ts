@@ -124,7 +124,7 @@ export class ValidationLogService implements OnModuleDestroy {
       const logFilePath = this.getLogFilePath(today);
 
       this.writeStream = fs.createWriteStream(logFilePath, { flags: 'a' });
-      this.writeStream.on('error', (err) => {
+      this.writeStream.on('error', err => {
         logger.error('Log file write error:', err);
       });
     }

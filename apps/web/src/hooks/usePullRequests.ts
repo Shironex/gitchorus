@@ -19,16 +19,16 @@ const logger = createLogger('usePullRequests');
  * Provides a refetch function for manual refresh.
  */
 export function usePullRequests() {
-  const repositoryPath = useRepositoryStore((state) => state.repositoryPath);
-  const githubInfo = useRepositoryStore((state) => state.githubInfo);
-  const setPullRequests = useReviewStore((state) => state.setPullRequests);
-  const setLoading = useReviewStore((state) => state.setLoading);
-  const setError = useReviewStore((state) => state.setError);
-  const clearPullRequests = useReviewStore((state) => state.clearPullRequests);
-  const pullRequests = useReviewStore((state) => state.pullRequests);
-  const loading = useReviewStore((state) => state.loading);
-  const error = useReviewStore((state) => state.error);
-  const filterState = useReviewStore((state) => state.filterState);
+  const repositoryPath = useRepositoryStore(state => state.repositoryPath);
+  const githubInfo = useRepositoryStore(state => state.githubInfo);
+  const setPullRequests = useReviewStore(state => state.setPullRequests);
+  const setLoading = useReviewStore(state => state.setLoading);
+  const setError = useReviewStore(state => state.setError);
+  const clearPullRequests = useReviewStore(state => state.clearPullRequests);
+  const pullRequests = useReviewStore(state => state.pullRequests);
+  const loading = useReviewStore(state => state.loading);
+  const error = useReviewStore(state => state.error);
+  const filterState = useReviewStore(state => state.filterState);
 
   // Track whether we've already fetched for this repo + filter combination
   const fetchedForKey = useRef<string | null>(null);
@@ -45,14 +45,11 @@ export function usePullRequests() {
 
       logger.info('Fetching PRs for', githubInfo.fullName, 'state:', filterState);
 
-      const response = await emitAsync<GithubListPRsPayload, GithubPRsResponse>(
-        GithubEvents.PRS,
-        {
-          projectPath: repositoryPath,
-          state: filterState,
-          limit: 100,
-        }
-      );
+      const response = await emitAsync<GithubListPRsPayload, GithubPRsResponse>(GithubEvents.PRS, {
+        projectPath: repositoryPath,
+        state: filterState,
+        limit: 100,
+      });
 
       if (response.error) {
         setError(response.error);
@@ -66,7 +63,15 @@ export function usePullRequests() {
       logger.error('Failed to fetch PRs:', message);
       setError(message);
     }
-  }, [repositoryPath, githubInfo, filterState, setPullRequests, setLoading, setError, clearPullRequests]);
+  }, [
+    repositoryPath,
+    githubInfo,
+    filterState,
+    setPullRequests,
+    setLoading,
+    setError,
+    clearPullRequests,
+  ]);
 
   // Auto-fetch on mount when GitHub info is available, or when filterState changes
   useEffect(() => {

@@ -29,26 +29,26 @@ const logger = createLogger('useReview');
  * Multiple calls will result in duplicate event handling.
  */
 export function useReviewSocket() {
-  const addReviewStep = useReviewStore((state) => state.addReviewStep);
-  const setReviewResult = useReviewStore((state) => state.setReviewResult);
-  const setReviewError = useReviewStore((state) => state.setReviewError);
-  const setReviewStatus = useReviewStore((state) => state.setReviewStatus);
-  const setReviewHistory = useReviewStore((state) => state.setReviewHistory);
-  const setHistoryLoading = useReviewStore((state) => state.setHistoryLoading);
+  const addReviewStep = useReviewStore(state => state.addReviewStep);
+  const setReviewResult = useReviewStore(state => state.setReviewResult);
+  const setReviewError = useReviewStore(state => state.setReviewError);
+  const setReviewStatus = useReviewStore(state => state.setReviewStatus);
+  const setReviewHistory = useReviewStore(state => state.setReviewHistory);
+  const setHistoryLoading = useReviewStore(state => state.setHistoryLoading);
 
-  const repositoryFullName = useRepositoryStore((state) => state.githubInfo)?.fullName || null;
+  const repositoryFullName = useRepositoryStore(state => state.githubInfo)?.fullName || null;
   const prevRepoRef = useRef<string | null>(null);
 
   const fetchHistoryInternal = useCallback(
     async (repoFullName: string) => {
       setHistoryLoading(true);
       try {
-        const response = await emitAsync<
-          ReviewHistoryListPayload,
-          ReviewHistoryListResponse
-        >(ReviewEvents.HISTORY_LIST, {
-          repositoryFullName: repoFullName,
-        });
+        const response = await emitAsync<ReviewHistoryListPayload, ReviewHistoryListResponse>(
+          ReviewEvents.HISTORY_LIST,
+          {
+            repositoryFullName: repoFullName,
+          }
+        );
 
         if (response.error) {
           logger.warn('Error fetching review history:', response.error);
@@ -71,8 +71,7 @@ export function useReviewSocket() {
           }
         }
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to fetch review history';
+        const message = err instanceof Error ? err.message : 'Failed to fetch review history';
         logger.error('Failed to fetch review history:', message);
         setReviewHistory([]);
       }
@@ -100,8 +99,7 @@ export function useReviewSocket() {
     const onError = (data: ReviewErrorResponse) => {
       logger.warn(`Error PR #${data.prNumber}: ${data.error}`);
       setReviewError(data.prNumber, data.error);
-      const isCancelled =
-        data.error.includes('cancelled') || data.error.includes('aborted');
+      const isCancelled = data.error.includes('cancelled') || data.error.includes('aborted');
       setReviewStatus(data.prNumber, isCancelled ? 'cancelled' : 'failed');
     };
 
@@ -132,13 +130,13 @@ export function useReviewSocket() {
  * Does NOT set up socket listeners -- use useReviewSocket() for that.
  */
 export function useReview() {
-  const repositoryPath = useRepositoryStore((state) => state.repositoryPath);
-  const clearReview = useReviewStore((state) => state.clearReview);
-  const setReviewStatus = useReviewStore((state) => state.setReviewStatus);
-  const setReviewError = useReviewStore((state) => state.setReviewError);
-  const setReviewHistory = useReviewStore((state) => state.setReviewHistory);
-  const setHistoryLoading = useReviewStore((state) => state.setHistoryLoading);
-  const removeHistoryEntry = useReviewStore((state) => state.removeHistoryEntry);
+  const repositoryPath = useRepositoryStore(state => state.repositoryPath);
+  const clearReview = useReviewStore(state => state.clearReview);
+  const setReviewStatus = useReviewStore(state => state.setReviewStatus);
+  const setReviewError = useReviewStore(state => state.setReviewError);
+  const setReviewHistory = useReviewStore(state => state.setReviewHistory);
+  const setHistoryLoading = useReviewStore(state => state.setHistoryLoading);
+  const removeHistoryEntry = useReviewStore(state => state.removeHistoryEntry);
 
   const startReview = useCallback(
     async (prNumber: number) => {
@@ -149,16 +147,15 @@ export function useReview() {
       setReviewStatus(prNumber, 'queued');
 
       try {
-        await emitAsync<
-          ReviewStartPayload,
-          { success: boolean; error?: string }
-        >(ReviewEvents.START, {
-          projectPath: repositoryPath,
-          prNumber,
-        });
+        await emitAsync<ReviewStartPayload, { success: boolean; error?: string }>(
+          ReviewEvents.START,
+          {
+            projectPath: repositoryPath,
+            prNumber,
+          }
+        );
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to start review';
+        const message = err instanceof Error ? err.message : 'Failed to start review';
         logger.error('Failed to start review:', message);
         setReviewError(prNumber, message);
         setReviewStatus(prNumber, 'failed');
@@ -167,21 +164,17 @@ export function useReview() {
     [repositoryPath, clearReview, setReviewStatus, setReviewError]
   );
 
-  const cancelReview = useCallback(
-    async (prNumber: number) => {
-      try {
-        await emitAsync<
-          ReviewCancelPayload,
-          { success: boolean; error?: string }
-        >(ReviewEvents.CANCEL, { prNumber });
-      } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to cancel review';
-        logger.error('Failed to cancel review:', message);
-      }
-    },
-    []
-  );
+  const cancelReview = useCallback(async (prNumber: number) => {
+    try {
+      await emitAsync<ReviewCancelPayload, { success: boolean; error?: string }>(
+        ReviewEvents.CANCEL,
+        { prNumber }
+      );
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to cancel review';
+      logger.error('Failed to cancel review:', message);
+    }
+  }, []);
 
   const pushReview = useCallback(
     async (
@@ -189,7 +182,7 @@ export function useReview() {
       selectedFindings: ReviewFinding[],
       verdict: string,
       qualityScore: number,
-      reviewAction: 'REQUEST_CHANGES' | 'COMMENT',
+      reviewAction: 'REQUEST_CHANGES' | 'COMMENT'
     ): Promise<{ url?: string; postedComments: number; skippedComments: number }> => {
       if (!repositoryPath) {
         throw new Error('No repository connected');
@@ -199,7 +192,8 @@ export function useReview() {
 
       // Build finding summary for the review body
       const findingSummaryParts = selectedFindings.map(
-        (f, i) => `${i + 1}. **[${f.severity.toUpperCase()} - ${f.category}]** ${f.title} (\`${f.file}:${f.line}\`)`,
+        (f, i) =>
+          `${i + 1}. **[${f.severity.toUpperCase()} - ${f.category}]** ${f.title} (\`${f.file}:${f.line}\`)`
       );
 
       // Build review body
@@ -220,7 +214,7 @@ export function useReview() {
       ];
 
       // Build inline comments
-      const comments = selectedFindings.map((f) => ({
+      const comments = selectedFindings.map(f => ({
         path: f.file,
         line: f.line,
         body: [
@@ -245,10 +239,11 @@ export function useReview() {
       };
 
       try {
-        const response = await emitAsync<
-          GithubCreatePrReviewPayload,
-          GithubCreatePrReviewResponse
-        >(GithubEvents.CREATE_PR_REVIEW, payload, { timeout: 30000 });
+        const response = await emitAsync<GithubCreatePrReviewPayload, GithubCreatePrReviewResponse>(
+          GithubEvents.CREATE_PR_REVIEW,
+          payload,
+          { timeout: 30000 }
+        );
 
         if (!response.success) {
           throw new Error(response.error || 'Failed to create PR review');
@@ -266,7 +261,7 @@ export function useReview() {
         throw new Error(message);
       }
     },
-    [repositoryPath],
+    [repositoryPath]
   );
 
   /**
@@ -276,12 +271,12 @@ export function useReview() {
     async (repoFullName: string) => {
       setHistoryLoading(true);
       try {
-        const response = await emitAsync<
-          ReviewHistoryListPayload,
-          ReviewHistoryListResponse
-        >(ReviewEvents.HISTORY_LIST, {
-          repositoryFullName: repoFullName,
-        });
+        const response = await emitAsync<ReviewHistoryListPayload, ReviewHistoryListResponse>(
+          ReviewEvents.HISTORY_LIST,
+          {
+            repositoryFullName: repoFullName,
+          }
+        );
 
         if (response.error) {
           logger.warn('Error fetching review history:', response.error);
@@ -290,8 +285,7 @@ export function useReview() {
           setReviewHistory(response.entries);
         }
       } catch (err) {
-        const message =
-          err instanceof Error ? err.message : 'Failed to fetch review history';
+        const message = err instanceof Error ? err.message : 'Failed to fetch review history';
         logger.error('Failed to fetch review history:', message);
         setReviewHistory([]);
       }
@@ -317,9 +311,7 @@ export function useReview() {
         }
       } catch (err) {
         const message =
-          err instanceof Error
-            ? err.message
-            : 'Failed to delete review history entry';
+          err instanceof Error ? err.message : 'Failed to delete review history entry';
         logger.error('Failed to delete review history entry:', message);
       }
     },
