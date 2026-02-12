@@ -77,9 +77,10 @@ export function ValidationPanel() {
   // Collapsible activity log state — collapsed by default after completion
   const [logExpanded, setLogExpanded] = useState(false);
 
-  // Reset logExpanded when issue changes
+  // Reset logExpanded and showConfirm when issue changes
   useEffect(() => {
     setLogExpanded(false);
+    setShowConfirm(false);
   }, [selectedIssueNumber]);
 
   if (selectedIssueNumber === null) {
@@ -223,13 +224,7 @@ export function ValidationPanel() {
                   size="sm"
                   variant="ghost"
                   className="h-6 text-xs mt-1.5 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
-                  onClick={() => {
-                    if (hasResult) {
-                      setShowConfirm(true);
-                    } else {
-                      startValidation(selectedIssueNumber);
-                    }
-                  }}
+                  onClick={() => setShowConfirm(true)}
                 >
                   <RefreshCw size={12} className="mr-1" /> Re-validate
                 </Button>
