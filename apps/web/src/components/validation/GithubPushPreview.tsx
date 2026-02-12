@@ -237,7 +237,7 @@ function SectionRow({
  * Features Edit/Preview tabs with per-section checkboxes and textareas.
  * Supports detecting prior GitChorus comments for update-or-post-new.
  */
-export function GithubPushPreview({
+export default function GithubPushPreview({
   open,
   onOpenChange,
   issueNumber,

@@ -1,18 +1,21 @@
-import { useState, useCallback } from 'react';
+import { lazy, Suspense, useState, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
 import { useAppInitialization } from '@/hooks';
 import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useValidationSocket } from '@/hooks/useValidation';
 import { useReviewSocket } from '@/hooks/useReview';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
+import { useSettingsStore } from '@/stores';
 import { useIssueStore } from '@/stores/useIssueStore';
 import { useReviewStore } from '@/stores/useReviewStore';
 import { TopBar, WelcomeView, TabBar } from '@/components/shared';
 import type { AppTab } from '@/components/shared';
-import { SettingsModal } from '@/components/settings';
 import { DashboardView } from '@/components/dashboard';
 import { IssueListView } from '@/components/issues';
 import { PRListView } from '@/components/pullrequests';
+
+const SettingsModal = lazy(() => import('@/components/settings/SettingsModal'));
 
 function App() {
   useAppInitialization();
@@ -23,6 +26,7 @@ function App() {
 
   const repositoryPath = useRepositoryStore(state => state.repositoryPath);
   const connectionStatus = useConnectionStore(state => state.status);
+  const settingsOpen = useSettingsStore(state => state.isOpen);
   const isConnected = repositoryPath !== null;
 
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
@@ -58,7 +62,17 @@ function App() {
           <PRListView />
         )}
       </div>
-      <SettingsModal />
+      {settingsOpen && (
+        <Suspense
+          fallback={
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
+              <Loader2 size={24} className="animate-spin text-muted-foreground" />
+            </div>
+          }
+        >
+          <SettingsModal />
+        </Suspense>
+      )}
     </div>
   );
 }

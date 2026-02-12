@@ -12,7 +12,7 @@ import {
   ReviewPreferencesSection,
 } from './sections';
 
-export function SettingsModal() {
+export default function SettingsModal() {
   const isOpen = useSettingsStore(state => state.isOpen);
   const activeSection = useSettingsStore(state => state.activeSection);
   const closeSettings = useSettingsStore(state => state.closeSettings);

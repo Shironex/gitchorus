@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { lazy, Suspense, useState, useEffect } from 'react';
 import {
   Play,
   X,
@@ -20,8 +20,9 @@ import { useValidationStore } from '@/stores/useValidationStore';
 import { useValidation } from '@/hooks/useValidation';
 import { ValidationStepLog } from './ValidationStepLog';
 import { ValidationResults } from './ValidationResults';
-import { GithubPushPreview } from './GithubPushPreview';
 import type { ValidationStatus } from '@gitchorus/shared';
+
+const GithubPushPreview = lazy(() => import('./GithubPushPreview'));
 
 /**
  * Side panel that shows validation state for the selected issue.
@@ -289,17 +290,25 @@ export function ValidationPanel() {
           </>
         )}
 
-        {/* Push modal (Dialog portals itself) */}
-        {hasResult && result && (
-          <GithubPushPreview
-            open={showPushModal}
-            onOpenChange={setShowPushModal}
-            issueNumber={selectedIssueNumber}
-            result={result}
-            onPush={pushToGithub}
-            onUpdate={updateGithubComment}
-            onListComments={listComments}
-          />
+        {/* Push modal (lazy loaded, only mounted when open) */}
+        {showPushModal && hasResult && result && (
+          <Suspense
+            fallback={
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs">
+                <Loader2 size={24} className="animate-spin text-muted-foreground" />
+              </div>
+            }
+          >
+            <GithubPushPreview
+              open={showPushModal}
+              onOpenChange={setShowPushModal}
+              issueNumber={selectedIssueNumber}
+              result={result}
+              onPush={pushToGithub}
+              onUpdate={updateGithubComment}
+              onListComments={listComments}
+            />
+          </Suspense>
         )}
 
         {/* Error state */}
