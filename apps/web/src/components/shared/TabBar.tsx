@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils';
 
-export type AppTab = 'issues' | 'prs';
+export type AppTab = 'dashboard' | 'issues' | 'prs';
 
 interface TabBarProps {
   activeTab: AppTab;
@@ -9,6 +9,7 @@ interface TabBarProps {
 }
 
 const TABS: { value: AppTab; label: string }[] = [
+  { value: 'dashboard', label: 'Dashboard' },
   { value: 'issues', label: 'Issues' },
   { value: 'prs', label: 'PRs' },
 ];
