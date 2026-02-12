@@ -15,7 +15,10 @@ import { ReviewProgress } from './ReviewProgress';
 import { ReviewSummary } from './ReviewSummary';
 import { ReviewFindings } from './ReviewFindings';
 import { ReviewPushModal } from './ReviewPushModal';
-import type { PullRequest, ReviewFinding } from '@gitchorus/shared';
+import type { PullRequest, ReviewFinding, ValidationStep } from '@gitchorus/shared';
+
+// Stable empty array reference to avoid infinite re-renders from Zustand selector
+const EMPTY_STEPS: ValidationStep[] = [];
 
 interface ReviewViewProps {
   pr: PullRequest;
@@ -42,7 +45,7 @@ export function ReviewView({ pr }: ReviewViewProps) {
     (state) => state.reviewStatus.get(pr.number) || 'idle'
   );
   const steps = useReviewStore(
-    (state) => state.reviewSteps.get(pr.number) || []
+    (state) => state.reviewSteps.get(pr.number) ?? EMPTY_STEPS
   );
   const result = useReviewStore(
     (state) => state.reviewResults.get(pr.number)
