@@ -17,7 +17,14 @@ The Claude Agent SDK spawns a child Node process running `cli.js` and also needs
 At runtime, the unpacked `cli.js` path is resolved via:
 
 ```typescript
-path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', '@anthropic-ai', 'claude-agent-sdk', 'cli.js')
+path.join(
+  process.resourcesPath,
+  'app.asar.unpacked',
+  'node_modules',
+  '@anthropic-ai',
+  'claude-agent-sdk',
+  'cli.js'
+);
 ```
 
 This is passed to the SDK as `pathToClaudeCodeExecutable`. In development (`!app.isPackaged`), the option is omitted so the SDK uses its default resolution.
@@ -55,12 +62,12 @@ The app needs to find the Claude CLI binary and verify authentication. This is h
 
 ## Platform-specific notes
 
-| Concern | macOS | Windows | Linux |
-|---------|-------|---------|-------|
-| Shell PATH | Resolved at startup via login shell | No-op (inherits full PATH) | Resolved at startup via login shell |
-| Claude CLI tokens | Stored in Keychain; config has `oauthAccount` | Stored in credential files | Stored in credential files |
-| Ripgrep binary | `vendor/ripgrep/arm64-darwin/` or `x64-darwin/` | `vendor/ripgrep/x64-win32/` | `vendor/ripgrep/arm64-linux/` or `x64-linux/` |
-| App targets | DMG, ZIP | NSIS installer | AppImage, DEB |
+| Concern           | macOS                                           | Windows                     | Linux                                         |
+| ----------------- | ----------------------------------------------- | --------------------------- | --------------------------------------------- |
+| Shell PATH        | Resolved at startup via login shell             | No-op (inherits full PATH)  | Resolved at startup via login shell           |
+| Claude CLI tokens | Stored in Keychain; config has `oauthAccount`   | Stored in credential files  | Stored in credential files                    |
+| Ripgrep binary    | `vendor/ripgrep/arm64-darwin/` or `x64-darwin/` | `vendor/ripgrep/x64-win32/` | `vendor/ripgrep/arm64-linux/` or `x64-linux/` |
+| App targets       | DMG, ZIP                                        | NSIS installer              | AppImage, DEB                                 |
 
 ## Version bumping
 
