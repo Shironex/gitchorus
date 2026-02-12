@@ -2,10 +2,13 @@ import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import type { Theme, SettingsSectionId, GhCliStatus, ReviewConfig } from '@gitchorus/shared';
 import { createLogger } from '@gitchorus/shared';
-import { themeOptions } from '@/lib/theme';
+import { themeOptions, getThemeOption } from '@/lib/theme';
 import { persistTheme, getPersistedTheme } from '@/lib/theme-persistence';
 
 const logger = createLogger('Settings');
+
+// Computed once at module level since themeOptions is a ReadonlyArray
+const allThemeClasses = themeOptions.map(t => t.value);
 
 /**
  * Settings modal state
@@ -72,13 +75,18 @@ type SettingsStore = SettingsState & SettingsActions;
 function applyThemeToDOM(theme: Theme) {
   logger.debug('applyThemeToDOM:', theme);
   const root = document.documentElement;
-  const allThemeClasses = themeOptions.map(t => t.value);
 
-  // Remove all theme classes
-  root.classList.remove(...allThemeClasses);
+  // Remove all theme classes and the 'dark' class
+  root.classList.remove(...allThemeClasses, 'dark');
 
   // Add new theme class
   root.classList.add(theme);
+
+  // Add 'dark' class for dark themes (needed by Shiki CSS and Tailwind dark: variant)
+  const themeOption = getThemeOption(theme);
+  if (themeOption?.isDark) {
+    root.classList.add('dark');
+  }
 }
 
 // Default theme
