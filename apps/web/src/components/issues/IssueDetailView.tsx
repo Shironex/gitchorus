@@ -7,8 +7,6 @@ import {
   AlertCircle,
   AlertTriangle,
   Loader2,
-  ChevronDown,
-  ChevronRight,
   Send,
   Check,
   ExternalLink,
@@ -21,9 +19,8 @@ import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useIssueStore } from '@/stores/useIssueStore';
 import { useValidationStore } from '@/stores/useValidationStore';
 import { useValidation } from '@/hooks/useValidation';
-import { ValidationStepLog } from '../validation/ValidationStepLog';
 import { ValidationResults } from '../validation/ValidationResults';
-import { AgentActivityHero } from '../agent-activity';
+import { AgentActivityHero, CollapsibleActivityLog } from '../agent-activity';
 import type { Issue, ValidationStatus } from '@gitchorus/shared';
 
 const GithubPushPreview = lazy(() => import('../validation/GithubPushPreview'));
@@ -70,12 +67,8 @@ export function IssueDetailView({ issue }: IssueDetailViewProps) {
   const pushStatus = useValidationStore(state => state.pushStatus.get(issueNumber) || 'idle');
   const postedUrl = useValidationStore(state => state.postedCommentUrls.get(issueNumber));
 
-  // Collapsible activity log state
-  const [logExpanded, setLogExpanded] = useState(false);
-
   // Reset states when issue changes
   useEffect(() => {
-    setLogExpanded(false);
     setShowConfirm(false);
   }, [issueNumber]);
 
@@ -268,22 +261,7 @@ export function IssueDetailView({ issue }: IssueDetailViewProps) {
         {isActivelyRunning && <AgentActivityHero steps={steps || []} isRunning={true} />}
 
         {/* Collapsible activity log — shown after completion */}
-        {showCollapsibleLog && (
-          <div>
-            <button
-              onClick={() => setLogExpanded(!logExpanded)}
-              className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full text-left"
-            >
-              {logExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              <span>Activity Log ({steps.length} steps)</span>
-            </button>
-            {logExpanded && (
-              <div className="mt-2">
-                <ValidationStepLog steps={steps} isRunning={false} />
-              </div>
-            )}
-          </div>
-        )}
+        {showCollapsibleLog && <CollapsibleActivityLog steps={steps!} isRunning={false} />}
 
         {/* Results */}
         {hasResult && result && (

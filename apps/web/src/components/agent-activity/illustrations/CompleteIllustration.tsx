@@ -68,12 +68,14 @@ export function CompleteIllustration() {
           cy="80"
           r={2 + (i % 2)}
           className={p.color}
-          style={{
-            opacity: 0,
-            animation: `fadeIn 0.1s ease-out ${0.4 + i * 0.05}s forwards`,
-            transform: `translate(${p.x}px, ${p.y}px)`,
-            transition: 'transform 0.5s ease-out, opacity 0.5s ease-out',
-          }}
+          style={
+            {
+              '--tx': `${p.x}px`,
+              '--ty': `${p.y}px`,
+              opacity: 0,
+              animation: `particleBurst 0.5s ease-out ${0.4 + i * 0.05}s forwards`,
+            } as React.CSSProperties
+          }
         />
       ))}
     </svg>

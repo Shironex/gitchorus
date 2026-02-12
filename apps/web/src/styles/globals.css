@@ -259,6 +259,16 @@
       stroke-dashoffset: 0;
     }
   }
+  @keyframes particleBurst {
+    from {
+      opacity: 0;
+      transform: translate(0, 0) scale(0.5);
+    }
+    to {
+      opacity: 1;
+      transform: translate(var(--tx), var(--ty)) scale(1);
+    }
+  }
 }
 
 :root {

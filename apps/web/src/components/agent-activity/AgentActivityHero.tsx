@@ -1,11 +1,9 @@
-import { useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ValidationStep, ValidationStepType } from '@gitchorus/shared';
 import { useStepTransition } from './hooks/useStepTransition';
 import { useActivityStats } from './hooks/useActivityStats';
 import { AgentActivityStats } from './AgentActivityStats';
-import { ValidationStepLog } from '../validation/ValidationStepLog';
+import { CollapsibleActivityLog } from './CollapsibleActivityLog';
 
 import { InitIllustration } from './illustrations/InitIllustration';
 import { ReadingIllustration } from './illustrations/ReadingIllustration';
@@ -61,7 +59,6 @@ function getIllustration(type: ValidationStepType) {
 export function AgentActivityHero({ steps, isRunning }: AgentActivityHeroProps) {
   const { currentType, currentLabel, isTransitioning } = useStepTransition(steps);
   const stats = useActivityStats(steps);
-  const [logExpanded, setLogExpanded] = useState(false);
 
   const actionLabel = STEP_LABELS[currentType] || 'Working';
 
@@ -96,22 +93,7 @@ export function AgentActivityHero({ steps, isRunning }: AgentActivityHeroProps) 
       </div>
 
       {/* Collapsible activity log */}
-      {steps.length > 0 && (
-        <div className="mt-2">
-          <button
-            onClick={() => setLogExpanded(!logExpanded)}
-            className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full text-left"
-          >
-            {logExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-            <span>Activity Log ({steps.length} steps)</span>
-          </button>
-          {logExpanded && (
-            <div className="mt-2">
-              <ValidationStepLog steps={steps} isRunning={isRunning} />
-            </div>
-          )}
-        </div>
-      )}
+      <CollapsibleActivityLog steps={steps} isRunning={isRunning} />
     </div>
   );
 }

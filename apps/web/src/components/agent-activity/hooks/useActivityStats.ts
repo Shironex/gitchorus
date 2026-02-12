@@ -16,14 +16,17 @@ export interface ActivityStats {
 export function useActivityStats(steps: ValidationStep[]): ActivityStats {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
-  const filesRead = useMemo(() => steps.filter(s => s.toolName === 'Read').length, [steps]);
-
-  const searchesPerformed = useMemo(
-    () => steps.filter(s => s.toolName === 'Grep' || s.toolName === 'Glob').length,
-    [steps]
-  );
-
-  const commandsRun = useMemo(() => steps.filter(s => s.toolName === 'Bash').length, [steps]);
+  const { filesRead, searchesPerformed, commandsRun } = useMemo(() => {
+    let files = 0,
+      searches = 0,
+      commands = 0;
+    for (const s of steps) {
+      if (s.toolName === 'Read') files++;
+      else if (s.toolName === 'Grep' || s.toolName === 'Glob') searches++;
+      else if (s.toolName === 'Bash') commands++;
+    }
+    return { filesRead: files, searchesPerformed: searches, commandsRun: commands };
+  }, [steps]);
 
   // Elapsed time ticker
   const firstTimestamp = steps[0]?.timestamp;

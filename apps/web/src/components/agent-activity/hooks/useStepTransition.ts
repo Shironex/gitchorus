@@ -36,6 +36,10 @@ export function useStepTransition(steps: ValidationStep[]): StepTransitionState 
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const swapTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
+  // Ref to always read the latest label at swap time (avoids stale closures)
+  const latestLabelRef = useRef(latestLabel);
+  latestLabelRef.current = latestLabel;
+
   useEffect(() => {
     if (latestType === displayed.type) {
       // Same type — just update the label without transition
@@ -55,7 +59,7 @@ export function useStepTransition(steps: ValidationStep[]): StepTransitionState 
 
       // After exit animation (150ms), swap the illustration
       swapTimeoutRef.current = setTimeout(() => {
-        setDisplayed({ type: latestType, label: latestLabel });
+        setDisplayed({ type: latestType, label: latestLabelRef.current });
         setIsTransitioning(false);
         lastChangeRef.current = Date.now();
       }, 150);
@@ -65,7 +69,7 @@ export function useStepTransition(steps: ValidationStep[]): StepTransitionState 
       clearTimeout(timeoutRef.current);
       clearTimeout(swapTimeoutRef.current);
     };
-  }, [latestType, latestLabel, displayed.type]);
+  }, [latestType, displayed.type]);
 
   return {
     currentType: displayed.type,
