@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -52,6 +52,7 @@ function PRCardSkeleton() {
 export function PRListView({ className }: PRListViewProps) {
   const { loading, error, refresh } = usePullRequests();
   const pullRequests = useReviewStore(state => state.pullRequests);
+  const hasFetched = useReviewStore(state => state.hasFetched);
   const sortBy = useReviewStore(state => state.sortBy);
   const selectedPrNumber = useReviewStore(state => state.selectedPrNumber);
   const setSelectedPr = useReviewStore(state => state.setSelectedPr);
@@ -129,7 +130,7 @@ export function PRListView({ className }: PRListViewProps) {
           disabled={loading}
           title="Refresh pull requests"
         >
-          <RefreshCw size={16} className={cn(loading && 'animate-spin')} />
+          {loading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
         </Button>
       </div>
 
@@ -155,7 +156,7 @@ export function PRListView({ className }: PRListViewProps) {
 
       {/* Content */}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4">
-        {loading && totalPRs === 0 ? (
+        {(!hasFetched || loading) && totalPRs === 0 ? (
           /* Loading skeletons */
           <div className="space-y-2">
             <PRCardSkeleton />

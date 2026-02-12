@@ -32,6 +32,8 @@ interface ReviewState {
   pullRequests: PullRequest[];
   /** Whether PRs are currently being fetched */
   loading: boolean;
+  /** Whether PRs have been fetched at least once */
+  hasFetched: boolean;
   /** Error from last fetch attempt */
   error: string | null;
   /** Currently selected PR number (null if none) */
@@ -105,8 +107,10 @@ export const useReviewStore = create<ReviewStore>()(
   devtools(
     set => ({
       // Initial state
+      // loading starts true so views show skeletons until first fetch completes
       pullRequests: [],
-      loading: false,
+      loading: true,
+      hasFetched: false,
       error: null,
       selectedPrNumber: null,
       sortBy: 'updated',
@@ -121,7 +125,11 @@ export const useReviewStore = create<ReviewStore>()(
       // Actions
       setPullRequests: (pullRequests: PullRequest[]) => {
         logger.info(`Loaded ${pullRequests.length} pull requests`);
-        set({ pullRequests, loading: false, error: null }, undefined, 'review/setPullRequests');
+        set(
+          { pullRequests, loading: false, hasFetched: true, error: null },
+          undefined,
+          'review/setPullRequests'
+        );
       },
 
       setSelectedPr: (prNumber: number | null) => {
@@ -143,8 +151,10 @@ export const useReviewStore = create<ReviewStore>()(
       setError: (error: string | null) => {
         if (error) {
           logger.warn('PR fetch error:', error);
+          set({ error, loading: false, hasFetched: true }, undefined, 'review/setError');
+        } else {
+          set({ error: null }, undefined, 'review/clearError');
         }
-        set({ error, loading: false }, undefined, 'review/setError');
       },
 
       setReviewStatus: (prNumber: number, status: ReviewStatus) => {
@@ -242,7 +252,8 @@ export const useReviewStore = create<ReviewStore>()(
         set(
           {
             pullRequests: [],
-            loading: false,
+            loading: true,
+            hasFetched: false,
             error: null,
             selectedPrNumber: null,
             reviewStatus: new Map(),

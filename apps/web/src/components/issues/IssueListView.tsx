@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from 'react';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { RefreshCw } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -48,6 +48,7 @@ function IssueCardSkeleton() {
 export function IssueListView({ className }: IssueListViewProps) {
   const { isLoading, error, refetch } = useIssues();
   const issues = useIssueStore(state => state.issues);
+  const hasFetched = useIssueStore(state => state.hasFetched);
   const sortBy = useIssueStore(state => state.sortBy);
   const filterLabels = useIssueStore(state => state.filterLabels);
   const selectedIssueNumber = useIssueStore(state => state.selectedIssueNumber);
@@ -112,7 +113,7 @@ export function IssueListView({ className }: IssueListViewProps) {
             disabled={isLoading}
             title="Refresh issues"
           >
-            <RefreshCw size={16} className={cn(isLoading && 'animate-spin')} />
+            {isLoading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
           </Button>
         </div>
 
@@ -140,7 +141,7 @@ export function IssueListView({ className }: IssueListViewProps) {
 
         {/* Content */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4">
-          {isLoading && totalIssues === 0 ? (
+          {(!hasFetched || isLoading) && totalIssues === 0 ? (
             /* Loading skeletons */
             <div className="space-y-2">
               <IssueCardSkeleton />

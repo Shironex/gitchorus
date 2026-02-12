@@ -20,6 +20,8 @@ interface IssueState {
   issues: Issue[];
   /** Whether issues are currently being fetched */
   isLoading: boolean;
+  /** Whether issues have been fetched at least once */
+  hasFetched: boolean;
   /** Error from last fetch attempt */
   error: string | null;
   /** Current sort order */
@@ -85,9 +87,10 @@ function extractUniqueLabels(issues: Issue[]): IssueLabel[] {
 export const useIssueStore = create<IssueStore>()(
   devtools(
     set => ({
-      // Initial state
+      // Initial state — isLoading starts true so views show skeletons until first fetch completes
       issues: [],
-      isLoading: false,
+      isLoading: true,
+      hasFetched: false,
       error: null,
       sortBy: 'newest',
       filterLabels: [],
@@ -103,6 +106,7 @@ export const useIssueStore = create<IssueStore>()(
             issues,
             availableLabels: extractUniqueLabels(issues),
             isLoading: false,
+            hasFetched: true,
             error: null,
           },
           undefined,
@@ -117,8 +121,10 @@ export const useIssueStore = create<IssueStore>()(
       setError: (error: string | null) => {
         if (error) {
           logger.warn('Issue fetch error:', error);
+          set({ error, isLoading: false, hasFetched: true }, undefined, 'issues/setError');
+        } else {
+          set({ error: null }, undefined, 'issues/clearError');
         }
-        set({ error, isLoading: false }, undefined, 'issues/setError');
       },
 
       setSortBy: (sortBy: IssueSortBy) => {
@@ -148,7 +154,8 @@ export const useIssueStore = create<IssueStore>()(
         set(
           {
             issues: [],
-            isLoading: false,
+            isLoading: true,
+            hasFetched: false,
             error: null,
             filterLabels: [],
             availableLabels: [],
