@@ -95,9 +95,10 @@ export function IssueDetailView({ issue }: IssueDetailViewProps) {
   const isStale =
     !!result && new Date(issue.updatedAt).getTime() > new Date(result.validatedAt).getTime();
 
-  // Step log visibility
+  // Step log visibility — treat "queued with steps" as actively running
   const hasSteps = steps && steps.length > 0;
-  const showCollapsibleLog = hasSteps && !isRunning;
+  const isActivelyRunning = isRunning || (isQueued && hasSteps);
+  const showCollapsibleLog = hasSteps && !isActivelyRunning;
 
   return (
     <div className="flex flex-col h-full">
@@ -192,8 +193,8 @@ export function IssueDetailView({ issue }: IssueDetailViewProps) {
           </div>
         </div>
 
-        {/* Queued status */}
-        {isQueued && (
+        {/* Queued status — only when no steps have arrived yet */}
+        {isQueued && !hasSteps && (
           <div className="flex items-center gap-1.5 mt-2 ml-11 text-xs text-muted-foreground">
             <Loader2 size={12} className="animate-spin" />
             <span>Waiting in queue...</span>
@@ -263,8 +264,8 @@ export function IssueDetailView({ issue }: IssueDetailViewProps) {
           </div>
         )}
 
-        {/* Agent activity hero — shown while running (replaces plain step log) */}
-        {isRunning && <AgentActivityHero steps={steps || []} isRunning={true} />}
+        {/* Agent activity hero — shown while running or queued with steps */}
+        {isActivelyRunning && <AgentActivityHero steps={steps || []} isRunning={true} />}
 
         {/* Collapsible activity log — shown after completion */}
         {showCollapsibleLog && (

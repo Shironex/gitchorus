@@ -161,19 +161,23 @@ export function ReviewView({ pr }: ReviewViewProps) {
           </div>
         )}
 
-        {/* Queued indicator */}
-        {isQueued && (
+        {/* Queued indicator — only when no steps have arrived yet */}
+        {isQueued && steps.length === 0 && (
           <div className="flex items-center gap-2 py-4 justify-center">
             <Loader2 size={16} className="animate-spin text-primary" />
             <span className="text-sm text-muted-foreground">Waiting in queue...</span>
           </div>
         )}
 
-        {/* Running: show agent activity hero via ReviewProgress */}
-        {isRunning && <ReviewProgress steps={steps} isRunning={true} />}
+        {/* Running (or queued with steps): show agent activity hero */}
+        {(isRunning || (isQueued && steps.length > 0)) && (
+          <ReviewProgress steps={steps} isRunning={true} />
+        )}
 
         {/* Completed: show collapsible log + results */}
-        {!isRunning && steps.length > 0 && <ReviewProgress steps={steps} isRunning={false} />}
+        {!isRunning && !isQueued && steps.length > 0 && (
+          <ReviewProgress steps={steps} isRunning={false} />
+        )}
 
         {/* Results */}
         {hasResult && result && (
