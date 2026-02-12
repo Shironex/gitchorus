@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import Store from 'electron-store';
 import { createLogger } from '@gitchorus/shared';
 import type { ReviewConfig } from '@gitchorus/shared';
-import { DEFAULT_REVIEW_CONFIG } from '@gitchorus/shared';
+import { DEFAULT_REVIEW_CONFIG, DEPRECATED_MODEL_MAP } from '@gitchorus/shared';
 
 const logger = createLogger('SettingsService');
 
@@ -33,7 +33,21 @@ export class SettingsService {
     try {
       const stored = this.store.get(STORE_KEY) as Partial<ReviewConfig> | undefined;
       if (stored && typeof stored === 'object') {
-        return { ...DEFAULT_REVIEW_CONFIG, ...stored };
+        const config = { ...DEFAULT_REVIEW_CONFIG, ...stored };
+
+        // Migrate deprecated model IDs to current ones
+        if (config.model && config.model in DEPRECATED_MODEL_MAP) {
+          const oldModel = config.model;
+          config.model = DEPRECATED_MODEL_MAP[config.model as string];
+          logger.info(`Migrated model ID: ${oldModel} -> ${config.model}`);
+          try {
+            this.store.set(STORE_KEY, config);
+          } catch (writeError) {
+            logger.error('Failed to persist migrated config:', writeError);
+          }
+        }
+
+        return config;
       }
       return { ...DEFAULT_REVIEW_CONFIG };
     } catch (error) {

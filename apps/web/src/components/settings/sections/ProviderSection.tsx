@@ -6,16 +6,16 @@ import { useSettings } from '@/hooks/useSettings';
 
 /** Model descriptions for the selection cards */
 const MODEL_DESCRIPTIONS: Record<ClaudeModel, string> = {
-  'claude-haiku-3-5-20241022': 'Fastest response time, ideal for quick scans',
+  'claude-haiku-4-5-20251001': 'Fastest response time, ideal for quick scans',
   'claude-sonnet-4-5-20250929': 'Best balance of speed and quality',
-  'claude-opus-4-6-20250528': 'Most thorough analysis, highest accuracy',
+  'claude-opus-4-6': 'Most thorough analysis, highest accuracy',
 };
 
 /** Ordered list of models for display */
 const MODEL_OPTIONS: ClaudeModel[] = [
-  'claude-haiku-3-5-20241022',
+  'claude-haiku-4-5-20251001',
   'claude-sonnet-4-5-20250929',
-  'claude-opus-4-6-20250528',
+  'claude-opus-4-6',
 ];
 
 export function ProviderSection() {
