@@ -89,7 +89,7 @@ export function PRListView({ className }: PRListViewProps) {
   const virtualizer = useVirtualizer({
     count: sortedPRs.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 82,
+    estimateSize: () => 100,
     gap: 8,
     overscan: 5,
     getItemKey: useCallback((index: number) => sortedPRs[index].number, [sortedPRs]),

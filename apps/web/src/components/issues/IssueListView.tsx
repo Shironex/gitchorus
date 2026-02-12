@@ -84,7 +84,7 @@ export function IssueListView({ className }: IssueListViewProps) {
   const virtualizer = useVirtualizer({
     count: filteredIssues.length,
     getScrollElement: () => scrollRef.current,
-    estimateSize: () => 82,
+    estimateSize: () => 100,
     gap: 8,
     overscan: 5,
     getItemKey: useCallback((index: number) => filteredIssues[index].number, [filteredIssues]),
