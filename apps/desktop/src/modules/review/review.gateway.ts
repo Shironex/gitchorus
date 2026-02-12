@@ -20,9 +20,15 @@ import {
   type ReviewCompleteResponse,
   type ReviewErrorResponse,
   type ReviewQueueUpdateResponse,
+  type ReviewHistoryListPayload,
+  type ReviewHistoryListResponse,
+  type ReviewHistoryGetPayload,
+  type ReviewHistoryGetResponse,
+  type ReviewHistoryDeletePayload,
 } from '@gitchorus/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 import { ReviewService, InternalReviewEvents } from './review.service';
+import { ReviewHistoryService } from './review-history.service';
 
 /**
  * WebSocket gateway for review events.
@@ -40,7 +46,10 @@ export class ReviewGateway implements OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly reviewService: ReviewService) {}
+  constructor(
+    private readonly reviewService: ReviewService,
+    private readonly historyService: ReviewHistoryService
+  ) {}
 
   afterInit(): void {
     this.logger.log('Initialized');
@@ -92,6 +101,82 @@ export class ReviewGateway implements OnGatewayInit {
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error cancelling review: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  // ============================================
+  // History handlers
+  // ============================================
+
+  /**
+   * Handle request to list review history for a repository.
+   */
+  @SubscribeMessage(ReviewEvents.HISTORY_LIST)
+  handleHistoryList(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ReviewHistoryListPayload
+  ): ReviewHistoryListResponse {
+    try {
+      const { repositoryFullName, limit } = payload;
+
+      if (!repositoryFullName) {
+        return { entries: [], error: 'repositoryFullName is required' };
+      }
+
+      const entries = this.historyService.list({ repositoryFullName, limit });
+      return { entries };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error listing review history: ${message}`);
+      return { entries: [], error: message };
+    }
+  }
+
+  /**
+   * Handle request to get the latest review for a specific PR.
+   */
+  @SubscribeMessage(ReviewEvents.HISTORY_GET)
+  handleHistoryGet(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ReviewHistoryGetPayload
+  ): ReviewHistoryGetResponse {
+    try {
+      const { repositoryFullName, prNumber } = payload;
+
+      if (!repositoryFullName || !prNumber) {
+        return { entry: null, error: 'repositoryFullName and prNumber are required' };
+      }
+
+      const entry = this.historyService.getLatestForPR(repositoryFullName, prNumber);
+      return { entry };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error getting review history entry: ${message}`);
+      return { entry: null, error: message };
+    }
+  }
+
+  /**
+   * Handle request to delete a review history entry.
+   */
+  @SubscribeMessage(ReviewEvents.HISTORY_DELETE)
+  handleHistoryDelete(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ReviewHistoryDeletePayload
+  ): { success: boolean; error?: string } {
+    try {
+      const { id } = payload;
+
+      if (!id) {
+        return { success: false, error: 'id is required' };
+      }
+
+      const deleted = this.historyService.delete(id);
+      return { success: deleted, error: deleted ? undefined : 'Entry not found' };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error deleting review history entry: ${message}`);
       return { success: false, error: message };
     }
   }

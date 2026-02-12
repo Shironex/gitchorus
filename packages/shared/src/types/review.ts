@@ -110,6 +110,31 @@ export interface ReviewQueueItem {
 }
 
 // ============================================
+// History Types
+// ============================================
+
+/**
+ * A persisted review result with a unique ID.
+ * Stored locally via electron-store for history viewing.
+ */
+export type ReviewHistoryEntry = ReviewResult & {
+  /** Unique identifier for this history entry */
+  id: string;
+};
+
+/**
+ * Filter options for querying review history
+ */
+export interface ReviewHistoryFilter {
+  /** Filter by repository full name (owner/repo) */
+  repositoryFullName?: string;
+  /** Filter by specific PR number */
+  prNumber?: number;
+  /** Maximum number of entries to return */
+  limit?: number;
+}
+
+// ============================================
 // Review Parameters
 // ============================================
 

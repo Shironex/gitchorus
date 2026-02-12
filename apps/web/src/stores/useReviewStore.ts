@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { createLogger } from '@gitchorus/shared';
-import type { PullRequest, ValidationStep, ReviewResult, ReviewStatus as SharedReviewStatus } from '@gitchorus/shared';
+import type { PullRequest, ValidationStep, ReviewResult, ReviewHistoryEntry, ReviewStatus as SharedReviewStatus } from '@gitchorus/shared';
 
 const logger = createLogger('ReviewStore');
 
@@ -42,6 +42,10 @@ interface ReviewState {
   reviewResults: Map<number, ReviewResult>;
   /** Review errors per PR number */
   reviewErrors: Map<number, string>;
+  /** Persisted review history entries */
+  reviewHistory: ReviewHistoryEntry[];
+  /** Whether history is being loaded */
+  historyLoading: boolean;
 }
 
 // ============================================
@@ -73,6 +77,12 @@ interface ReviewActions {
   clearReview: (prNumber: number) => void;
   /** Clear all PR data */
   clearPullRequests: () => void;
+  /** Set review history entries */
+  setReviewHistory: (entries: ReviewHistoryEntry[]) => void;
+  /** Set history loading state */
+  setHistoryLoading: (loading: boolean) => void;
+  /** Remove a single history entry by ID */
+  removeHistoryEntry: (id: string) => void;
 }
 
 // ============================================
@@ -99,6 +109,8 @@ export const useReviewStore = create<ReviewStore>()(
       reviewSteps: new Map(),
       reviewResults: new Map(),
       reviewErrors: new Map(),
+      reviewHistory: [],
+      historyLoading: false,
 
       // Actions
       setPullRequests: (pullRequests: PullRequest[]) => {
@@ -200,6 +212,29 @@ export const useReviewStore = create<ReviewStore>()(
         );
       },
 
+      setReviewHistory: (entries: ReviewHistoryEntry[]) => {
+        logger.info(`Loaded ${entries.length} review history entries`);
+        set(
+          { reviewHistory: entries, historyLoading: false },
+          undefined,
+          'review/setReviewHistory'
+        );
+      },
+
+      setHistoryLoading: (loading: boolean) => {
+        set({ historyLoading: loading }, undefined, 'review/setHistoryLoading');
+      },
+
+      removeHistoryEntry: (id: string) => {
+        set(
+          (state) => ({
+            reviewHistory: state.reviewHistory.filter((e) => e.id !== id),
+          }),
+          undefined,
+          'review/removeHistoryEntry'
+        );
+      },
+
       clearPullRequests: () => {
         logger.info('Clearing pull requests');
         set(
@@ -212,6 +247,8 @@ export const useReviewStore = create<ReviewStore>()(
             reviewSteps: new Map(),
             reviewResults: new Map(),
             reviewErrors: new Map(),
+            reviewHistory: [],
+            historyLoading: false,
           },
           undefined,
           'review/clearPullRequests'

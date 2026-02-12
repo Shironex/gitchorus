@@ -70,6 +70,9 @@ export const ReviewEvents = {
   COMPLETE: 'review:complete',
   ERROR: 'review:error',
   QUEUE_UPDATE: 'review:queue-update',
+  HISTORY_LIST: 'review:history-list',
+  HISTORY_GET: 'review:history-get',
+  HISTORY_DELETE: 'review:history-delete',
 } as const;
 
 // ============================================

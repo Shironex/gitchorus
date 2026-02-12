@@ -12,6 +12,7 @@ import type {
 } from '@gitchorus/shared';
 import { GithubService } from '../git/github.service';
 import { ProviderRegistry } from '../provider/provider.registry';
+import { ReviewHistoryService } from './review-history.service';
 
 /**
  * Internal event names for EventEmitter2 communication
@@ -47,7 +48,8 @@ export class ReviewService {
   constructor(
     private readonly providerRegistry: ProviderRegistry,
     private readonly githubService: GithubService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
+    private readonly historyService: ReviewHistoryService
   ) {
     this.logger = createLogger('ReviewService');
   }
@@ -209,6 +211,9 @@ export class ReviewService {
       if (!result) {
         throw new Error('Review completed without producing a result');
       }
+
+      // Save to history for local persistence
+      this.historyService.save(result);
 
       // Update queue item with result
       this.updateQueueItem(prNumber, {

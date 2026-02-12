@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { socket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
@@ -15,6 +15,9 @@ import {
   type ReviewFinding,
   type GithubCreatePrReviewPayload,
   type GithubCreatePrReviewResponse,
+  type ReviewHistoryListPayload,
+  type ReviewHistoryListResponse,
+  type ReviewHistoryDeletePayload,
 } from '@gitchorus/shared';
 
 const logger = createLogger('useReview');
@@ -30,6 +33,52 @@ export function useReviewSocket() {
   const setReviewResult = useReviewStore((state) => state.setReviewResult);
   const setReviewError = useReviewStore((state) => state.setReviewError);
   const setReviewStatus = useReviewStore((state) => state.setReviewStatus);
+  const setReviewHistory = useReviewStore((state) => state.setReviewHistory);
+  const setHistoryLoading = useReviewStore((state) => state.setHistoryLoading);
+
+  const repositoryFullName = useRepositoryStore((state) => state.githubInfo)?.fullName || null;
+  const prevRepoRef = useRef<string | null>(null);
+
+  const fetchHistoryInternal = useCallback(
+    async (repoFullName: string) => {
+      setHistoryLoading(true);
+      try {
+        const response = await emitAsync<
+          ReviewHistoryListPayload,
+          ReviewHistoryListResponse
+        >(ReviewEvents.HISTORY_LIST, {
+          repositoryFullName: repoFullName,
+        });
+
+        if (response.error) {
+          logger.warn('Error fetching review history:', response.error);
+          setReviewHistory([]);
+        } else {
+          setReviewHistory(response.entries);
+
+          // Hydrate reviewResults map from history so past reviews
+          // show immediately when revisiting a PR
+          const setResult = useReviewStore.getState().setReviewResult;
+          const setStatus = useReviewStore.getState().setReviewStatus;
+          const currentResults = useReviewStore.getState().reviewResults;
+
+          for (const entry of response.entries) {
+            // Only hydrate if no live result exists for this PR
+            if (!currentResults.has(entry.prNumber)) {
+              setResult(entry.prNumber, entry);
+              setStatus(entry.prNumber, 'completed');
+            }
+          }
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to fetch review history';
+        logger.error('Failed to fetch review history:', message);
+        setReviewHistory([]);
+      }
+    },
+    [setReviewHistory, setHistoryLoading]
+  );
 
   useEffect(() => {
     const onProgress = (data: ReviewProgressResponse) => {
@@ -41,6 +90,11 @@ export function useReviewSocket() {
       logger.info(`Complete PR #${data.prNumber}: ${data.result.verdict}`);
       setReviewResult(data.prNumber, data.result);
       setReviewStatus(data.prNumber, 'completed');
+      // Refresh history after a review completes
+      const repoName = useRepositoryStore.getState().githubInfo?.fullName;
+      if (repoName) {
+        fetchHistoryInternal(repoName);
+      }
     };
 
     const onError = (data: ReviewErrorResponse) => {
@@ -60,7 +114,15 @@ export function useReviewSocket() {
       socket.off(ReviewEvents.COMPLETE, onComplete);
       socket.off(ReviewEvents.ERROR, onError);
     };
-  }, [addReviewStep, setReviewResult, setReviewError, setReviewStatus]);
+  }, [addReviewStep, setReviewResult, setReviewError, setReviewStatus, fetchHistoryInternal]);
+
+  // Fetch history when repository changes
+  useEffect(() => {
+    if (repositoryFullName && repositoryFullName !== prevRepoRef.current) {
+      fetchHistoryInternal(repositoryFullName);
+    }
+    prevRepoRef.current = repositoryFullName;
+  }, [repositoryFullName, fetchHistoryInternal]);
 }
 
 /**
@@ -74,6 +136,9 @@ export function useReview() {
   const clearReview = useReviewStore((state) => state.clearReview);
   const setReviewStatus = useReviewStore((state) => state.setReviewStatus);
   const setReviewError = useReviewStore((state) => state.setReviewError);
+  const setReviewHistory = useReviewStore((state) => state.setReviewHistory);
+  const setHistoryLoading = useReviewStore((state) => state.setHistoryLoading);
+  const removeHistoryEntry = useReviewStore((state) => state.removeHistoryEntry);
 
   const startReview = useCallback(
     async (prNumber: number) => {
@@ -204,9 +269,68 @@ export function useReview() {
     [repositoryPath],
   );
 
+  /**
+   * Fetch review history for a given repository.
+   */
+  const fetchHistory = useCallback(
+    async (repoFullName: string) => {
+      setHistoryLoading(true);
+      try {
+        const response = await emitAsync<
+          ReviewHistoryListPayload,
+          ReviewHistoryListResponse
+        >(ReviewEvents.HISTORY_LIST, {
+          repositoryFullName: repoFullName,
+        });
+
+        if (response.error) {
+          logger.warn('Error fetching review history:', response.error);
+          setReviewHistory([]);
+        } else {
+          setReviewHistory(response.entries);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Failed to fetch review history';
+        logger.error('Failed to fetch review history:', message);
+        setReviewHistory([]);
+      }
+    },
+    [setReviewHistory, setHistoryLoading]
+  );
+
+  /**
+   * Delete a review history entry by ID.
+   */
+  const deleteHistoryEntry = useCallback(
+    async (id: string) => {
+      try {
+        const response = await emitAsync<
+          ReviewHistoryDeletePayload,
+          { success: boolean; error?: string }
+        >(ReviewEvents.HISTORY_DELETE, { id });
+
+        if (response.success) {
+          removeHistoryEntry(id);
+        } else {
+          logger.warn('Failed to delete review history entry:', response.error);
+        }
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : 'Failed to delete review history entry';
+        logger.error('Failed to delete review history entry:', message);
+      }
+    },
+    [removeHistoryEntry]
+  );
+
   return {
     startReview,
     cancelReview,
     pushReview,
+    fetchHistory,
+    deleteHistoryEntry,
   };
 }

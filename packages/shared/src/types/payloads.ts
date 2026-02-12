@@ -16,7 +16,7 @@ import type {
 import type { ProviderStatus } from './provider';
 import type { LogEntry } from '../logger';
 import type { ValidationStep, ValidationResult, ValidationQueueItem, ValidationHistoryEntry } from './validation';
-import type { ReviewResult, ReviewQueueItem } from './review';
+import type { ReviewResult, ReviewQueueItem, ReviewHistoryEntry } from './review';
 
 // ============================================
 // Generic Response Types
@@ -333,6 +333,49 @@ export interface ReviewQueueUpdateResponse {
 export interface ReviewErrorResponse {
   prNumber: number;
   error: string;
+}
+
+// ============================================
+// Review History Payloads
+// ============================================
+
+/**
+ * Payload to list review history for a repository
+ */
+export interface ReviewHistoryListPayload {
+  repositoryFullName: string;
+  limit?: number;
+}
+
+/**
+ * Response for listing review history
+ */
+export interface ReviewHistoryListResponse {
+  entries: ReviewHistoryEntry[];
+  error?: string;
+}
+
+/**
+ * Payload to get the latest review for a specific PR
+ */
+export interface ReviewHistoryGetPayload {
+  prNumber: number;
+  repositoryFullName: string;
+}
+
+/**
+ * Response for getting a specific review history entry
+ */
+export interface ReviewHistoryGetResponse {
+  entry: ReviewHistoryEntry | null;
+  error?: string;
+}
+
+/**
+ * Payload to delete a review history entry
+ */
+export interface ReviewHistoryDeletePayload {
+  id: string;
 }
 
 // ============================================
