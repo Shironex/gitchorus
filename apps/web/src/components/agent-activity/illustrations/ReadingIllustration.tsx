@@ -18,22 +18,18 @@ export function ReadingIllustration() {
     <svg viewBox="0 0 200 160" className="w-48 h-40" aria-hidden="true">
       {/* Document body */}
       <rect
-        x="45" y="15" width="110" height="130" rx="4"
+        x="45"
+        y="15"
+        width="110"
+        height="130"
+        rx="4"
         className="fill-card stroke-border"
         strokeWidth="1.5"
       />
 
       {/* Corner fold */}
-      <path
-        d="M 135 15 L 155 15 L 155 35 Z"
-        className="fill-muted stroke-border"
-        strokeWidth="1"
-      />
-      <path
-        d="M 135 15 L 135 35 L 155 35"
-        className="fill-card stroke-border"
-        strokeWidth="1"
-      />
+      <path d="M 135 15 L 155 15 L 155 35 Z" className="fill-muted stroke-border" strokeWidth="1" />
+      <path d="M 135 15 L 135 35 L 155 35" className="fill-card stroke-border" strokeWidth="1" />
 
       {/* Text lines */}
       {textLines.map((line, i) => (
@@ -51,7 +47,10 @@ export function ReadingIllustration() {
       {/* Scanning line with glow */}
       <g className="animate-scan-line">
         <line
-          x1="50" y1="35" x2="150" y2="35"
+          x1="50"
+          y1="35"
+          x2="150"
+          y2="35"
           className="stroke-primary"
           strokeWidth="2"
           strokeLinecap="round"

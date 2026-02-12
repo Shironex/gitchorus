@@ -170,14 +170,10 @@ export function ReviewView({ pr }: ReviewViewProps) {
         )}
 
         {/* Running: show agent activity hero via ReviewProgress */}
-        {isRunning && (
-          <ReviewProgress steps={steps} isRunning={true} />
-        )}
+        {isRunning && <ReviewProgress steps={steps} isRunning={true} />}
 
         {/* Completed: show collapsible log + results */}
-        {!isRunning && steps.length > 0 && (
-          <ReviewProgress steps={steps} isRunning={false} />
-        )}
+        {!isRunning && steps.length > 0 && <ReviewProgress steps={steps} isRunning={false} />}
 
         {/* Results */}
         {hasResult && result && (

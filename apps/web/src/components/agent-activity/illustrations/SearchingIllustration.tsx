@@ -31,7 +31,11 @@ export function SearchingIllustration() {
 
       {/* Highlighted "found" line — pulses */}
       <rect
-        x="30" y="64" width="90" height="3" rx="1.5"
+        x="30"
+        y="64"
+        width="90"
+        height="3"
+        rx="1.5"
         className="fill-primary/40"
         style={{ animation: 'pulseSubtle 2s ease-in-out infinite' }}
       />
@@ -40,21 +44,22 @@ export function SearchingIllustration() {
       <g className="animate-float">
         {/* Glass circle */}
         <circle
-          cx="130" cy="75" r="18"
+          cx="130"
+          cy="75"
+          r="18"
           className="stroke-primary"
           fill="none"
           strokeWidth="2.5"
           style={{ filter: 'drop-shadow(0 0 3px var(--primary))' }}
         />
         {/* Glass fill — subtle tint */}
-        <circle
-          cx="130" cy="75" r="16"
-          className="fill-primary/5"
-        />
+        <circle cx="130" cy="75" r="16" className="fill-primary/5" />
         {/* Handle */}
         <line
-          x1="143" y1="88"
-          x2="155" y2="100"
+          x1="143"
+          y1="88"
+          x2="155"
+          y2="100"
           className="stroke-primary"
           strokeWidth="3"
           strokeLinecap="round"

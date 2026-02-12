@@ -67,12 +67,8 @@ export function IssueDetailView({ issue }: IssueDetailViewProps) {
 
   // Push modal state
   const [showPushModal, setShowPushModal] = useState(false);
-  const pushStatus = useValidationStore(state =>
-    state.pushStatus.get(issueNumber) || 'idle'
-  );
-  const postedUrl = useValidationStore(state =>
-    state.postedCommentUrls.get(issueNumber)
-  );
+  const pushStatus = useValidationStore(state => state.pushStatus.get(issueNumber) || 'idle');
+  const postedUrl = useValidationStore(state => state.postedCommentUrls.get(issueNumber));
 
   // Collapsible activity log state
   const [logExpanded, setLogExpanded] = useState(false);
@@ -148,9 +144,7 @@ export function IssueDetailView({ issue }: IssueDetailViewProps) {
               {/* Comments count */}
               {issue.commentsCount > 0 && (
                 <>
-                  {issue.labels.length > 0 && (
-                    <span className="text-muted-foreground/40">|</span>
-                  )}
+                  {issue.labels.length > 0 && <span className="text-muted-foreground/40">|</span>}
                   <span className="flex items-center gap-0.5">
                     <MessageSquare size={12} />
                     {issue.commentsCount} comments
@@ -270,9 +264,7 @@ export function IssueDetailView({ issue }: IssueDetailViewProps) {
         )}
 
         {/* Agent activity hero — shown while running (replaces plain step log) */}
-        {isRunning && (
-          <AgentActivityHero steps={steps || []} isRunning={true} />
-        )}
+        {isRunning && <AgentActivityHero steps={steps || []} isRunning={true} />}
 
         {/* Collapsible activity log — shown after completion */}
         {showCollapsibleLog && (

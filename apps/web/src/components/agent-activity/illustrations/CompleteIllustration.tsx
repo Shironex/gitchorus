@@ -18,7 +18,9 @@ export function CompleteIllustration() {
     <svg viewBox="0 0 200 160" className="w-48 h-40" aria-hidden="true">
       {/* Outer ring */}
       <circle
-        cx="100" cy="80" r="38"
+        cx="100"
+        cy="80"
+        r="38"
         className="stroke-primary/20"
         fill="none"
         strokeWidth="1.5"
@@ -30,7 +32,9 @@ export function CompleteIllustration() {
 
       {/* Main circle */}
       <circle
-        cx="100" cy="80" r="30"
+        cx="100"
+        cy="80"
+        r="30"
         className="fill-primary/10 stroke-primary"
         strokeWidth="2"
         style={{

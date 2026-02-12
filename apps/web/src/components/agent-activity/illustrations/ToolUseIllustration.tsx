@@ -7,21 +7,19 @@ export function ToolUseIllustration() {
     <svg viewBox="0 0 200 160" className="w-48 h-40" aria-hidden="true">
       {/* Terminal window frame */}
       <rect
-        x="30" y="20" width="140" height="120" rx="6"
+        x="30"
+        y="20"
+        width="140"
+        height="120"
+        rx="6"
         className="fill-card stroke-border"
         strokeWidth="1.5"
       />
 
       {/* Title bar */}
-      <rect
-        x="30" y="20" width="140" height="24" rx="6"
-        className="fill-muted"
-      />
+      <rect x="30" y="20" width="140" height="24" rx="6" className="fill-muted" />
       {/* Bottom corners of title bar are square */}
-      <rect
-        x="30" y="38" width="140" height="6"
-        className="fill-muted"
-      />
+      <rect x="30" y="38" width="140" height="6" className="fill-muted" />
 
       {/* Traffic light dots */}
       <circle cx="46" cy="32" r="4" className="fill-destructive/60" />
@@ -29,14 +27,8 @@ export function ToolUseIllustration() {
       <circle cx="70" cy="32" r="4" className="fill-status-success/60" />
 
       {/* Terminal body (darker area) */}
-      <rect
-        x="31" y="44" width="138" height="95" rx="0"
-        className="fill-background"
-      />
-      <rect
-        x="31" y="133" width="138" height="6" rx="0 0 6 6"
-        className="fill-background"
-      />
+      <rect x="31" y="44" width="138" height="95" rx="0" className="fill-background" />
+      <rect x="31" y="133" width="138" height="6" rx="0 0 6 6" className="fill-background" />
 
       {/* Prompt lines */}
       {/* Line 1: completed command */}
@@ -65,7 +57,11 @@ export function ToolUseIllustration() {
 
       {/* Blinking cursor */}
       <rect
-        x="85" y="110" width="2" height="10" rx="1"
+        x="85"
+        y="110"
+        width="2"
+        height="10"
+        rx="1"
         className="fill-primary"
         style={{ animation: 'cursorBlink 0.8s step-end infinite' }}
       />

@@ -40,7 +40,11 @@ export function ProcessingIllustration() {
           {/* Gear body */}
           <path
             d={gearPath(gear.cx, gear.cy, gear.r, gear.teeth)}
-            className={i === 0 ? 'fill-primary/20 stroke-primary' : 'fill-muted-foreground/10 stroke-muted-foreground/30'}
+            className={
+              i === 0
+                ? 'fill-primary/20 stroke-primary'
+                : 'fill-muted-foreground/10 stroke-muted-foreground/30'
+            }
             strokeWidth="1.5"
           />
           {/* Center hole */}
