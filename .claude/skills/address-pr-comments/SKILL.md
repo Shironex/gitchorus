@@ -2,7 +2,7 @@
 name: address-pr-comments
 description: Fetch and address all inline review comments on a GitHub PR
 disable-model-invocation: true
-argument-hint: "[pr-number or empty for current branch PR]"
+argument-hint: '[pr-number or empty for current branch PR]'
 allowed-tools: Bash(gh *), Read, Edit, Grep, Glob
 ---
 
@@ -64,6 +64,7 @@ pnpm format                                    # formatting
 ```
 
 If desktop code was changed, also run:
+
 ```bash
 pnpm --filter @gitchorus/desktop test         # backend tests
 ```
