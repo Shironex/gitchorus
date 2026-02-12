@@ -7,6 +7,9 @@
     "buildResources": "resources"
   },
   "files": ["dist/**/*", "package.json", "!**/*.map", "!**/*.d.ts", "!dist/**/*.d.ts"],
+  "asarUnpack": [
+    "node_modules/@anthropic-ai/claude-agent-sdk/**/*"
+  ],
   "artifactName": "${productName}-${version}-${arch}.${ext}",
   "nodeGypRebuild": false,
   "npmRebuild": false,

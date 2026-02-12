@@ -1,4 +1,6 @@
 import { Injectable } from '@nestjs/common';
+import { app } from 'electron';
+import * as path from 'path';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type {
   SDKMessage,
@@ -336,6 +338,22 @@ export class ClaudeAgentProvider {
   constructor(private readonly settingsService: SettingsService) {}
 
   /**
+   * Resolve the path to the SDK's cli.js for packaged (production) builds.
+   * In development, returns undefined so the SDK uses its default resolution.
+   */
+  private getCliPath(): string | undefined {
+    if (!app.isPackaged) return undefined;
+    return path.join(
+      process.resourcesPath,
+      'app.asar.unpacked',
+      'node_modules',
+      '@anthropic-ai',
+      'claude-agent-sdk',
+      'cli.js'
+    );
+  }
+
+  /**
    * Create a stderr handler that collects lines into a rolling buffer.
    */
   private createStderrHandler(buffer: string[]): (data: string) => void {
@@ -430,6 +448,7 @@ export class ClaudeAgentProvider {
         },
         persistSession: false,
         stderr: this.createStderrHandler(stderrBuffer),
+        pathToClaudeCodeExecutable: this.getCliPath(),
       },
     });
 
@@ -601,6 +620,7 @@ export class ClaudeAgentProvider {
         },
         persistSession: false,
         stderr: this.createStderrHandler(stderrBuffer),
+        pathToClaudeCodeExecutable: this.getCliPath(),
       },
     });
 
