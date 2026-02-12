@@ -69,15 +69,24 @@ export type DefaultReviewAction = 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
 
 /** Claude model options */
 export type ClaudeModel =
-  | 'claude-haiku-3-5-20241022'
+  | 'claude-haiku-4-5-20251001'
   | 'claude-sonnet-4-5-20250929'
-  | 'claude-opus-4-6-20250528';
+  | 'claude-opus-4-6';
 
 /** Display labels for Claude models */
 export const CLAUDE_MODEL_LABELS: Record<ClaudeModel, string> = {
-  'claude-haiku-3-5-20241022': 'Haiku',
+  'claude-haiku-4-5-20251001': 'Haiku',
   'claude-sonnet-4-5-20250929': 'Sonnet',
-  'claude-opus-4-6-20250528': 'Opus',
+  'claude-opus-4-6': 'Opus',
+};
+
+/**
+ * Map of deprecated model IDs to their current replacements.
+ * Used to migrate stored settings from older versions.
+ */
+export const DEPRECATED_MODEL_MAP: Record<string, ClaudeModel> = {
+  'claude-haiku-3-5-20241022': 'claude-haiku-4-5-20251001',
+  'claude-opus-4-6-20250528': 'claude-opus-4-6',
 };
 
 /** Review depth display labels and descriptions */
