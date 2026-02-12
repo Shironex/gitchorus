@@ -132,6 +132,9 @@ export class ReviewLogService implements OnModuleDestroy {
 
   /**
    * Remove log files older than MAX_LOG_DAYS.
+   *
+   * Note: This service shares the log directory with ValidationLogService.
+   * Each service uses a distinct file prefix (review- vs validation-) to avoid conflicts.
    */
   private cleanupOldLogs(): void {
     try {

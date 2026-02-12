@@ -336,6 +336,18 @@ export class ClaudeAgentProvider {
   constructor(private readonly settingsService: SettingsService) {}
 
   /**
+   * Create a stderr handler that collects lines into a rolling buffer.
+   */
+  private createStderrHandler(buffer: string[]): (data: string) => void {
+    return (data: string) => {
+      buffer.push(data.trimEnd());
+      if (buffer.length > MAX_STDERR_LINES) {
+        buffer.shift();
+      }
+    };
+  }
+
+  /**
    * Check if Claude CLI is available and authenticated.
    */
   async getStatus(): Promise<ProviderStatus> {
@@ -417,12 +429,7 @@ export class ClaudeAgentProvider {
           schema: VALIDATION_OUTPUT_SCHEMA,
         },
         persistSession: false,
-        stderr: (data: string) => {
-          stderrBuffer.push(data.trimEnd());
-          if (stderrBuffer.length > MAX_STDERR_LINES) {
-            stderrBuffer.shift();
-          }
-        },
+        stderr: this.createStderrHandler(stderrBuffer),
       },
     });
 
@@ -443,10 +450,13 @@ export class ClaudeAgentProvider {
           // Check for assistant-level errors (auth, billing, rate limit, etc.)
           const assistantMsg = message as SDKAssistantMessage;
           if (assistantMsg.error) {
+            const errorCode =
+              typeof assistantMsg.error === 'string'
+                ? assistantMsg.error
+                : String(assistantMsg.error);
             const friendlyMsg =
-              ASSISTANT_ERROR_MESSAGES[assistantMsg.error] ||
-              `Claude agent error: ${assistantMsg.error}`;
-            logger.error(`Assistant error: ${assistantMsg.error} — ${friendlyMsg}`);
+              ASSISTANT_ERROR_MESSAGES[errorCode] || `Claude agent error: ${errorCode}`;
+            logger.error(`Assistant error: ${errorCode} — ${friendlyMsg}`);
             throw new Error(friendlyMsg);
           }
 
@@ -502,7 +512,9 @@ export class ClaudeAgentProvider {
       if (stderrBuffer.length > 0 && error instanceof Error) {
         const stderrContext = stderrBuffer.join('\n');
         logger.error(`stderr output:\n${stderrContext}`);
-        error.message = `${error.message}\n[stderr]: ${stderrContext}`;
+        const enhanced = new Error(`${error.message}\n[stderr]: ${stderrContext}`);
+        enhanced.stack = error.stack;
+        throw enhanced;
       }
       throw error;
     } finally {
@@ -587,12 +599,7 @@ export class ClaudeAgentProvider {
           schema: REVIEW_OUTPUT_SCHEMA,
         },
         persistSession: false,
-        stderr: (data: string) => {
-          stderrBuffer.push(data.trimEnd());
-          if (stderrBuffer.length > MAX_STDERR_LINES) {
-            stderrBuffer.shift();
-          }
-        },
+        stderr: this.createStderrHandler(stderrBuffer),
       },
     });
 
@@ -613,10 +620,13 @@ export class ClaudeAgentProvider {
           // Check for assistant-level errors (auth, billing, rate limit, etc.)
           const assistantMsg = message as SDKAssistantMessage;
           if (assistantMsg.error) {
+            const errorCode =
+              typeof assistantMsg.error === 'string'
+                ? assistantMsg.error
+                : String(assistantMsg.error);
             const friendlyMsg =
-              ASSISTANT_ERROR_MESSAGES[assistantMsg.error] ||
-              `Claude agent error: ${assistantMsg.error}`;
-            logger.error(`Assistant error: ${assistantMsg.error} — ${friendlyMsg}`);
+              ASSISTANT_ERROR_MESSAGES[errorCode] || `Claude agent error: ${errorCode}`;
+            logger.error(`Assistant error: ${errorCode} — ${friendlyMsg}`);
             throw new Error(friendlyMsg);
           }
 
@@ -668,7 +678,9 @@ export class ClaudeAgentProvider {
       if (stderrBuffer.length > 0 && error instanceof Error) {
         const stderrContext = stderrBuffer.join('\n');
         logger.error(`stderr output:\n${stderrContext}`);
-        error.message = `${error.message}\n[stderr]: ${stderrContext}`;
+        const enhanced = new Error(`${error.message}\n[stderr]: ${stderrContext}`);
+        enhanced.stack = error.stack;
+        throw enhanced;
       }
       throw error;
     } finally {
