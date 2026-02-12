@@ -41,6 +41,15 @@ export default defineConfig({
       output: {
         manualChunks: {
           vendor: ['react', 'react-dom'],
+          recharts: ['recharts'],
+          markdown: [
+            'react-markdown',
+            'remark-gfm',
+            'remark-breaks',
+            'rehype-raw',
+            'rehype-sanitize',
+          ],
+          socketio: ['socket.io-client'],
         },
       },
     },

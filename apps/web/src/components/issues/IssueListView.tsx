@@ -1,4 +1,5 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo, useRef } from 'react';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -78,6 +79,17 @@ export function IssueListView({ className }: IssueListViewProps) {
 
   const hasSelection = selectedIssueNumber !== null;
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  const virtualizer = useVirtualizer({
+    count: filteredIssues.length,
+    getScrollElement: () => scrollRef.current,
+    estimateSize: () => 100,
+    gap: 8,
+    overscan: 5,
+    getItemKey: useCallback((index: number) => filteredIssues[index].number, [filteredIssues]),
+  });
+
   return (
     <div className={cn('flex h-full', className)}>
       {/* Issue list panel */}
@@ -127,7 +139,7 @@ export function IssueListView({ className }: IssueListViewProps) {
         )}
 
         {/* Content */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4">
           {isLoading && totalIssues === 0 ? (
             /* Loading skeletons */
             <div className="space-y-2">
@@ -146,18 +158,39 @@ export function IssueListView({ className }: IssueListViewProps) {
               <p className="text-sm text-muted-foreground">No issues match the selected filters.</p>
             </div>
           ) : (
-            /* Issue cards */
-            <div className="space-y-2">
-              {filteredIssues.map(issue => (
-                <IssueCard
-                  key={issue.number}
-                  issue={issue}
-                  isSelected={selectedIssueNumber === issue.number}
-                  onClick={() =>
-                    setSelectedIssue(selectedIssueNumber === issue.number ? null : issue.number)
-                  }
-                />
-              ))}
+            /* Virtualized issue cards */
+            <div
+              style={{
+                height: virtualizer.getTotalSize(),
+                width: '100%',
+                position: 'relative',
+              }}
+            >
+              {virtualizer.getVirtualItems().map(virtualItem => {
+                const issue = filteredIssues[virtualItem.index];
+                return (
+                  <div
+                    key={virtualItem.key}
+                    data-index={virtualItem.index}
+                    ref={virtualizer.measureElement}
+                    style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      width: '100%',
+                      transform: `translateY(${virtualItem.start}px)`,
+                    }}
+                  >
+                    <IssueCard
+                      issue={issue}
+                      isSelected={selectedIssueNumber === issue.number}
+                      onClick={() =>
+                        setSelectedIssue(selectedIssueNumber === issue.number ? null : issue.number)
+                      }
+                    />
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
