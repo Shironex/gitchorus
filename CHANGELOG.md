@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.1 (2026-02-12)
+
+### Bug Fixes
+
+- **Stderr capture for Claude SDK** — Added `stderr` callback to both `validate()` and `review()` methods; on failure the last 20 stderr lines are appended to the error message so the root cause surfaces (#8)
+- **SDK assistant error handling** — Detect `SDKAssistantMessage.error` field (`authentication_failed`, `billing_error`, `rate_limit`, etc.) and throw user-friendly error messages immediately (#8)
+- **E2E smoke test fix** — `data-testid="app-ready"` was never rendered by any component; added to `App.tsx` root div gated on WebSocket connection status (#8)
+- **Error message mutation** — Create new Error instances instead of mutating `error.message` to avoid breaking upstream error handling (#8)
+
+### New Features
+
+- **Review log service** — JSONL file logging for PR reviews (mirrors `ValidationLogService`) with daily rotation and 7-day retention (#8)
+- **`review:log-entries` WebSocket event** — Retrieve recent review log entries via socket for debugging (#8)
+
+### Maintenance
+
+- **Bump dependencies** — Updated CI actions, desktop, and web dependencies (#7)
+- **Prettier formatting** — Fixed formatting inconsistencies and removed stale `WorktreeService` from integration tests
+
 ## 0.1.0 (2026-02-12)
 
 Initial release of GitChorus — AI-powered code review and issue validation for GitHub repositories.
