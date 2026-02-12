@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { toast } from 'sonner';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useAppVersion } from './useAppVersion';
+import type { ConnectionStatus } from '@gitchorus/shared';
 
 /** Minimum time the splash screen stays visible (ms) */
 const MIN_DISPLAY_MS = 1500;
@@ -45,6 +46,7 @@ export function useSplashScreen(): SplashScreenState {
   const version = useAppVersion();
 
   const hasDismissedRef = useRef(false);
+  const hasWarnedRef = useRef(false);
 
   // Derived readiness
   const isAppReady = connectionStatus === 'connected';
@@ -78,9 +80,10 @@ export function useSplashScreen(): SplashScreenState {
     return () => clearTimeout(timer);
   }, [shouldDismiss]);
 
-  // Max timeout warning toast
+  // Max timeout warning toast (fire only once)
   useEffect(() => {
-    if (maxTimeReached && !isAppReady) {
+    if (maxTimeReached && !isAppReady && !hasWarnedRef.current) {
+      hasWarnedRef.current = true;
       toast.warning(
         'Some services are still connecting. The app may take a moment to fully load.',
         { duration: 5000 }
@@ -96,7 +99,7 @@ export function useSplashScreen(): SplashScreenState {
 /**
  * Derive human-readable status text from the current connection status.
  */
-function deriveStatusText(connectionStatus: string): string {
+function deriveStatusText(connectionStatus: ConnectionStatus): string {
   switch (connectionStatus) {
     case 'connected':
       return 'Almost ready';
