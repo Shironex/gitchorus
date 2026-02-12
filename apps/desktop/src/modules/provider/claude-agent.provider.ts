@@ -513,6 +513,7 @@ export class ClaudeAgentProvider {
         const stderrContext = stderrBuffer.join('\n');
         logger.error(`stderr output:\n${stderrContext}`);
         const enhanced = new Error(`${error.message}\n[stderr]: ${stderrContext}`);
+        enhanced.name = error.name;
         enhanced.stack = error.stack;
         throw enhanced;
       }
@@ -679,6 +680,7 @@ export class ClaudeAgentProvider {
         const stderrContext = stderrBuffer.join('\n');
         logger.error(`stderr output:\n${stderrContext}`);
         const enhanced = new Error(`${error.message}\n[stderr]: ${stderrContext}`);
+        enhanced.name = error.name;
         enhanced.stack = error.stack;
         throw enhanced;
       }

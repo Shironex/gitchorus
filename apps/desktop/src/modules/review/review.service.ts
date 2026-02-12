@@ -239,9 +239,11 @@ export class ReviewService {
 
       // Log full error to file logger for post-mortem debugging
       this.logger.error(
-        `Review failed for PR #${prNumber} (duration=${durationMs}ms): ${errorMessage}`,
-        error instanceof Error ? error : undefined
+        `Review failed for PR #${prNumber} (duration=${durationMs}ms): ${errorMessage}`
       );
+      if (error instanceof Error && error.stack) {
+        this.logger.debug(`Stack trace: ${error.stack}`);
+      }
 
       const status: ReviewStatus = isCancelled ? 'cancelled' : 'failed';
 
