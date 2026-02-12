@@ -4,6 +4,7 @@ import { ProviderModule } from '../provider';
 import { ReviewService } from './review.service';
 import { ReviewGateway } from './review.gateway';
 import { ReviewHistoryService } from './review-history.service';
+import { ReviewLogService } from './review-log.service';
 
 /**
  * NestJS module for PR review.
@@ -11,11 +12,12 @@ import { ReviewHistoryService } from './review-history.service';
  * Imports GitModule (for GithubService) and ProviderModule (for ProviderRegistry).
  * Provides ReviewService for queue management and agent dispatch,
  * ReviewHistoryService for local persistence via electron-store,
+ * ReviewLogService for JSONL file logging,
  * and ReviewGateway for WebSocket event handling.
  */
 @Module({
   imports: [GitModule, ProviderModule],
-  providers: [ReviewService, ReviewGateway, ReviewHistoryService],
-  exports: [ReviewService, ReviewHistoryService],
+  providers: [ReviewService, ReviewGateway, ReviewHistoryService, ReviewLogService],
+  exports: [ReviewService, ReviewHistoryService, ReviewLogService],
 })
 export class ReviewModule {}
