@@ -36,6 +36,23 @@ const DEFAULT_MAX_TURNS = 30;
 const DEFAULT_REVIEW_MAX_TURNS = 50;
 
 /**
+ * Maximum number of stderr lines to retain for error diagnostics.
+ */
+const MAX_STDERR_LINES = 20;
+
+/**
+ * Map SDK assistant message error codes to user-friendly messages.
+ */
+const ASSISTANT_ERROR_MESSAGES: Record<string, string> = {
+  authentication_failed: 'Claude authentication failed. Please re-authenticate.',
+  billing_error: 'Claude billing error. Check your subscription.',
+  rate_limit: 'Rate limited by Claude API. Please try again later.',
+  invalid_request: 'Invalid request sent to Claude API.',
+  server_error: 'Claude API server error. Please try again later.',
+  max_output_tokens: 'Claude response exceeded maximum output tokens.',
+};
+
+/**
  * JSON schema for structured validation output.
  * Matches the ValidationResult type (without metadata fields that are added after).
  */
@@ -373,6 +390,9 @@ export class ClaudeAgentProvider {
 
     this.abortController = new AbortController();
 
+    // Capture stderr output for error diagnostics
+    const stderrBuffer: string[] = [];
+
     yield {
       step: 'initializing',
       message: 'Starting Claude agent for issue analysis...',
@@ -397,6 +417,12 @@ export class ClaudeAgentProvider {
           schema: VALIDATION_OUTPUT_SCHEMA,
         },
         persistSession: false,
+        stderr: (data: string) => {
+          stderrBuffer.push(data.trimEnd());
+          if (stderrBuffer.length > MAX_STDERR_LINES) {
+            stderrBuffer.shift();
+          }
+        },
       },
     });
 
@@ -414,8 +440,17 @@ export class ClaudeAgentProvider {
         logger.debug(`SDK message: type=${message.type}`);
 
         if (message.type === 'assistant') {
-          // Parse tool_use blocks from assistant message content
+          // Check for assistant-level errors (auth, billing, rate limit, etc.)
           const assistantMsg = message as SDKAssistantMessage;
+          if (assistantMsg.error) {
+            const friendlyMsg =
+              ASSISTANT_ERROR_MESSAGES[assistantMsg.error] ||
+              `Claude agent error: ${assistantMsg.error}`;
+            logger.error(`Assistant error: ${assistantMsg.error} — ${friendlyMsg}`);
+            throw new Error(friendlyMsg);
+          }
+
+          // Parse tool_use blocks from assistant message content
           const toolSteps = [...parseAssistantToolUseBlocks(assistantMsg)];
 
           // If assistant message has tool_use blocks, yield each one
@@ -462,6 +497,12 @@ export class ClaudeAgentProvider {
       if (error instanceof Error && error.name === 'AbortError') {
         logger.info('Validation cancelled by user');
         throw new Error('Validation cancelled by user');
+      }
+      // Enrich error with stderr context if available
+      if (stderrBuffer.length > 0 && error instanceof Error) {
+        const stderrContext = stderrBuffer.join('\n');
+        logger.error(`stderr output:\n${stderrContext}`);
+        error.message = `${error.message}\n[stderr]: ${stderrContext}`;
       }
       throw error;
     } finally {
@@ -519,6 +560,9 @@ export class ClaudeAgentProvider {
 
     this.abortController = new AbortController();
 
+    // Capture stderr output for error diagnostics
+    const stderrBuffer: string[] = [];
+
     yield {
       step: 'initializing',
       message: 'Starting Claude agent for PR review...',
@@ -543,6 +587,12 @@ export class ClaudeAgentProvider {
           schema: REVIEW_OUTPUT_SCHEMA,
         },
         persistSession: false,
+        stderr: (data: string) => {
+          stderrBuffer.push(data.trimEnd());
+          if (stderrBuffer.length > MAX_STDERR_LINES) {
+            stderrBuffer.shift();
+          }
+        },
       },
     });
 
@@ -560,7 +610,16 @@ export class ClaudeAgentProvider {
         logger.debug(`SDK message: type=${message.type}`);
 
         if (message.type === 'assistant') {
+          // Check for assistant-level errors (auth, billing, rate limit, etc.)
           const assistantMsg = message as SDKAssistantMessage;
+          if (assistantMsg.error) {
+            const friendlyMsg =
+              ASSISTANT_ERROR_MESSAGES[assistantMsg.error] ||
+              `Claude agent error: ${assistantMsg.error}`;
+            logger.error(`Assistant error: ${assistantMsg.error} — ${friendlyMsg}`);
+            throw new Error(friendlyMsg);
+          }
+
           const toolSteps = [...parseAssistantToolUseBlocks(assistantMsg)];
 
           for (const step of toolSteps) {
@@ -604,6 +663,12 @@ export class ClaudeAgentProvider {
       if (error instanceof Error && error.name === 'AbortError') {
         logger.info('Review cancelled by user');
         throw new Error('Review cancelled by user');
+      }
+      // Enrich error with stderr context if available
+      if (stderrBuffer.length > 0 && error instanceof Error) {
+        const stderrContext = stderrBuffer.join('\n');
+        logger.error(`stderr output:\n${stderrContext}`);
+        error.message = `${error.message}\n[stderr]: ${stderrContext}`;
       }
       throw error;
     } finally {

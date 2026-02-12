@@ -4,6 +4,7 @@ import { useUpdateToast } from '@/hooks/useUpdateToast';
 import { useValidationSocket } from '@/hooks/useValidation';
 import { useReviewSocket } from '@/hooks/useReview';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useIssueStore } from '@/stores/useIssueStore';
 import { useReviewStore } from '@/stores/useReviewStore';
 import { TopBar, WelcomeView, TabBar } from '@/components/shared';
@@ -21,6 +22,7 @@ function App() {
   useReviewSocket();
 
   const repositoryPath = useRepositoryStore(state => state.repositoryPath);
+  const connectionStatus = useConnectionStore(state => state.status);
   const isConnected = repositoryPath !== null;
 
   const [activeTab, setActiveTab] = useState<AppTab>('dashboard');
@@ -36,7 +38,10 @@ function App() {
   }, []);
 
   return (
-    <div className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden">
+    <div
+      className="h-screen w-screen bg-background text-foreground flex flex-col overflow-hidden"
+      {...(connectionStatus === 'connected' ? { 'data-testid': 'app-ready' } : {})}
+    >
       <TopBar />
       {isConnected && <TabBar activeTab={activeTab} onTabChange={setActiveTab} />}
       <div className="flex-1 overflow-hidden">

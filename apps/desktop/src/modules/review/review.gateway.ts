@@ -25,10 +25,13 @@ import {
   type ReviewHistoryGetPayload,
   type ReviewHistoryGetResponse,
   type ReviewHistoryDeletePayload,
+  type ReviewLogEntriesPayload,
+  type ReviewLogEntriesResponse,
 } from '@gitchorus/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 import { ReviewService, InternalReviewEvents } from './review.service';
 import { ReviewHistoryService } from './review-history.service';
+import { ReviewLogService } from './review-log.service';
 
 /**
  * WebSocket gateway for review events.
@@ -48,7 +51,8 @@ export class ReviewGateway implements OnGatewayInit {
 
   constructor(
     private readonly reviewService: ReviewService,
-    private readonly historyService: ReviewHistoryService
+    private readonly historyService: ReviewHistoryService,
+    private readonly logService: ReviewLogService
   ) {}
 
   afterInit(): void {
@@ -178,6 +182,28 @@ export class ReviewGateway implements OnGatewayInit {
       const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error deleting review history entry: ${message}`);
       return { success: false, error: message };
+    }
+  }
+
+  // ============================================
+  // Log handlers
+  // ============================================
+
+  /**
+   * Handle request to get recent review log entries.
+   */
+  @SubscribeMessage(ReviewEvents.LOG_ENTRIES)
+  handleLogEntries(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ReviewLogEntriesPayload
+  ): ReviewLogEntriesResponse {
+    try {
+      const entries = this.logService.getLogEntries(payload?.limit);
+      return { entries };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error fetching log entries: ${message}`);
+      return { entries: [], error: message };
     }
   }
 

@@ -11,6 +11,7 @@ import type {
 import { GithubService } from '../git/github.service';
 import { ProviderRegistry } from '../provider/provider.registry';
 import { ReviewHistoryService } from './review-history.service';
+import { ReviewLogService } from './review-log.service';
 
 /**
  * Internal event names for EventEmitter2 communication
@@ -40,16 +41,21 @@ export class ReviewService {
   /** Project path for the current session */
   private projectPath: string | null = null;
 
-  /** Logger instance */
+  /** Logger with file transport for troubleshooting */
   private readonly logger: Logger;
+
+  /** File transport function for passing to providers */
+  private readonly fileTransport: (message: string) => void;
 
   constructor(
     private readonly providerRegistry: ProviderRegistry,
     private readonly githubService: GithubService,
     private readonly eventEmitter: EventEmitter2,
-    private readonly historyService: ReviewHistoryService
+    private readonly historyService: ReviewHistoryService,
+    private readonly logService: ReviewLogService
   ) {
-    this.logger = createLogger('ReviewService');
+    this.fileTransport = this.logService.getLogTransport();
+    this.logger = createLogger('ReviewService', { fileTransport: this.fileTransport });
   }
 
   /**
@@ -143,6 +149,8 @@ export class ReviewService {
    * Run a single review using the AI provider.
    */
   private async runReview(prNumber: number, projectPath: string): Promise<void> {
+    const startTime = Date.now();
+
     // Update status to running
     this.updateQueueItem(prNumber, {
       status: 'running',
@@ -183,6 +191,7 @@ export class ReviewService {
         baseBranch: pr.baseRefName,
         repoPath: projectPath,
         repoName,
+        fileTransport: this.fileTransport,
       });
 
       let result: ReviewResult | undefined;
@@ -224,8 +233,15 @@ export class ReviewService {
         result,
       });
     } catch (error) {
+      const durationMs = Date.now() - startTime;
       const errorMessage = error instanceof Error ? error.message : String(error);
       const isCancelled = errorMessage.includes('cancelled') || errorMessage.includes('aborted');
+
+      // Log full error with stack trace to file logger for post-mortem debugging
+      this.logger.error(
+        `Review failed for PR #${prNumber} (duration=${durationMs}ms): ${errorMessage}`,
+        error instanceof Error ? error.stack : undefined
+      );
 
       const status: ReviewStatus = isCancelled ? 'cancelled' : 'failed';
 
