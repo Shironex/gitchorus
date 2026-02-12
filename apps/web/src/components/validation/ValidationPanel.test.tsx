@@ -65,9 +65,7 @@ describe('ValidationPanel - error message position', () => {
   beforeEach(() => {
     mockIssueState = {
       selectedIssueNumber: 7,
-      issues: [
-        { number: 7, title: 'Test issue', updatedAt: '2025-01-01T00:00:00Z' },
-      ],
+      issues: [{ number: 7, title: 'Test issue', updatedAt: '2025-01-01T00:00:00Z' }],
     };
     mockValidationState = {
       queue: [],
