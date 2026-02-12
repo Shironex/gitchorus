@@ -88,20 +88,20 @@ export const REVIEW_DEPTH_CONFIG: Record<
   quick: {
     label: 'Quick',
     description: 'Fast scan, surface-level issues only',
-    validationMaxTurns: 15,
-    reviewMaxTurns: 25,
+    validationMaxTurns: 25,
+    reviewMaxTurns: 40,
   },
   standard: {
     label: 'Standard',
     description: 'Balanced analysis with good coverage',
-    validationMaxTurns: 30,
-    reviewMaxTurns: 50,
+    validationMaxTurns: 50,
+    reviewMaxTurns: 80,
   },
   thorough: {
     label: 'Thorough',
     description: 'Deep dive with exhaustive analysis',
-    validationMaxTurns: 50,
-    reviewMaxTurns: 80,
+    validationMaxTurns: 100,
+    reviewMaxTurns: 150,
   },
 };
 
