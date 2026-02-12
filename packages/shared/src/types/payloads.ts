@@ -547,3 +547,27 @@ export interface GithubUpdateCommentResponse {
   commentUrl?: string;
   error?: string;
 }
+
+// ============================================
+// Settings Payloads
+// ============================================
+
+/** Payload to get current settings */
+export interface SettingsGetPayload {}
+
+/** Response with current review config */
+export interface SettingsGetResponse {
+  config: import('./settings').ReviewConfig;
+  error?: string;
+}
+
+/** Payload to update settings */
+export interface SettingsUpdatePayload {
+  config: Partial<import('./settings').ReviewConfig>;
+}
+
+/** Response after updating settings */
+export interface SettingsUpdateResponse {
+  config: import('./settings').ReviewConfig;
+  error?: string;
+}

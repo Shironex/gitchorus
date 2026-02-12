@@ -2,6 +2,7 @@ import { Module, OnModuleInit } from '@nestjs/common';
 import { createLogger } from '@gitchorus/shared';
 import { ClaudeAgentProvider } from './claude-agent.provider';
 import { ProviderRegistry } from './provider.registry';
+import { SettingsModule } from '../settings';
 
 const logger = createLogger('ProviderModule');
 
@@ -13,6 +14,7 @@ const logger = createLogger('ProviderModule');
  * exported for use by other modules (e.g., ValidationModule).
  */
 @Module({
+  imports: [SettingsModule],
   providers: [ClaudeAgentProvider, ProviderRegistry],
   exports: [ClaudeAgentProvider, ProviderRegistry],
 })

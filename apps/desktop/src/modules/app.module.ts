@@ -5,6 +5,7 @@ import { GitModule } from './git';
 import { ProviderModule } from './provider';
 import { ValidationModule } from './validation';
 import { ReviewModule } from './review';
+import { SettingsModule } from './settings';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { ReviewModule } from './review';
       },
     ]),
     GitModule,
+    SettingsModule,
     ProviderModule,
     ValidationModule,
     ReviewModule,

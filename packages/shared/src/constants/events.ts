@@ -81,6 +81,15 @@ export const ProviderEvents = {
 } as const;
 
 // ============================================
+// Settings Events
+// ============================================
+export const SettingsEvents = {
+  GET: 'settings:get',
+  UPDATE: 'settings:update',
+  CHANGED: 'settings:changed',
+} as const;
+
+// ============================================
 // System Events
 // ============================================
 export const SystemEvents = {

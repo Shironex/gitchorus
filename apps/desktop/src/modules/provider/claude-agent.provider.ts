@@ -16,8 +16,9 @@ import type {
   ReviewParams,
   ReviewResult,
 } from '@gitchorus/shared';
-import { createLogger } from '@gitchorus/shared';
+import { createLogger, REVIEW_DEPTH_CONFIG } from '@gitchorus/shared';
 import { getClaudeCliStatus } from '../../main/utils';
+import { SettingsService } from '../settings';
 
 /**
  * Default model for Claude Agent SDK queries
@@ -305,6 +306,8 @@ function* parseAssistantToolUseBlocks(
 export class ClaudeAgentProvider {
   private abortController: AbortController | null = null;
 
+  constructor(private readonly settingsService: SettingsService) {}
+
   /**
    * Check if Claude CLI is available and authenticated.
    */
@@ -348,8 +351,9 @@ export class ClaudeAgentProvider {
     params: ValidationParams
   ): AsyncGenerator<ValidationStep, ValidationResult> {
     const startTime = Date.now();
-    const model = params.config?.model || DEFAULT_MODEL;
-    const maxTurns = params.config?.maxTurns || DEFAULT_MAX_TURNS;
+    const settingsConfig = this.settingsService.getConfig();
+    const model = params.config?.model || settingsConfig.model || DEFAULT_MODEL;
+    const maxTurns = params.config?.maxTurns || REVIEW_DEPTH_CONFIG[settingsConfig.validationDepth].validationMaxTurns || DEFAULT_MAX_TURNS;
 
     // Create logger — with file transport if provided
     const logger = createLogger('ClaudeAgentProvider', {
@@ -490,8 +494,9 @@ export class ClaudeAgentProvider {
     params: ReviewParams
   ): AsyncGenerator<ValidationStep, ReviewResult> {
     const startTime = Date.now();
-    const model = params.config?.model || DEFAULT_MODEL;
-    const maxTurns = params.config?.maxTurns || DEFAULT_REVIEW_MAX_TURNS;
+    const settingsConfig = this.settingsService.getConfig();
+    const model = params.config?.model || settingsConfig.model || DEFAULT_MODEL;
+    const maxTurns = params.config?.maxTurns || REVIEW_DEPTH_CONFIG[settingsConfig.reviewDepth].reviewMaxTurns || DEFAULT_REVIEW_MAX_TURNS;
 
     // Create logger -- with file transport if provided
     const logger = createLogger('ClaudeAgentProvider', {
