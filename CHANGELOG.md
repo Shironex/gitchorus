@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.2 (2026-02-12)
+
+### Bug Fixes
+
+- **Claude Agent SDK asar packaging** — SDK's `cli.js`, WASM files, and ripgrep binaries are now extracted from the asar archive via `asarUnpack` so they can be executed by `spawn()` in production builds (#10)
+- **Production CLI path resolution** — Added `pathToClaudeCodeExecutable` option pointing to the unpacked `cli.js` path when `app.isPackaged` is true, fixing `MODULE_NOT_FOUND` errors in packaged Electron app (#10)
+- **CLI path caching & validation** — Cached the resolved CLI path (computed once at runtime) and added `fs.existsSync` check with error logging for clearer diagnostics if the file is missing (#10)
+
 ## 0.1.1 (2026-02-12)
 
 ### Bug Fixes
