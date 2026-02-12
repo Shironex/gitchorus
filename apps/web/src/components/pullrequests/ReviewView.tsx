@@ -116,6 +116,27 @@ export function ReviewView({ pr }: ReviewViewProps) {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        {/* Error state — shown at top for immediate visibility */}
+        {(isFailed || (error && !isRunning)) && error && (
+          <div className="rounded-lg border p-4 border-destructive/30 bg-destructive/5">
+            <div className="flex items-start gap-2">
+              <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-destructive">Review failed</p>
+                <p className="text-xs text-muted-foreground mt-1">{error}</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 text-xs mt-2 text-destructive hover:text-destructive"
+                  onClick={() => startReview(pr.number)}
+                >
+                  <RefreshCw size={12} className="mr-1" /> Retry
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Queued indicator */}
         {isQueued && (
           <div className="flex items-center gap-2 py-4 justify-center">
@@ -156,27 +177,6 @@ export function ReviewView({ pr }: ReviewViewProps) {
               }}
             />
           </>
-        )}
-
-        {/* Error state */}
-        {(isFailed || (error && !isRunning)) && error && (
-          <div className="rounded-lg border p-4 border-destructive/30 bg-destructive/5">
-            <div className="flex items-start gap-2">
-              <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="text-sm font-medium text-destructive">Review failed</p>
-                <p className="text-xs text-muted-foreground mt-1">{error}</p>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-7 text-xs mt-2 text-destructive hover:text-destructive"
-                  onClick={() => startReview(pr.number)}
-                >
-                  <RefreshCw size={12} className="mr-1" /> Retry
-                </Button>
-              </div>
-            </div>
-          </div>
         )}
 
         {/* Cancelled state */}

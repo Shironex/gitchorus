@@ -174,6 +174,27 @@ export function ValidationPanel() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+        {/* Error state — shown at top for immediate visibility */}
+        {(isFailed || (error && !isRunning)) && error && (
+          <div className={cn('rounded-lg border p-3', 'border-destructive/30 bg-destructive/5')}>
+            <div className="flex items-start gap-2">
+              <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
+              <div className="flex-1">
+                <p className="text-xs font-medium text-destructive">Validation failed</p>
+                <p className="text-xs text-muted-foreground mt-1">{error}</p>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 text-xs mt-2 text-destructive hover:text-destructive"
+                  onClick={() => startValidation(selectedIssueNumber)}
+                >
+                  <RefreshCw size={12} className="mr-1" /> Retry
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Staleness banner */}
         {isStale && hasResult && !isRunning && !isQueued && (
           <div className="rounded-lg border p-3 border-amber-500/30 bg-amber-500/5">
@@ -309,27 +330,6 @@ export function ValidationPanel() {
               onListComments={listComments}
             />
           </Suspense>
-        )}
-
-        {/* Error state */}
-        {(isFailed || (error && !isRunning)) && error && (
-          <div className={cn('rounded-lg border p-3', 'border-destructive/30 bg-destructive/5')}>
-            <div className="flex items-start gap-2">
-              <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
-              <div className="flex-1">
-                <p className="text-xs font-medium text-destructive">Validation failed</p>
-                <p className="text-xs text-muted-foreground mt-1">{error}</p>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  className="h-6 text-xs mt-2 text-destructive hover:text-destructive"
-                  onClick={() => startValidation(selectedIssueNumber)}
-                >
-                  <RefreshCw size={12} className="mr-1" /> Retry
-                </Button>
-              </div>
-            </div>
-          </div>
         )}
 
         {/* Cancelled state */}
