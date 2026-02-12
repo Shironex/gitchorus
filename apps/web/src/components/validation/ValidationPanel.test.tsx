@@ -82,13 +82,12 @@ describe('ValidationPanel - error message position', () => {
     mockValidationState.queue = [{ issueNumber: 7, status: 'failed' }];
     mockValidationState.errors = 'Invalid model ID';
 
-    const { container } = render(<ValidationPanel />);
+    render(<ValidationPanel />);
 
-    const contentArea = container.querySelector('.overflow-y-auto');
-    expect(contentArea).not.toBeNull();
+    const contentArea = screen.getByTestId('validation-content');
 
     // Error alert should be the first rendered child element
-    const firstChild = contentArea!.children[0];
+    const firstChild = contentArea.children[0];
     expect(firstChild.textContent).toContain('Validation failed');
     expect(firstChild.textContent).toContain('Invalid model ID');
   });
@@ -101,13 +100,12 @@ describe('ValidationPanel - error message position', () => {
       { step: '2', message: 'Analyzing code...', timestamp: '2025-01-01T00:00:01Z' },
     ];
 
-    const { container } = render(<ValidationPanel />);
+    render(<ValidationPanel />);
 
-    const contentArea = container.querySelector('.overflow-y-auto');
-    expect(contentArea).not.toBeNull();
+    const contentArea = screen.getByTestId('validation-content');
 
     // Error should still be the first child
-    const firstChild = contentArea!.children[0];
+    const firstChild = contentArea.children[0];
     expect(firstChild.textContent).toContain('Validation failed');
     expect(firstChild.textContent).toContain('API rate limit exceeded');
   });
@@ -118,8 +116,8 @@ describe('ValidationPanel - error message position', () => {
 
     render(<ValidationPanel />);
 
-    expect(screen.getByText('Validation failed')).toBeDefined();
-    expect(screen.getByText('Something went wrong')).toBeDefined();
+    expect(screen.queryByText('Validation failed')).not.toBeNull();
+    expect(screen.queryByText('Something went wrong')).not.toBeNull();
   });
 
   it('should show retry button in error state', () => {
@@ -128,26 +126,26 @@ describe('ValidationPanel - error message position', () => {
 
     render(<ValidationPanel />);
 
-    expect(screen.getByText('Retry')).toBeDefined();
+    expect(screen.queryByText('Retry')).not.toBeNull();
   });
 
   it('should not render error alert when there is no error', () => {
     mockValidationState.queue = [{ issueNumber: 7, status: 'idle' }];
 
-    const { container } = render(<ValidationPanel />);
+    render(<ValidationPanel />);
 
-    const contentArea = container.querySelector('.overflow-y-auto');
-    expect(contentArea!.textContent).not.toContain('Validation failed');
+    const contentArea = screen.getByTestId('validation-content');
+    expect(contentArea.textContent).not.toContain('Validation failed');
   });
 
   it('should not render error alert while running even if error exists', () => {
     mockValidationState.queue = [{ issueNumber: 7, status: 'running' }];
     mockValidationState.errors = 'Previous error';
 
-    const { container } = render(<ValidationPanel />);
+    render(<ValidationPanel />);
 
-    const contentArea = container.querySelector('.overflow-y-auto');
-    expect(contentArea!.textContent).not.toContain('Validation failed');
+    const contentArea = screen.getByTestId('validation-content');
+    expect(contentArea.textContent).not.toContain('Validation failed');
   });
 
   it('should show placeholder when no issue is selected', () => {
@@ -155,6 +153,6 @@ describe('ValidationPanel - error message position', () => {
 
     render(<ValidationPanel />);
 
-    expect(screen.getByText('Select an issue to validate')).toBeDefined();
+    expect(screen.queryByText('Select an issue to validate')).not.toBeNull();
   });
 });

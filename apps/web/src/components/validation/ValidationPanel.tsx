@@ -12,7 +12,6 @@ import {
   Check,
   ExternalLink,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useIssueStore } from '@/stores/useIssueStore';
@@ -173,10 +172,10 @@ export function ValidationPanel() {
       <Separator />
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
+      <div data-testid="validation-content" className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
         {/* Error state — shown at top for immediate visibility */}
         {(isFailed || (error && !isRunning)) && error && (
-          <div className={cn('rounded-lg border p-3', 'border-destructive/30 bg-destructive/5')}>
+          <div className="rounded-lg border p-3 border-destructive/30 bg-destructive/5">
             <div className="flex items-start gap-2">
               <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
               <div className="flex-1">

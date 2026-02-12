@@ -115,7 +115,7 @@ export function ReviewView({ pr }: ReviewViewProps) {
       <Separator />
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+      <div data-testid="review-content" className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {/* Error state — shown at top for immediate visibility */}
         {(isFailed || (error && !isRunning)) && error && (
           <div className="rounded-lg border p-4 border-destructive/30 bg-destructive/5">

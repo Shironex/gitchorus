@@ -67,14 +67,12 @@ describe('ReviewView - error message position', () => {
     mockStoreState.reviewStatus = 'failed';
     mockStoreState.reviewErrors = 'Invalid model ID';
 
-    const { container } = render(<ReviewView pr={basePr} />);
+    render(<ReviewView pr={basePr} />);
 
-    // The scrollable content area
-    const contentArea = container.querySelector('.overflow-y-auto');
-    expect(contentArea).not.toBeNull();
+    const contentArea = screen.getByTestId('review-content');
 
     // Error alert should be the first rendered child element
-    const firstChild = contentArea!.children[0];
+    const firstChild = contentArea.children[0];
     expect(firstChild.textContent).toContain('Review failed');
     expect(firstChild.textContent).toContain('Invalid model ID');
   });
@@ -87,13 +85,12 @@ describe('ReviewView - error message position', () => {
       { step: '2', message: 'Analyzing code...', timestamp: '2025-01-01T00:00:01Z' },
     ];
 
-    const { container } = render(<ReviewView pr={basePr} />);
+    render(<ReviewView pr={basePr} />);
 
-    const contentArea = container.querySelector('.overflow-y-auto');
-    expect(contentArea).not.toBeNull();
+    const contentArea = screen.getByTestId('review-content');
 
     // Error should still be the first child
-    const firstChild = contentArea!.children[0];
+    const firstChild = contentArea.children[0];
     expect(firstChild.textContent).toContain('Review failed');
     expect(firstChild.textContent).toContain('API rate limit exceeded');
   });
@@ -104,8 +101,8 @@ describe('ReviewView - error message position', () => {
 
     render(<ReviewView pr={basePr} />);
 
-    expect(screen.getByText('Review failed')).toBeDefined();
-    expect(screen.getByText('Something went wrong')).toBeDefined();
+    expect(screen.queryByText('Review failed')).not.toBeNull();
+    expect(screen.queryByText('Something went wrong')).not.toBeNull();
   });
 
   it('should show retry button in error state', () => {
@@ -114,25 +111,25 @@ describe('ReviewView - error message position', () => {
 
     render(<ReviewView pr={basePr} />);
 
-    expect(screen.getByText('Retry')).toBeDefined();
+    expect(screen.queryByText('Retry')).not.toBeNull();
   });
 
   it('should not render error alert when there is no error', () => {
     mockStoreState.reviewStatus = 'idle';
 
-    const { container } = render(<ReviewView pr={basePr} />);
+    render(<ReviewView pr={basePr} />);
 
-    const contentArea = container.querySelector('.overflow-y-auto');
-    expect(contentArea!.textContent).not.toContain('Review failed');
+    const contentArea = screen.getByTestId('review-content');
+    expect(contentArea.textContent).not.toContain('Review failed');
   });
 
   it('should not render error alert while running even if error exists from previous run', () => {
     mockStoreState.reviewStatus = 'running';
     mockStoreState.reviewErrors = 'Previous error';
 
-    const { container } = render(<ReviewView pr={basePr} />);
+    render(<ReviewView pr={basePr} />);
 
-    const contentArea = container.querySelector('.overflow-y-auto');
-    expect(contentArea!.textContent).not.toContain('Review failed');
+    const contentArea = screen.getByTestId('review-content');
+    expect(contentArea.textContent).not.toContain('Review failed');
   });
 });
