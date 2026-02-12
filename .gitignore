@@ -49,4 +49,5 @@ Thumbs.db
 *.temp
 .cache/
 .mcp.json
-.claude
+.claude/*
+!.claude/skills/
