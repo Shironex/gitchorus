@@ -79,7 +79,7 @@ export function CompleteIllustration() {
               '--ty': `${p.y}px`,
               opacity: 0,
               animation: `particleBurst 0.5s ease-out ${0.4 + i * 0.05}s forwards`,
-            } satisfies ParticleStyle
+            } as ParticleStyle
           }
         />
       ))}
