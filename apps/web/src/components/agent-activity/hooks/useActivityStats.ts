@@ -13,7 +13,7 @@ export interface ActivityStats {
  * Derives real-time stats from the validation/review step list.
  * Counts tool invocations by type and tracks elapsed time with a 1s ticker.
  */
-export function useActivityStats(steps: ValidationStep[]): ActivityStats {
+export function useActivityStats(steps: ValidationStep[], isRunning: boolean): ActivityStats {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   const { filesRead, searchesPerformed, commandsRun } = useMemo(() => {
@@ -28,7 +28,7 @@ export function useActivityStats(steps: ValidationStep[]): ActivityStats {
     return { filesRead: files, searchesPerformed: searches, commandsRun: commands };
   }, [steps]);
 
-  // Elapsed time ticker
+  // Elapsed time ticker — only ticks while running
   const firstTimestamp = steps[0]?.timestamp;
   useEffect(() => {
     if (!firstTimestamp) {
@@ -39,12 +39,14 @@ export function useActivityStats(steps: ValidationStep[]): ActivityStats {
     const startTime = new Date(firstTimestamp).getTime();
     setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
 
+    if (!isRunning) return;
+
     const interval = setInterval(() => {
       setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [firstTimestamp]);
+  }, [firstTimestamp, isRunning]);
 
   return {
     filesRead,

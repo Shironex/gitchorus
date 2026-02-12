@@ -70,6 +70,7 @@ export function IssueDetailView({ issue }: IssueDetailViewProps) {
   // Reset states when issue changes
   useEffect(() => {
     setShowConfirm(false);
+    setShowPushModal(false);
   }, [issueNumber]);
 
   // Derive status from queue

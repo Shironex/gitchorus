@@ -58,7 +58,7 @@ function getIllustration(type: ValidationStepType) {
  */
 export function AgentActivityHero({ steps, isRunning }: AgentActivityHeroProps) {
   const { currentType, currentLabel, isTransitioning } = useStepTransition(steps);
-  const stats = useActivityStats(steps);
+  const stats = useActivityStats(steps, isRunning);
 
   const actionLabel = STEP_LABELS[currentType] || 'Working';
 

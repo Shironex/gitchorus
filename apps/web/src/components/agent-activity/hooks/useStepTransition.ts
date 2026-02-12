@@ -40,12 +40,16 @@ export function useStepTransition(steps: ValidationStep[]): StepTransitionState 
   const latestLabelRef = useRef(latestLabel);
   latestLabelRef.current = latestLabel;
 
+  // Effect 1: Same-type label updates — no cleanup, won't disturb pending debounce
   useEffect(() => {
     if (latestType === displayed.type) {
-      // Same type — just update the label without transition
       setDisplayed(prev => ({ ...prev, label: latestLabel }));
-      return;
     }
+  }, [latestType, latestLabel, displayed.type]);
+
+  // Effect 2: Type-change transitions with debounce
+  useEffect(() => {
+    if (latestType === displayed.type) return;
 
     const elapsed = Date.now() - lastChangeRef.current;
     const minHold = 300;
