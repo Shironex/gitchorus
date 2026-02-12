@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { app } from 'electron';
+import * as fs from 'fs';
 import * as path from 'path';
 import { query } from '@anthropic-ai/claude-agent-sdk';
 import type {
@@ -334,16 +335,24 @@ function* parseAssistantToolUseBlocks(message: SDKAssistantMessage): Generator<V
 @Injectable()
 export class ClaudeAgentProvider {
   private abortController: AbortController | null = null;
+  private cachedCliPath: string | undefined | null = null;
 
   constructor(private readonly settingsService: SettingsService) {}
 
   /**
    * Resolve the path to the SDK's cli.js for packaged (production) builds.
    * In development, returns undefined so the SDK uses its default resolution.
+   * Result is cached since the path never changes at runtime.
    */
   private getCliPath(): string | undefined {
-    if (!app.isPackaged) return undefined;
-    return path.join(
+    if (this.cachedCliPath !== null) return this.cachedCliPath;
+
+    if (!app.isPackaged) {
+      this.cachedCliPath = undefined;
+      return undefined;
+    }
+
+    const cliPath = path.join(
       process.resourcesPath,
       'app.asar.unpacked',
       'node_modules',
@@ -351,6 +360,14 @@ export class ClaudeAgentProvider {
       'claude-agent-sdk',
       'cli.js'
     );
+
+    if (!fs.existsSync(cliPath)) {
+      const logger = createLogger('ClaudeAgentProvider');
+      logger.error(`Claude Agent SDK cli.js not found at expected path: ${cliPath}`);
+    }
+
+    this.cachedCliPath = cliPath;
+    return cliPath;
   }
 
   /**

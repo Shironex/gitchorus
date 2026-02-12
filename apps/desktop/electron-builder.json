@@ -39,6 +39,7 @@
     "createDesktopShortcut": true,
     "createStartMenuShortcut": true
   },
+  "_comment:electronFuses": "onlyLoadAppFromAsar applies to app code loading only; asarUnpack extracts files to app.asar.unpacked/ on disk for child process spawning (e.g. SDK cli.js, WASM, ripgrep binaries). Both coexist safely — Electron loads app code from asar while unpacked files are accessible via filesystem.",
   "electronFuses": {
     "runAsNode": false,
     "enableNodeCliInspectArguments": false,
