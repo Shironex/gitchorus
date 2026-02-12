@@ -73,6 +73,7 @@ export const ReviewEvents = {
   HISTORY_LIST: 'review:history-list',
   HISTORY_GET: 'review:history-get',
   HISTORY_DELETE: 'review:history-delete',
+  LOG_ENTRIES: 'review:log-entries',
 } as const;
 
 // ============================================

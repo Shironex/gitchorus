@@ -494,6 +494,25 @@ export interface ValidationLogEntriesResponse {
 }
 
 // ============================================
+// Review Log Payloads
+// ============================================
+
+/**
+ * Payload to request recent review log entries
+ */
+export interface ReviewLogEntriesPayload {
+  limit?: number;
+}
+
+/**
+ * Response containing recent review log entries
+ */
+export interface ReviewLogEntriesResponse {
+  entries: LogEntry[];
+  error?: string;
+}
+
+// ============================================
 // Provider Responses
 // ============================================
 
