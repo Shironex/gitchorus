@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import Store from 'electron-store';
 import { createLogger } from '@gitchorus/shared';
-import type { ReviewConfig, ClaudeModel } from '@gitchorus/shared';
+import type { ReviewConfig } from '@gitchorus/shared';
 import { DEFAULT_REVIEW_CONFIG, DEPRECATED_MODEL_MAP } from '@gitchorus/shared';
 
 const logger = createLogger('SettingsService');
@@ -38,9 +38,13 @@ export class SettingsService {
         // Migrate deprecated model IDs to current ones
         if (config.model && config.model in DEPRECATED_MODEL_MAP) {
           const oldModel = config.model;
-          config.model = DEPRECATED_MODEL_MAP[config.model as string] as ClaudeModel;
+          config.model = DEPRECATED_MODEL_MAP[config.model as string];
           logger.info(`Migrated model ID: ${oldModel} -> ${config.model}`);
-          this.store.set(STORE_KEY, config);
+          try {
+            this.store.set(STORE_KEY, config);
+          } catch (writeError) {
+            logger.error('Failed to persist migrated config:', writeError);
+          }
         }
 
         return config;
