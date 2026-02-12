@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ArrowLeft, Play, RefreshCw, AlertCircle, Loader2, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useReviewStore } from '@/stores/useReviewStore';
 import { useReview } from '@/hooks/useReview';
 import { ReviewProgress } from './ReviewProgress';
@@ -28,6 +29,9 @@ type ReviewAction = 'REQUEST_CHANGES' | 'COMMENT';
 export function ReviewView({ pr }: ReviewViewProps) {
   const { startReview, cancelReview } = useReview();
   const setSelectedPr = useReviewStore(state => state.setSelectedPr);
+
+  // Confirmation dialog state
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Push modal state
   const [pushModalOpen, setPushModalOpen] = useState(false);
@@ -96,7 +100,17 @@ export function ReviewView({ pr }: ReviewViewProps) {
           {/* Action buttons */}
           <div className="flex items-center gap-2 shrink-0">
             {(isIdle || canRestart) && (
-              <Button size="sm" className="h-8 gap-1.5" onClick={() => startReview(pr.number)}>
+              <Button
+                size="sm"
+                className="h-8 gap-1.5"
+                onClick={() => {
+                  if (canRestart && hasResult) {
+                    setShowConfirm(true);
+                  } else {
+                    startReview(pr.number);
+                  }
+                }}
+              >
                 {canRestart ? (
                   <>
                     <RefreshCw size={14} /> Re-review
@@ -217,6 +231,16 @@ export function ReviewView({ pr }: ReviewViewProps) {
           prNumber={pr.number}
         />
       )}
+
+      {/* Re-review confirmation dialog */}
+      <ConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        title="Discard current review?"
+        description="Starting a new review will discard all existing results for this pull request. This action cannot be undone."
+        confirmLabel="Discard & Re-review"
+        onConfirm={() => startReview(pr.number)}
+      />
     </div>
   );
 }

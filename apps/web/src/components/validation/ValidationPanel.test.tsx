@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ValidationPanel } from './ValidationPanel';
 import type { ValidationStep } from '@gitchorus/shared';
 
@@ -61,8 +61,9 @@ vi.mock('@/stores/useValidationStore', () => ({
   },
 }));
 
-describe('ValidationPanel - error message position', () => {
+describe('ValidationPanel', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mockIssueState = {
       selectedIssueNumber: 7,
       issues: [{ number: 7, title: 'Test issue', updatedAt: '2025-01-01T00:00:00Z' }],
@@ -154,5 +155,82 @@ describe('ValidationPanel - error message position', () => {
     render(<ValidationPanel />);
 
     expect(screen.queryByText('Select an issue to validate')).not.toBeNull();
+  });
+
+  describe('re-validate confirmation dialog', () => {
+    const mockResult = {
+      issueType: 'bug',
+      verdict: 'confirmed',
+      confidence: 90,
+      affectedFiles: [],
+      complexity: 'medium',
+      suggestedApproach: 'Fix the bug',
+      reasoning: 'Test reasoning',
+      issueNumber: 7,
+      issueTitle: 'Test issue',
+      repositoryFullName: 'test/repo',
+      validatedAt: '2025-01-01T00:00:00Z',
+      providerType: 'claude-code',
+      model: 'claude-sonnet-4-5-20250929',
+      costUsd: 0.01,
+      durationMs: 1000,
+    };
+
+    it('should show confirmation dialog when clicking Re-validate with existing results', () => {
+      mockValidationState.queue = [{ issueNumber: 7, status: 'completed' }];
+      mockValidationState.results = mockResult;
+
+      render(<ValidationPanel />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-validate/ }));
+
+      expect(screen.queryByText('Discard current validation?')).not.toBeNull();
+      expect(mockStartValidation).not.toHaveBeenCalled();
+    });
+
+    it('should start validation directly when clicking Validate with no results', () => {
+      render(<ValidationPanel />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Validate/ }));
+
+      expect(screen.queryByText('Discard current validation?')).toBeNull();
+      expect(mockStartValidation).toHaveBeenCalledWith(7);
+    });
+
+    it('should start validation when confirming the dialog', () => {
+      mockValidationState.queue = [{ issueNumber: 7, status: 'completed' }];
+      mockValidationState.results = mockResult;
+
+      render(<ValidationPanel />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-validate/ }));
+      fireEvent.click(screen.getByText('Discard & Re-validate'));
+
+      expect(mockStartValidation).toHaveBeenCalledWith(7);
+    });
+
+    it('should not start validation when cancelling the dialog', () => {
+      mockValidationState.queue = [{ issueNumber: 7, status: 'completed' }];
+      mockValidationState.results = mockResult;
+
+      render(<ValidationPanel />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-validate/ }));
+      fireEvent.click(screen.getByText('Cancel'));
+
+      expect(mockStartValidation).not.toHaveBeenCalled();
+    });
+
+    it('should not show confirmation for Retry button in error state', () => {
+      mockValidationState.queue = [{ issueNumber: 7, status: 'failed' }];
+      mockValidationState.errors = 'Something went wrong';
+
+      render(<ValidationPanel />);
+
+      fireEvent.click(screen.getByText('Retry'));
+
+      expect(screen.queryByText('Discard current validation?')).toBeNull();
+      expect(mockStartValidation).toHaveBeenCalledWith(7);
+    });
   });
 });
