@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.2.0 (2026-02-12)
+
+### Bug Fixes
+
+- **Critical: Incorrect model IDs** — Opus and Haiku model IDs were wrong, causing API calls to fail. Corrected to `claude-opus-4-6` and `claude-haiku-4-5-20251001` with migration logic for persisted settings (#19)
+- **Dark theme syntax highlighting** — Code blocks used light theme colors on dark themes because `applyThemeToDOM()` only added the theme name class (e.g., `dracula`) but not the `dark` class required by Shiki CSS and Tailwind `dark:` variants. Now correctly toggles `dark` class based on `isDark` metadata (#20)
+- **Error messages hidden at bottom** — Validation and review error alerts were rendered below progress steps and results, requiring users to scroll to see them. Moved error alerts to the top of the scrollable content area in both `ValidationPanel` and `ReviewView` (#21)
+
+### New Features
+
+- **Splash screen** — Branded splash screen shown during app initialization with smooth fade-out transition, replacing the blank white flash on startup (#14)
+- **Confirmation dialog for Re-review/Re-validate** — Prevents accidental loss of existing analysis results by showing an AlertDialog when users click Re-review or Re-validate. Retry (error) and Run Again (cancelled) skip the dialog since there are no results to discard. Includes a reusable `ConfirmDialog` shared component (#22)
+- **Review depth configuration** — Increased review depth settings range for more granular control over AI analysis thoroughness
+
+### Testing
+
+- 39 frontend unit tests (up from 0) covering dark theme toggling, error message positioning, and confirmation dialog behavior
+
 ## 0.1.3 (2026-02-12)
 
 ### Performance
