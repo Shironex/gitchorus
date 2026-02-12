@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
+import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useIssueStore } from '@/stores/useIssueStore';
 import { useValidationStore } from '@/stores/useValidationStore';
 import { useValidation } from '@/hooks/useValidation';
@@ -60,6 +61,9 @@ export function ValidationPanel() {
   // Use live result if available, otherwise fall back to history
   const result = liveResult || latestValidation;
   const isFromHistory = !liveResult && !!latestValidation;
+
+  // Confirmation dialog state
+  const [showConfirm, setShowConfirm] = useState(false);
 
   // Push modal state
   const [showPushModal, setShowPushModal] = useState(false);
@@ -134,7 +138,13 @@ export function ValidationPanel() {
               <Button
                 size="sm"
                 className="h-7 text-xs gap-1"
-                onClick={() => startValidation(selectedIssueNumber)}
+                onClick={() => {
+                  if (canRevalidate && hasResult) {
+                    setShowConfirm(true);
+                  } else {
+                    startValidation(selectedIssueNumber);
+                  }
+                }}
               >
                 {canRevalidate ? (
                   <>
@@ -213,7 +223,13 @@ export function ValidationPanel() {
                   size="sm"
                   variant="ghost"
                   className="h-6 text-xs mt-1.5 text-amber-600 dark:text-amber-400 hover:text-amber-700 dark:hover:text-amber-300"
-                  onClick={() => startValidation(selectedIssueNumber)}
+                  onClick={() => {
+                    if (hasResult) {
+                      setShowConfirm(true);
+                    } else {
+                      startValidation(selectedIssueNumber);
+                    }
+                  }}
                 >
                   <RefreshCw size={12} className="mr-1" /> Re-validate
                 </Button>
@@ -356,6 +372,16 @@ export function ValidationPanel() {
           </div>
         )}
       </div>
+
+      {/* Re-validate confirmation dialog */}
+      <ConfirmDialog
+        open={showConfirm}
+        onOpenChange={setShowConfirm}
+        title="Discard current validation?"
+        description="Starting a new validation will discard all existing results for this issue. This action cannot be undone."
+        confirmLabel="Discard & Re-validate"
+        onConfirm={() => startValidation(selectedIssueNumber)}
+      />
     </div>
   );
 }

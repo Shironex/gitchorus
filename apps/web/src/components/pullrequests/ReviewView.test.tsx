@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { ReviewView } from './ReviewView';
 import type { PullRequest, ValidationStep } from '@gitchorus/shared';
 
@@ -53,8 +53,9 @@ const basePr: PullRequest = {
   updatedAt: '2025-01-01T00:00:00Z',
 };
 
-describe('ReviewView - error message position', () => {
+describe('ReviewView', () => {
   beforeEach(() => {
+    vi.clearAllMocks();
     mockStoreState = {
       reviewStatus: 'idle',
       reviewSteps: [],
@@ -131,5 +132,80 @@ describe('ReviewView - error message position', () => {
 
     const contentArea = screen.getByTestId('review-content');
     expect(contentArea.textContent).not.toContain('Review failed');
+  });
+
+  describe('re-review confirmation dialog', () => {
+    const mockResult = {
+      prNumber: 42,
+      prTitle: 'Test PR',
+      repositoryFullName: 'test/repo',
+      findings: [],
+      verdict: 'Looks good',
+      qualityScore: 8,
+      reviewedAt: '2025-01-01T00:00:00Z',
+      providerType: 'claude-code',
+      model: 'claude-sonnet-4-5-20250929',
+      costUsd: 0.01,
+      durationMs: 1000,
+    };
+
+    it('should show confirmation dialog when clicking Re-review with existing results', () => {
+      mockStoreState.reviewStatus = 'completed';
+      mockStoreState.reviewResults = mockResult;
+
+      render(<ReviewView pr={basePr} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-review/ }));
+
+      expect(screen.queryByText('Discard current review?')).not.toBeNull();
+      expect(mockStartReview).not.toHaveBeenCalled();
+    });
+
+    it('should start review directly when clicking Start Review with no results', () => {
+      mockStoreState.reviewStatus = 'idle';
+
+      render(<ReviewView pr={basePr} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Start Review/ }));
+
+      expect(screen.queryByText('Discard current review?')).toBeNull();
+      expect(mockStartReview).toHaveBeenCalledWith(42);
+    });
+
+    it('should start review when confirming the dialog', () => {
+      mockStoreState.reviewStatus = 'completed';
+      mockStoreState.reviewResults = mockResult;
+
+      render(<ReviewView pr={basePr} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-review/ }));
+      fireEvent.click(screen.getByText('Discard & Re-review'));
+
+      expect(mockStartReview).toHaveBeenCalledWith(42);
+    });
+
+    it('should not start review when cancelling the dialog', () => {
+      mockStoreState.reviewStatus = 'completed';
+      mockStoreState.reviewResults = mockResult;
+
+      render(<ReviewView pr={basePr} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-review/ }));
+      fireEvent.click(screen.getByText('Cancel'));
+
+      expect(mockStartReview).not.toHaveBeenCalled();
+    });
+
+    it('should not show confirmation for Retry button in error state', () => {
+      mockStoreState.reviewStatus = 'failed';
+      mockStoreState.reviewErrors = 'Something went wrong';
+
+      render(<ReviewView pr={basePr} />);
+
+      fireEvent.click(screen.getByText('Retry'));
+
+      expect(screen.queryByText('Discard current review?')).toBeNull();
+      expect(mockStartReview).toHaveBeenCalledWith(42);
+    });
   });
 });
