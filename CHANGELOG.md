@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.1.3 (2026-02-12)
+
+### Performance
+
+- **Vite manual chunks** — Split recharts (479KB), markdown ecosystem (342KB), and socket.io into separate chunks, reducing main bundle from 1,274KB to 332KB (#11)
+- **List virtualization** — Added `@tanstack/react-virtual` to IssueListView and PRListView with dynamic measurement, reducing DOM nodes for large lists (#11)
+- **Lazy load QualityChart** — Dashboard's recharts-heavy chart is now code-split via `React.lazy` with skeleton fallback (#11)
+- **Lazy load SettingsModal** — Only mounted when settings are open, removed from initial bundle (#12)
+- **Lazy load GithubPushPreview** — Only mounted when push modal is open (#12)
+
+### Bug Fixes
+
+- **Loading UX flash** — Fixed empty state ("No issues" / "No pull requests") briefly appearing when switching tabs before data loads. Root cause: `setError(null)` was resetting loading state before the async fetch completed (#12)
+- **Suspense fallback blanks** — Added proper fallback overlays with Loader2 spinners for all lazy-loaded components (#11, #12)
+
+### UI Improvements
+
+- **Refresh button spinners** — Refresh buttons now swap between `RefreshCw` (idle) and spinning `Loader2` (loading) for clearer visual feedback (#12)
+
 ## 0.1.2 (2026-02-12)
 
 ### Bug Fixes
