@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.4.0-beta.1 (2026-02-13)
+
+### New Features
+
+- **PR re-review with review chains** — Re-review a PR with full context from the previous review. The AI receives the prior findings, score, and incremental diff (commit-to-commit) to fairly assess whether issues were addressed. Results include chain metadata: `reviewSequence`, `previousScore`, `isReReview`, and `addressedFindings` with per-finding status (addressed / partially-addressed / unaddressed / new-issue). UI shows a sequence indicator ("Review #N"), previous score comparison, and a "Previous Findings Status" section with 8-status breakdown (#28, #30)
+- **Re-review chaining from history** — Clicking "Re-review" on a completed review automatically chains from the latest history entry for that PR and repository, skipping the discard confirmation dialog. Falls back to a fresh review with confirmation if no history exists (#30)
+
+### Refactoring
+
+- **BaseLogService extraction** — Extracted shared `BaseLogService` abstract class from `ValidationLogService` and `ReviewLogService`, eliminating ~60 lines of duplicated JSONL file logging, rotation, and retention logic (#27)
+
+### Bug Fixes
+
+- **Duplicate getById() call** — Eliminated redundant `historyService.getById()` call in review result enrichment by hoisting `previousEntry` to a `let` variable and reusing it (#30)
+- **Stale reReviewContext** — Fixed orphaned map entries when `queueReReview` was called for an already-queued PR by adding an early return guard (#30)
+- **Cross-repo history collision** — History entry lookup in `ReviewView` now filters by `repositoryFullName` to prevent chaining from the wrong repository's review (#30)
+- **Inconsistent re-review metadata** — When a previous review entry is deleted between queue and completion, the result is now correctly treated as an initial review instead of being marked `isReReview` with missing sequence data (#30)
+- **SHA validation for git diff** — Added hex-character regex validation on commit SHAs before passing to `git diff` for defense-in-depth (#30)
+- **Array.reverse() mutation** — Changed `entries.reverse()` to `[...entries].reverse()` in `getReviewChain` to avoid in-place mutation (#30)
+
+### Testing
+
+- 81 new unit tests for the review module: `ReviewService` (14), `ReviewGateway` (33), `ReviewHistoryService` (19), `ReviewView` (5), `GithubService` (6), SHA validation (4) — total test count: 503
+
 ## 0.3.0 (2026-02-13)
 
 ### New Features
