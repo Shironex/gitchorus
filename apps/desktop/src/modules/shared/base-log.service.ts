@@ -31,7 +31,13 @@ export abstract class BaseLogService implements OnModuleDestroy {
   private writeStream: fs.WriteStream | null = null;
 
   constructor(private readonly logPrefix: string) {
-    this.logger = createLogger(`${logPrefix}LogService`);
+    if (!/^[a-z][a-z0-9-]*$/.test(logPrefix)) {
+      throw new Error(`Invalid log prefix: ${logPrefix}`);
+    }
+
+    this.logger = createLogger(
+      `${logPrefix.charAt(0).toUpperCase() + logPrefix.slice(1)}LogService`
+    );
     this.logPattern = new RegExp(`^${logPrefix}-(\\d{4}-\\d{2}-\\d{2})\\.log$`);
     this.logDir = path.join(app.getPath('userData'), 'logs');
     this.currentDate = getTodayDate();
@@ -76,12 +82,6 @@ export abstract class BaseLogService implements OnModuleDestroy {
     const logFilePath = this.getLogFilePath(getTodayDate());
 
     try {
-      try {
-        await fs.promises.access(logFilePath);
-      } catch {
-        return [];
-      }
-
       const content = await fs.promises.readFile(logFilePath, 'utf-8');
       const lines = content.trim().split('\n').filter(Boolean);
 
@@ -99,7 +99,11 @@ export abstract class BaseLogService implements OnModuleDestroy {
       }
 
       return entries;
-    } catch (error) {
+    } catch (error: unknown) {
+      // File doesn't exist yet — not an error
+      if ((error as NodeJS.ErrnoException).code === 'ENOENT') {
+        return [];
+      }
       this.logger.error('Failed to read log entries:', error);
       return [];
     }

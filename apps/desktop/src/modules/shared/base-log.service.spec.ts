@@ -1,23 +1,17 @@
 // ---- Mocks ----
 
 const mockMkdirSync = jest.fn();
-const mockExistsSync = jest.fn();
-const mockReadFileSync = jest.fn();
 const mockReaddirSync = jest.fn();
 const mockUnlinkSync = jest.fn();
 const mockCreateWriteStream = jest.fn();
-const mockAccess = jest.fn();
 const mockReadFile = jest.fn();
 
 jest.mock('fs', () => ({
   mkdirSync: (...args: unknown[]) => mockMkdirSync(...args),
-  existsSync: (...args: unknown[]) => mockExistsSync(...args),
-  readFileSync: (...args: unknown[]) => mockReadFileSync(...args),
   readdirSync: (...args: unknown[]) => mockReaddirSync(...args),
   unlinkSync: (...args: unknown[]) => mockUnlinkSync(...args),
   createWriteStream: (...args: unknown[]) => mockCreateWriteStream(...args),
   promises: {
-    access: (...args: unknown[]) => mockAccess(...args),
     readFile: (...args: unknown[]) => mockReadFile(...args),
   },
 }));
@@ -89,12 +83,21 @@ describe('BaseLogService', () => {
       });
     });
 
-    it('should create logger with prefix-based context', () => {
-      expect(createLogger).toHaveBeenCalledWith('testLogService');
+    it('should create logger with PascalCase context', () => {
+      expect(createLogger).toHaveBeenCalledWith('TestLogService');
     });
 
     it('should clean up old logs on startup', () => {
       expect(mockReaddirSync).toHaveBeenCalled();
+    });
+
+    it('should reject invalid prefixes', () => {
+      class BadPrefixService extends BaseLogService {
+        constructor() {
+          super('Bad.Prefix');
+        }
+      }
+      expect(() => new BadPrefixService()).toThrow('Invalid log prefix: Bad.Prefix');
     });
 
     it('should handle mkdirSync failure gracefully', () => {
@@ -165,7 +168,9 @@ describe('BaseLogService', () => {
 
   describe('getLogEntries', () => {
     it('should return empty array if log file does not exist', async () => {
-      mockAccess.mockRejectedValue(new Error('ENOENT'));
+      const enoent = new Error('ENOENT') as NodeJS.ErrnoException;
+      enoent.code = 'ENOENT';
+      mockReadFile.mockRejectedValue(enoent);
 
       const entries = await service.getLogEntries();
       expect(entries).toEqual([]);
@@ -187,7 +192,6 @@ describe('BaseLogService', () => {
         }),
       ].join('\n');
 
-      mockAccess.mockResolvedValue(undefined);
       mockReadFile.mockResolvedValue(logLines);
 
       const entries = await service.getLogEntries();
@@ -206,7 +210,6 @@ describe('BaseLogService', () => {
         })
       ).join('\n');
 
-      mockAccess.mockResolvedValue(undefined);
       mockReadFile.mockResolvedValue(lines);
 
       const entries = await service.getLogEntries(3);
@@ -233,7 +236,6 @@ describe('BaseLogService', () => {
         }),
       ].join('\n');
 
-      mockAccess.mockResolvedValue(undefined);
       mockReadFile.mockResolvedValue(logLines);
 
       const entries = await service.getLogEntries();
@@ -243,7 +245,6 @@ describe('BaseLogService', () => {
     });
 
     it('should handle read errors gracefully', async () => {
-      mockAccess.mockResolvedValue(undefined);
       mockReadFile.mockRejectedValue(new Error('read error'));
 
       const entries = await service.getLogEntries();
@@ -264,7 +265,6 @@ describe('BaseLogService', () => {
         })
       ).join('\n');
 
-      mockAccess.mockResolvedValue(undefined);
       mockReadFile.mockResolvedValue(lines);
 
       const entries = await service.getLogEntries();
@@ -273,7 +273,6 @@ describe('BaseLogService', () => {
     });
 
     it('should handle empty log file', async () => {
-      mockAccess.mockResolvedValue(undefined);
       mockReadFile.mockResolvedValue('');
 
       const entries = await service.getLogEntries();
