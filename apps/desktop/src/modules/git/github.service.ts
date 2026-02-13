@@ -740,6 +740,57 @@ export class GithubService {
   }
 
   /**
+   * Get the HEAD commit SHA for a pull request
+   */
+  async getPrHeadSha(repoPath: string, prNumber: number): Promise<string> {
+    const { stdout } = await this.execGh(repoPath, [
+      'pr',
+      'view',
+      prNumber.toString(),
+      '--json',
+      'headRefOid',
+      '--jq',
+      '.headRefOid',
+    ]);
+
+    const sha = stdout.trim();
+    if (!sha) {
+      throw new Error(`Failed to get HEAD SHA for PR #${prNumber}`);
+    }
+    return sha;
+  }
+
+  /**
+   * Get the diff between two commits (for incremental re-review).
+   * Fetches from origin first to ensure commits are available locally.
+   */
+  async getCommitDiff(repoPath: string, fromSha: string, toSha: string): Promise<string> {
+    // Validate SHA format (basic hex check)
+    const shaRegex = /^[0-9a-f]{4,40}$/i;
+    if (!shaRegex.test(fromSha) || !shaRegex.test(toSha)) {
+      throw new Error(`Invalid commit SHA format: ${fromSha}..${toSha}`);
+    }
+
+    // Fetch latest to ensure both SHAs are available locally
+    try {
+      await execFileAsync('git', ['fetch', 'origin'], {
+        cwd: repoPath,
+        timeout: GH_TIMEOUT_MS,
+      });
+    } catch (error) {
+      this.logger.warn('git fetch origin failed, proceeding with local state:', error);
+    }
+
+    const { stdout } = await execFileAsync('git', ['diff', `${fromSha}..${toSha}`], {
+      cwd: repoPath,
+      maxBuffer: 10 * 1024 * 1024, // 10MB
+      timeout: GH_TIMEOUT_MS,
+    });
+
+    return stdout;
+  }
+
+  /**
    * Get PR diff using gh CLI
    */
   async getPrDiff(repoPath: string, prNumber: number): Promise<string> {

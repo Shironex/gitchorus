@@ -9,6 +9,7 @@ import {
   GithubEvents,
   createLogger,
   type ReviewStartPayload,
+  type ReviewReReviewStartPayload,
   type ReviewCancelPayload,
   type ReviewProgressResponse,
   type ReviewCompleteResponse,
@@ -19,6 +20,8 @@ import {
   type ReviewHistoryListPayload,
   type ReviewHistoryListResponse,
   type ReviewHistoryDeletePayload,
+  type ReviewChainPayload,
+  type ReviewChainResponse,
 } from '@gitchorus/shared';
 
 const logger = createLogger('useReview');
@@ -145,11 +148,13 @@ export function useReviewSocket() {
 export function useReview() {
   const repositoryPath = useRepositoryStore(state => state.repositoryPath);
   const clearReview = useReviewStore(state => state.clearReview);
+  const clearReviewForReReview = useReviewStore(state => state.clearReviewForReReview);
   const setReviewStatus = useReviewStore(state => state.setReviewStatus);
   const setReviewError = useReviewStore(state => state.setReviewError);
   const setReviewHistory = useReviewStore(state => state.setReviewHistory);
   const setHistoryLoading = useReviewStore(state => state.setHistoryLoading);
   const removeHistoryEntry = useReviewStore(state => state.removeHistoryEntry);
+  const setReviewChain = useReviewStore(state => state.setReviewChain);
 
   const startReview = useCallback(
     async (prNumber: number) => {
@@ -175,6 +180,33 @@ export function useReview() {
       }
     },
     [repositoryPath, clearReview, setReviewStatus, setReviewError]
+  );
+
+  const startReReview = useCallback(
+    async (prNumber: number, previousReviewId: string) => {
+      if (!repositoryPath) return;
+
+      // Only clear steps/errors — preserve the old result until the new one arrives
+      clearReviewForReReview(prNumber);
+      setReviewStatus(prNumber, 'queued');
+
+      try {
+        await emitAsync<ReviewReReviewStartPayload, { success: boolean; error?: string }>(
+          ReviewEvents.RE_REVIEW_START,
+          {
+            projectPath: repositoryPath,
+            prNumber,
+            previousReviewId,
+          }
+        );
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to start re-review';
+        logger.error('Failed to start re-review:', message);
+        setReviewError(prNumber, message);
+        setReviewStatus(prNumber, 'failed');
+      }
+    },
+    [repositoryPath, clearReviewForReReview, setReviewStatus, setReviewError]
   );
 
   const cancelReview = useCallback(async (prNumber: number) => {
@@ -307,6 +339,30 @@ export function useReview() {
   );
 
   /**
+   * Fetch the review chain (all reviews) for a specific PR.
+   */
+  const fetchReviewChain = useCallback(
+    async (prNumber: number, repositoryFullName: string) => {
+      try {
+        const response = await emitAsync<ReviewChainPayload, ReviewChainResponse>(
+          ReviewEvents.CHAIN,
+          { prNumber, repositoryFullName }
+        );
+
+        if (response.error) {
+          logger.warn('Error fetching review chain:', response.error);
+        } else {
+          setReviewChain(prNumber, response.chain);
+        }
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to fetch review chain';
+        logger.error('Failed to fetch review chain:', message);
+      }
+    },
+    [setReviewChain]
+  );
+
+  /**
    * Delete a review history entry by ID.
    */
   const deleteHistoryEntry = useCallback(
@@ -333,9 +389,11 @@ export function useReview() {
 
   return {
     startReview,
+    startReReview,
     cancelReview,
     pushReview,
     fetchHistory,
+    fetchReviewChain,
     deleteHistoryEntry,
   };
 }

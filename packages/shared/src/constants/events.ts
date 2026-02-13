@@ -65,6 +65,7 @@ export const ValidationEvents = {
 // ============================================
 export const ReviewEvents = {
   START: 'review:start',
+  RE_REVIEW_START: 'review:re-review-start',
   CANCEL: 'review:cancel',
   PROGRESS: 'review:progress',
   COMPLETE: 'review:complete',
@@ -73,6 +74,7 @@ export const ReviewEvents = {
   HISTORY_LIST: 'review:history-list',
   HISTORY_GET: 'review:history-get',
   HISTORY_DELETE: 'review:history-delete',
+  CHAIN: 'review:chain',
   LOG_ENTRIES: 'review:log-entries',
 } as const;
 

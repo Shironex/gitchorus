@@ -107,6 +107,36 @@ export class ReviewHistoryService {
   }
 
   /**
+   * Get a specific history entry by ID.
+   */
+  getById(id: string): ReviewHistoryEntry | null {
+    const entries = this.getAllEntries();
+    return entries.find(e => e.id === id) || null;
+  }
+
+  /**
+   * Get the review chain for a PR — all reviews sorted by reviewedAt ascending (oldest first).
+   * The chain represents the full re-review history for a single PR.
+   */
+  getReviewChain(
+    repositoryFullName: string,
+    prNumber: number,
+    limit: number = 10
+  ): ReviewHistoryEntry[] {
+    const entries = this.list({ repositoryFullName, prNumber });
+
+    // list() returns newest-first; use spread to avoid in-place mutation
+    const chain = [...entries].reverse();
+
+    // Cap at limit
+    if (limit > 0 && chain.length > limit) {
+      return chain.slice(-limit);
+    }
+
+    return chain;
+  }
+
+  /**
    * Delete a specific history entry by ID.
    * Returns true if the entry was found and deleted.
    */

@@ -15,6 +15,7 @@ import {
   createLogger,
   extractErrorMessage,
   type ReviewStartPayload,
+  type ReviewReReviewStartPayload,
   type ReviewCancelPayload,
   type ReviewProgressResponse,
   type ReviewCompleteResponse,
@@ -25,6 +26,8 @@ import {
   type ReviewHistoryGetPayload,
   type ReviewHistoryGetResponse,
   type ReviewHistoryDeletePayload,
+  type ReviewChainPayload,
+  type ReviewChainResponse,
   type ReviewLogEntriesPayload,
   type ReviewLogEntriesResponse,
 } from '@gitchorus/shared';
@@ -80,6 +83,34 @@ export class ReviewGateway implements OnGatewayInit {
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error starting review: ${message}`);
+      return { success: false, error: message };
+    }
+  }
+
+  /**
+   * Handle re-review start request with previous review context.
+   */
+  @SubscribeMessage(ReviewEvents.RE_REVIEW_START)
+  handleReReviewStart(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ReviewReReviewStartPayload
+  ): { success: boolean; error?: string } {
+    try {
+      const { projectPath, prNumber, previousReviewId } = payload;
+
+      if (!projectPath || !prNumber || !previousReviewId) {
+        return {
+          success: false,
+          error: 'projectPath, prNumber, and previousReviewId are required',
+        };
+      }
+
+      this.reviewService.queueReReview(prNumber, projectPath, previousReviewId);
+
+      return { success: true };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error starting re-review: ${message}`);
       return { success: false, error: message };
     }
   }
@@ -182,6 +213,30 @@ export class ReviewGateway implements OnGatewayInit {
       const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error deleting review history entry: ${message}`);
       return { success: false, error: message };
+    }
+  }
+
+  /**
+   * Handle request to get the review chain for a PR.
+   */
+  @SubscribeMessage(ReviewEvents.CHAIN)
+  handleChain(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ReviewChainPayload
+  ): ReviewChainResponse {
+    try {
+      const { repositoryFullName, prNumber } = payload;
+
+      if (!repositoryFullName || !prNumber) {
+        return { chain: [], error: 'repositoryFullName and prNumber are required' };
+      }
+
+      const chain = this.historyService.getReviewChain(repositoryFullName, prNumber);
+      return { chain };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error getting review chain: ${message}`);
+      return { chain: [], error: message };
     }
   }
 

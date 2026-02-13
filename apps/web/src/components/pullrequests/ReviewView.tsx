@@ -1,15 +1,30 @@
 import { useState } from 'react';
-import { ArrowLeft, Play, X, RefreshCw, AlertCircle, Loader2, GitBranch } from 'lucide-react';
+import {
+  ArrowLeft,
+  Play,
+  X,
+  RefreshCw,
+  AlertCircle,
+  Loader2,
+  GitBranch,
+  GitCommitHorizontal,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useReviewStore } from '@/stores/useReviewStore';
+import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import { useReview } from '@/hooks/useReview';
 import { ReviewProgress } from './ReviewProgress';
 import { ReviewSummary } from './ReviewSummary';
 import { ReviewFindings } from './ReviewFindings';
 import { ReviewPushModal } from './ReviewPushModal';
-import type { PullRequest, ReviewFinding, ValidationStep } from '@gitchorus/shared';
+import type {
+  PullRequest,
+  ReviewFinding,
+  ReviewHistoryEntry,
+  ValidationStep,
+} from '@gitchorus/shared';
 
 // Stable empty array reference to avoid infinite re-renders from Zustand selector
 const EMPTY_STEPS: ValidationStep[] = [];
@@ -27,7 +42,7 @@ type ReviewAction = 'REQUEST_CHANGES' | 'COMMENT';
  * and review results when complete.
  */
 export function ReviewView({ pr }: ReviewViewProps) {
-  const { startReview, cancelReview } = useReview();
+  const { startReview, startReReview, cancelReview } = useReview();
   const setSelectedPr = useReviewStore(state => state.setSelectedPr);
 
   // Confirmation dialog state
@@ -51,6 +66,23 @@ export function ReviewView({ pr }: ReviewViewProps) {
   const hasResult = !!result;
   const isIdle = status === 'idle' && !result && !error;
   const canRestart = isCompleted || isFailed || isCancelled;
+
+  // Find the latest history entry for this PR (used for re-review chaining)
+  const repositoryFullName = useRepositoryStore(state => state.githubInfo?.fullName);
+  const latestHistoryEntry = useReviewStore(state =>
+    state.reviewHistory.find(
+      e => e.prNumber === pr.number && e.repositoryFullName === repositoryFullName
+    )
+  ) as ReviewHistoryEntry | undefined;
+
+  /** Start a re-review with chain context, or a fresh review if no history */
+  const handleReReview = () => {
+    if (latestHistoryEntry?.id) {
+      startReReview(pr.number, latestHistoryEntry.id);
+    } else {
+      startReview(pr.number);
+    }
+  };
 
   return (
     <div className="flex flex-col h-full">
@@ -105,7 +137,13 @@ export function ReviewView({ pr }: ReviewViewProps) {
                 className="h-8 gap-1.5"
                 onClick={() => {
                   if (canRestart && hasResult) {
-                    setShowConfirm(true);
+                    if (latestHistoryEntry?.id) {
+                      // Re-review with chain context — no need to confirm discard
+                      handleReReview();
+                    } else {
+                      // No history to chain from — confirm fresh review
+                      setShowConfirm(true);
+                    }
                   } else {
                     startReview(pr.number);
                   }
@@ -140,6 +178,17 @@ export function ReviewView({ pr }: ReviewViewProps) {
 
       {/* Content */}
       <div data-testid="review-content" className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        {/* Re-review sequence indicator */}
+        {result?.isReReview && result.reviewSequence && result.reviewSequence > 1 && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground">
+            <GitCommitHorizontal size={14} />
+            <span>
+              Review #{result.reviewSequence} of PR #{pr.number}
+              {result.previousScore != null && <> — Previous score: {result.previousScore}/10</>}
+            </span>
+          </div>
+        )}
+
         {/* Error state — shown at top for immediate visibility */}
         {(isFailed || (error && !isRunning)) && error && (
           <div className="rounded-lg border p-4 border-destructive/30 bg-destructive/5">

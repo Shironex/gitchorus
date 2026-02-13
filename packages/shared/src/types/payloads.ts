@@ -297,6 +297,16 @@ export interface ReviewStartPayload {
 }
 
 /**
+ * Payload to start a re-review with previous review context
+ */
+export interface ReviewReReviewStartPayload {
+  projectPath: string;
+  prNumber: number;
+  /** ID of the previous ReviewHistoryEntry to chain from */
+  previousReviewId: string;
+}
+
+/**
  * Payload to cancel a running PR review
  */
 export interface ReviewCancelPayload {
@@ -375,6 +385,22 @@ export interface ReviewHistoryGetResponse {
  */
 export interface ReviewHistoryDeletePayload {
   id: string;
+}
+
+/**
+ * Payload to fetch the review chain for a PR
+ */
+export interface ReviewChainPayload {
+  prNumber: number;
+  repositoryFullName: string;
+}
+
+/**
+ * Response containing the review chain for a PR
+ */
+export interface ReviewChainResponse {
+  chain: ReviewHistoryEntry[];
+  error?: string;
 }
 
 // ============================================

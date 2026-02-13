@@ -1,9 +1,14 @@
 import { useState, useMemo, useCallback } from 'react';
-import { Send, ChevronDown } from 'lucide-react';
+import { Send, ChevronDown, CheckCircle2, AlertTriangle, XCircle, CircleDot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { FindingCard } from './FindingCard';
-import type { ReviewFinding, ReviewResult, ReviewSeverity } from '@gitchorus/shared';
+import type {
+  ReviewFinding,
+  ReviewResult,
+  ReviewSeverity,
+  AddressedFindingSummary,
+} from '@gitchorus/shared';
 
 // ============================================
 // Types
@@ -35,6 +40,89 @@ const severityCountBg: Record<ReviewSeverity, string> = {
   minor: 'bg-yellow-500/10 text-yellow-600 dark:text-yellow-400',
   nit: 'bg-gray-500/10 text-gray-600 dark:text-gray-400',
 };
+
+// ============================================
+// Addressed Findings (Re-review)
+// ============================================
+
+const addressedStatusConfig = {
+  addressed: {
+    icon: CheckCircle2,
+    label: 'Addressed',
+    colorClass: 'text-green-600 dark:text-green-400',
+    bgClass: 'bg-green-500/10',
+  },
+  'partially-addressed': {
+    icon: AlertTriangle,
+    label: 'Partial',
+    colorClass: 'text-amber-600 dark:text-amber-400',
+    bgClass: 'bg-amber-500/10',
+  },
+  unaddressed: {
+    icon: XCircle,
+    label: 'Unaddressed',
+    colorClass: 'text-red-600 dark:text-red-400',
+    bgClass: 'bg-red-500/10',
+  },
+  'new-issue': {
+    icon: CircleDot,
+    label: 'New Issue',
+    colorClass: 'text-blue-600 dark:text-blue-400',
+    bgClass: 'bg-blue-500/10',
+  },
+} as const;
+
+function AddressedFindingsSection({ findings }: { findings: AddressedFindingSummary[] }) {
+  const grouped = useMemo(() => {
+    const groups: Record<string, AddressedFindingSummary[]> = {
+      addressed: [],
+      'partially-addressed': [],
+      unaddressed: [],
+      'new-issue': [],
+    };
+    for (const f of findings) {
+      groups[f.status]?.push(f);
+    }
+    return groups;
+  }, [findings]);
+
+  const addressedCount = grouped['addressed'].length;
+  const totalPrevious = findings.filter(f => f.status !== 'new-issue').length;
+
+  return (
+    <div className="rounded-lg border p-4 bg-card space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-sm font-semibold text-foreground">Previous Findings Status</h4>
+        <span className="text-xs text-muted-foreground">
+          {addressedCount}/{totalPrevious} addressed
+        </span>
+      </div>
+
+      <div className="space-y-2">
+        {findings.map((finding, i) => {
+          const config = addressedStatusConfig[finding.status];
+          const Icon = config.icon;
+          return (
+            <div
+              key={`${finding.title}-${finding.severity}-${i}`}
+              className={cn('flex items-start gap-2 px-3 py-2 rounded-md text-xs', config.bgClass)}
+            >
+              <Icon size={14} className={cn('shrink-0 mt-0.5', config.colorClass)} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className={cn('font-medium', config.colorClass)}>{config.label}</span>
+                  <span className="text-muted-foreground capitalize">({finding.severity})</span>
+                </div>
+                <p className="text-foreground font-medium mt-0.5">{finding.title}</p>
+                <p className="text-muted-foreground mt-0.5">{finding.explanation}</p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 // ============================================
 // Component
@@ -153,7 +241,7 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
     [groupedFindings, selectedFindings]
   );
 
-  if (result.findings.length === 0) {
+  if (result.findings.length === 0 && !result.addressedFindings?.length) {
     return (
       <div className="rounded-lg border p-6 bg-card text-center">
         <p className="text-sm text-muted-foreground">No findings. Clean code!</p>
@@ -163,6 +251,11 @@ export function ReviewFindings({ result, onPushToGithub }: ReviewFindingsProps) 
 
   return (
     <div className="space-y-3">
+      {/* Addressed findings from previous review (re-review only) */}
+      {result.addressedFindings && result.addressedFindings.length > 0 && (
+        <AddressedFindingsSection findings={result.addressedFindings} />
+      )}
+
       {/* Top bar: selection info + push button */}
       <div className="flex items-center justify-between gap-3 sticky top-0 z-10 bg-background py-2">
         <div className="flex items-center gap-3 text-xs text-muted-foreground">

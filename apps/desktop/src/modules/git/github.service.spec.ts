@@ -786,4 +786,100 @@ describe('GithubService', () => {
       expect(result).toBe(true);
     });
   });
+
+  // ==================== getPrHeadSha ====================
+
+  describe('getPrHeadSha', () => {
+    it('should return the HEAD SHA for a PR', async () => {
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: 'abc123def456\n',
+        stderr: '',
+      });
+
+      const sha = await service.getPrHeadSha('/repo', 42);
+
+      expect(sha).toBe('abc123def456');
+      const args = mockExecFileAsync.mock.calls[0][1] as string[];
+      expect(args).toContain('pr');
+      expect(args).toContain('view');
+      expect(args).toContain('42');
+      expect(args).toContain('headRefOid');
+    });
+
+    it('should throw when SHA is empty', async () => {
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: '  \n',
+        stderr: '',
+      });
+
+      await expect(service.getPrHeadSha('/repo', 42)).rejects.toThrow(
+        'Failed to get HEAD SHA for PR #42'
+      );
+    });
+
+    it('should throw when gh command fails', async () => {
+      mockExecFileAsync.mockRejectedValueOnce(new Error('PR not found'));
+
+      await expect(service.getPrHeadSha('/repo', 999)).rejects.toThrow();
+    });
+  });
+
+  // ==================== getCommitDiff ====================
+
+  describe('getCommitDiff', () => {
+    it('should fetch origin and return diff between two SHAs', async () => {
+      // git fetch origin
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git diff
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: 'diff --git a/file.ts b/file.ts\n+added line\n',
+        stderr: '',
+      });
+
+      const diff = await service.getCommitDiff('/repo', 'abc123', 'def456');
+
+      expect(diff).toContain('diff --git');
+      // First call is git fetch origin
+      expect(mockExecFileAsync.mock.calls[0][0]).toBe('git');
+      expect(mockExecFileAsync.mock.calls[0][1]).toEqual(['fetch', 'origin']);
+      // Second call is git diff
+      expect(mockExecFileAsync.mock.calls[1][0]).toBe('git');
+      expect(mockExecFileAsync.mock.calls[1][1]).toEqual(['diff', 'abc123..def456']);
+    });
+
+    it('should still return diff when git fetch fails', async () => {
+      // git fetch origin fails
+      mockExecFileAsync.mockRejectedValueOnce(new Error('fetch failed'));
+      // git diff succeeds
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: 'diff content here',
+        stderr: '',
+      });
+
+      const diff = await service.getCommitDiff('/repo', 'abc123', 'def456');
+
+      expect(diff).toBe('diff content here');
+    });
+
+    it('should throw when git diff fails', async () => {
+      // git fetch origin succeeds
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '', stderr: '' });
+      // git diff fails
+      mockExecFileAsync.mockRejectedValueOnce(new Error('diff failed'));
+
+      await expect(service.getCommitDiff('/repo', 'abc123', 'def456')).rejects.toThrow(
+        'diff failed'
+      );
+    });
+
+    it('should throw when SHA format is invalid', async () => {
+      await expect(service.getCommitDiff('/repo', '--malicious', 'def456')).rejects.toThrow(
+        'Invalid commit SHA format'
+      );
+
+      await expect(service.getCommitDiff('/repo', 'abc123', 'not valid')).rejects.toThrow(
+        'Invalid commit SHA format'
+      );
+    });
+  });
 });

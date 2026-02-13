@@ -5,12 +5,14 @@ import type { PullRequest, ValidationStep } from '@gitchorus/shared';
 
 // Mock stores and hooks
 const mockStartReview = vi.fn();
+const mockStartReReview = vi.fn();
 const mockCancelReview = vi.fn();
 const mockSetSelectedPr = vi.fn();
 
 vi.mock('@/hooks/useReview', () => ({
   useReview: () => ({
     startReview: mockStartReview,
+    startReReview: mockStartReReview,
     cancelReview: mockCancelReview,
   }),
 }));
@@ -21,6 +23,7 @@ let mockStoreState: {
   reviewSteps: ValidationStep[];
   reviewResults: unknown;
   reviewErrors: string | undefined;
+  reviewHistory: Array<{ id: string; prNumber: number; [key: string]: unknown }>;
 };
 
 vi.mock('@/stores/useReviewStore', () => ({
@@ -31,6 +34,16 @@ vi.mock('@/stores/useReviewStore', () => ({
       reviewSteps: { get: () => mockStoreState.reviewSteps },
       reviewResults: { get: () => mockStoreState.reviewResults },
       reviewErrors: { get: () => mockStoreState.reviewErrors },
+      reviewHistory: mockStoreState.reviewHistory,
+    };
+    return selector(state);
+  },
+}));
+
+vi.mock('@/stores/useRepositoryStore', () => ({
+  useRepositoryStore: (selector: (state: Record<string, unknown>) => unknown) => {
+    const state = {
+      githubInfo: { fullName: 'test/repo' },
     };
     return selector(state);
   },
@@ -61,6 +74,7 @@ describe('ReviewView', () => {
       reviewSteps: [],
       reviewResults: undefined,
       reviewErrors: undefined,
+      reviewHistory: [],
     };
   });
 
@@ -206,6 +220,119 @@ describe('ReviewView', () => {
 
       expect(screen.queryByText('Discard current review?')).toBeNull();
       expect(mockStartReview).toHaveBeenCalledWith(42);
+    });
+  });
+
+  describe('re-review chaining', () => {
+    const mockResult = {
+      prNumber: 42,
+      prTitle: 'Test PR',
+      repositoryFullName: 'test/repo',
+      findings: [],
+      verdict: 'Looks good',
+      qualityScore: 8,
+      reviewedAt: '2025-01-01T00:00:00Z',
+      providerType: 'claude-code',
+      model: 'claude-sonnet-4-5-20250929',
+      costUsd: 0.01,
+      durationMs: 1000,
+    };
+
+    it('should call startReReview (not show confirm) when history entry exists', () => {
+      mockStoreState.reviewStatus = 'completed';
+      mockStoreState.reviewResults = mockResult;
+      mockStoreState.reviewHistory = [
+        { id: 'rh-42-abc', prNumber: 42, repositoryFullName: 'test/repo' },
+      ];
+
+      render(<ReviewView pr={basePr} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-review/ }));
+
+      // Should call startReReview with chain context, not show confirmation
+      expect(mockStartReReview).toHaveBeenCalledWith(42, 'rh-42-abc');
+      expect(screen.queryByText('Discard current review?')).toBeNull();
+      expect(mockStartReview).not.toHaveBeenCalled();
+    });
+
+    it('should show confirm dialog when no history entry exists for re-review', () => {
+      mockStoreState.reviewStatus = 'completed';
+      mockStoreState.reviewResults = mockResult;
+      mockStoreState.reviewHistory = []; // No history entries
+
+      render(<ReviewView pr={basePr} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-review/ }));
+
+      // Should show the confirmation dialog since no history to chain from
+      expect(screen.queryByText('Discard current review?')).not.toBeNull();
+      expect(mockStartReReview).not.toHaveBeenCalled();
+    });
+
+    it('should only match history entry for the correct PR number', () => {
+      mockStoreState.reviewStatus = 'completed';
+      mockStoreState.reviewResults = mockResult;
+      // History entry for a different PR
+      mockStoreState.reviewHistory = [{ id: 'rh-99-abc', prNumber: 99 }];
+
+      render(<ReviewView pr={basePr} />);
+
+      fireEvent.click(screen.getByRole('button', { name: /Re-review/ }));
+
+      // Should show confirmation since no matching entry for PR #42
+      expect(screen.queryByText('Discard current review?')).not.toBeNull();
+      expect(mockStartReReview).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('re-review sequence indicator', () => {
+    it('should show sequence indicator for re-review results', () => {
+      mockStoreState.reviewStatus = 'completed';
+      mockStoreState.reviewResults = {
+        prNumber: 42,
+        prTitle: 'Test PR',
+        repositoryFullName: 'test/repo',
+        findings: [],
+        verdict: 'Better now',
+        qualityScore: 9,
+        reviewedAt: '2025-01-02T00:00:00Z',
+        providerType: 'claude-code',
+        model: 'claude-sonnet-4-5-20250929',
+        costUsd: 0.01,
+        durationMs: 1000,
+        isReReview: true,
+        reviewSequence: 3,
+        previousScore: 7,
+      };
+
+      render(<ReviewView pr={basePr} />);
+
+      const contentArea = screen.getByTestId('review-content');
+      expect(contentArea.textContent).toContain('Review #3');
+      expect(contentArea.textContent).toContain('Previous score: 7/10');
+    });
+
+    it('should not show sequence indicator for initial review', () => {
+      mockStoreState.reviewStatus = 'completed';
+      mockStoreState.reviewResults = {
+        prNumber: 42,
+        prTitle: 'Test PR',
+        repositoryFullName: 'test/repo',
+        findings: [],
+        verdict: 'Looks good',
+        qualityScore: 8,
+        reviewedAt: '2025-01-01T00:00:00Z',
+        providerType: 'claude-code',
+        model: 'claude-sonnet-4-5-20250929',
+        costUsd: 0.01,
+        durationMs: 1000,
+        reviewSequence: 1,
+      };
+
+      render(<ReviewView pr={basePr} />);
+
+      const contentArea = screen.getByTestId('review-content');
+      expect(contentArea.textContent).not.toContain('Review #');
     });
   });
 });

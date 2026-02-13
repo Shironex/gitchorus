@@ -125,6 +125,21 @@ export function FindingCard({ finding, index, selected, onToggle }: FindingCardP
               >
                 {finding.category}
               </span>
+              {/* Addressing status badge (re-review only) */}
+              {finding.addressingStatus && (
+                <span
+                  className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded-full border font-medium capitalize',
+                    finding.addressingStatus === 'new'
+                      ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                      : finding.addressingStatus === 'persisting'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                        : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                  )}
+                >
+                  {finding.addressingStatus}
+                </span>
+              )}
             </div>
 
             {/* Title */}

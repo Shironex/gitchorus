@@ -1,4 +1,4 @@
-import { Star } from 'lucide-react';
+import { Star, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Markdown } from '@/components/ui/markdown';
 import type { ReviewResult, ReviewSeverity } from '@gitchorus/shared';
@@ -38,6 +38,41 @@ function QualityBadge({ score }: { score: number }) {
 }
 
 /**
+ * Score progression delta display for re-reviews.
+ * Shows the previous score, an arrow, and the delta (+2, -1, etc.)
+ */
+function ScoreDelta({ previous, current }: { previous: number; current: number }) {
+  const delta = current - previous;
+
+  if (delta === 0) {
+    return (
+      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+        <span>{previous}/10</span>
+        <Minus size={12} />
+        <span>No change</span>
+      </div>
+    );
+  }
+
+  const isImprovement = delta > 0;
+  const Icon = isImprovement ? TrendingUp : TrendingDown;
+  const colorClass = isImprovement
+    ? 'text-green-600 dark:text-green-400'
+    : 'text-red-600 dark:text-red-400';
+
+  return (
+    <div className={cn('flex items-center gap-1 text-xs font-medium', colorClass)}>
+      <span className="text-muted-foreground">{previous}/10</span>
+      <Icon size={14} />
+      <span>
+        {isImprovement ? '+' : ''}
+        {delta}
+      </span>
+    </div>
+  );
+}
+
+/**
  * Summary section displayed at the top of the review results.
  *
  * Shows the overall verdict text (rendered as markdown), quality score badge,
@@ -66,7 +101,11 @@ export function ReviewSummary({ result }: ReviewSummaryProps) {
           <h4 className="text-sm font-semibold text-foreground mb-1">Verdict</h4>
           <Markdown size="sm">{result.verdict}</Markdown>
         </div>
-        <div className="shrink-0">
+        <div className="shrink-0 flex items-center gap-2">
+          {/* Score delta for re-reviews */}
+          {result.previousScore != null && (
+            <ScoreDelta previous={result.previousScore} current={result.qualityScore} />
+          )}
           <QualityBadge score={result.qualityScore} />
         </div>
       </div>
