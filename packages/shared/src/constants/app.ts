@@ -43,7 +43,7 @@ export const STATUS_CACHE_TTL_MS = 5 * 60 * 1000;
 // =============================================================================
 
 /** Vite dev server port */
-export const VITE_DEV_PORT = 5173;
+export const VITE_DEV_PORT = 15173;
 
 /** Localhost address */
 export const LOCALHOST = '127.0.0.1';

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import {
   SettingsEvents,
@@ -21,6 +22,7 @@ const logger = createLogger('useSettings');
  * and provides updateConfig for auto-save behavior.
  */
 export function useSettings() {
+  const socketInitialized = useConnectionStore(state => state.socketInitialized);
   const config = useSettingsStore(state => state.reviewConfig);
   const loading = useSettingsStore(state => state.isReviewConfigLoading);
   const setReviewConfig = useSettingsStore(state => state.setReviewConfig);
@@ -64,16 +66,20 @@ export function useSettings() {
     [setReviewConfig]
   );
 
-  // Fetch config on first mount
+  // Fetch config on first mount (after socket is ready)
   useEffect(() => {
+    if (!socketInitialized) return;
     if (!fetchedRef.current && !config) {
       fetchedRef.current = true;
       fetchConfig();
     }
-  }, [config, fetchConfig]);
+  }, [socketInitialized, config, fetchConfig]);
 
-  // Listen for external changes
+  // Listen for external changes (after socket is ready)
   useEffect(() => {
+    if (!socketInitialized) return;
+
+    const socket = getSocket();
     const onChanged = (data: { config: ReviewConfig }) => {
       logger.debug('Settings changed externally');
       setReviewConfig(data.config);
@@ -83,7 +89,7 @@ export function useSettings() {
     return () => {
       socket.off(SettingsEvents.CHANGED, onChanged);
     };
-  }, [setReviewConfig]);
+  }, [socketInitialized, setReviewConfig]);
 
   return { config, loading, fetchConfig, updateConfig };
 }

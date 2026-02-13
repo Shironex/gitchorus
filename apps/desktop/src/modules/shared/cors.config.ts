@@ -3,14 +3,14 @@
  *
  * Security: Restricts connections to local origins only to prevent
  * malicious websites from connecting to the local server.
+ * The NestJS server binds to 127.0.0.1 (not externally reachable),
+ * so accepting any localhost port is safe — only local processes can connect.
  */
 
 /** Allowed origins for CORS */
 export const ALLOWED_ORIGINS: (string | RegExp)[] = [
-  'http://localhost:5173', // Vite dev server
-  'http://127.0.0.1:5173',
-  'http://localhost:3001', // NestJS server
-  'http://127.0.0.1:3001',
+  /^http:\/\/localhost:\d+$/, // Any localhost port (Vite dev, dynamic backend)
+  /^http:\/\/127\.0\.0\.1:\d+$/, // Any loopback port
   /^app:\/\//, // Electron app protocol
   /^file:\/\//, // Local file protocol
 ];

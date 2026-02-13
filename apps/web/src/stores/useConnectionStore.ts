@@ -7,7 +7,7 @@ import {
   type ConnectionStatus,
   type WsThrottledPayload,
 } from '@gitchorus/shared';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 
 const logger = createLogger('ConnectionStore');
 
@@ -19,6 +19,8 @@ interface ConnectionState {
   status: ConnectionStatus;
   /** Timestamp when the last disconnect occurred */
   disconnectedAt: number | null;
+  /** Whether the socket has been initialized with a dynamic port */
+  socketInitialized: boolean;
 }
 
 interface ConnectionActions {
@@ -30,6 +32,8 @@ interface ConnectionActions {
   setFailed: () => void;
   /** Retry the connection manually */
   retryConnection: () => void;
+  /** Mark socket as initialized (called after initializeSocket) */
+  setSocketInitialized: () => void;
   /** Register socket event listeners */
   initListeners: () => void;
   /** Remove socket event listeners */
@@ -54,6 +58,7 @@ export const useConnectionStore = create<ConnectionStore>()(
       // Initial state: reconnecting because socket starts disconnected
       status: 'reconnecting',
       disconnectedAt: null,
+      socketInitialized: false,
 
       setConnected: () => {
         if (failureTimeoutHandle !== null) {
@@ -93,7 +98,11 @@ export const useConnectionStore = create<ConnectionStore>()(
       retryConnection: () => {
         logger.info('Manual retry requested');
         get().setReconnecting();
-        socket.connect();
+        getSocket().connect();
+      },
+
+      setSocketInitialized: () => {
+        set({ socketInitialized: true }, undefined, 'connection/setSocketInitialized');
       },
 
       initListeners: () => {
@@ -124,10 +133,10 @@ export const useConnectionStore = create<ConnectionStore>()(
           });
         };
 
-        socket.on('connect', connectHandler);
-        socket.on('disconnect', disconnectHandler);
-        socket.on('reconnect_failed', reconnectFailedHandler);
-        socket.on(SystemEvents.THROTTLED, throttledHandler);
+        getSocket().on('connect', connectHandler);
+        getSocket().on('disconnect', disconnectHandler);
+        getSocket().on('reconnect_failed', reconnectFailedHandler);
+        getSocket().on(SystemEvents.THROTTLED, throttledHandler);
 
         listenersInitialized = true;
         logger.debug('Connection listeners registered');
@@ -140,19 +149,19 @@ export const useConnectionStore = create<ConnectionStore>()(
         }
 
         if (connectHandler) {
-          socket.off('connect', connectHandler);
+          getSocket().off('connect', connectHandler);
           connectHandler = null;
         }
         if (disconnectHandler) {
-          socket.off('disconnect', disconnectHandler);
+          getSocket().off('disconnect', disconnectHandler);
           disconnectHandler = null;
         }
         if (reconnectFailedHandler) {
-          socket.off('reconnect_failed', reconnectFailedHandler);
+          getSocket().off('reconnect_failed', reconnectFailedHandler);
           reconnectFailedHandler = null;
         }
         if (throttledHandler) {
-          socket.off(SystemEvents.THROTTLED, throttledHandler);
+          getSocket().off(SystemEvents.THROTTLED, throttledHandler);
           throttledHandler = null;
         }
 

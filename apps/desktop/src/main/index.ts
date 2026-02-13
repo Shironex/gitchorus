@@ -10,6 +10,7 @@ import { initializeAutoUpdater } from './updater';
 import { corsOriginCallback } from '../modules/shared/cors.config';
 import { NestLoggerAdapter } from '../modules/shared/nest-logger';
 import { LOCALHOST } from '@gitchorus/shared';
+import { setBackendPort } from './backend-port';
 import { resolveShellPath } from './utils/shell-path';
 
 // Allow E2E tests to isolate userData by setting ELECTRON_USER_DATA_DIR.
@@ -41,9 +42,16 @@ async function bootstrapNestApp(): Promise<void> {
       credentials: true,
     });
 
-    logger.info('Starting to listen on port 3001...');
-    await nestApp.listen(3001, LOCALHOST);
-    logger.info('NestJS server running on port 3001');
+    logger.info('Starting to listen on dynamic port...');
+    await nestApp.listen(0, LOCALHOST);
+
+    const address = nestApp.getHttpServer().address();
+    if (typeof address === 'string' || !address) {
+      throw new Error(`Unexpected server address format: ${address}`);
+    }
+    setBackendPort(address.port);
+
+    logger.info(`NestJS server running on port ${address.port}`);
     logger.info('Log file location:', getLogPath());
   } catch (error) {
     logger.error('Failed to bootstrap NestJS:', error);

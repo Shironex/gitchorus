@@ -1,20 +1,9 @@
 import { io, Socket } from 'socket.io-client';
-import { createLogger } from '@gitchorus/shared';
+import { createLogger, LOCALHOST } from '@gitchorus/shared';
 
 const logger = createLogger('Socket');
 
-const SOCKET_URL = 'ws://localhost:3001';
-
-export const socket: Socket = io(SOCKET_URL, {
-  autoConnect: false,
-  reconnection: true,
-  reconnectionAttempts: Infinity,
-  reconnectionDelay: 500,
-  reconnectionDelayMax: 5000,
-  randomizationFactor: 0.5,
-  timeout: 20000,
-  transports: ['websocket', 'polling'],
-});
+let _socket: Socket | null = null;
 
 let isConnecting = false;
 
@@ -41,7 +30,79 @@ function rejectPendingCallers(error: Error): void {
   }
 }
 
+/**
+ * Initialize the socket with the dynamically assigned backend port.
+ * Must be called once before any socket operations.
+ * Idempotent — returns the existing socket if already initialized.
+ */
+export function initializeSocket(port: number): Socket {
+  if (_socket) {
+    logger.warn('Socket already initialized, returning existing instance');
+    return _socket;
+  }
+
+  const url = `ws://${LOCALHOST}:${port}`;
+  logger.info(`Initializing socket connection to ${url}`);
+
+  _socket = io(url, {
+    autoConnect: false,
+    reconnection: true,
+    reconnectionAttempts: Infinity,
+    reconnectionDelay: 500,
+    reconnectionDelayMax: 5000,
+    randomizationFactor: 0.5,
+    timeout: 20000,
+    transports: ['websocket', 'polling'],
+  });
+
+  // Connection event handlers
+  _socket.on('connect', () => {
+    logger.info('Connected to server');
+  });
+
+  _socket.on('disconnect', reason => {
+    logger.warn('Disconnected:', reason);
+  });
+
+  _socket.on('reconnect', attemptNumber => {
+    logger.info('Reconnected after', attemptNumber, 'attempts');
+  });
+
+  _socket.on('reconnect_attempt', attemptNumber => {
+    logger.debug('Reconnection attempt', attemptNumber);
+  });
+
+  _socket.on('reconnect_error', error => {
+    logger.error('Reconnection error:', error);
+  });
+
+  _socket.on('reconnect_failed', () => {
+    logger.error('Reconnection failed after all attempts');
+  });
+
+  // Expose socket instance on window for E2E testing.
+  // Allows Playwright to trigger disconnect/reconnect scenarios.
+  // This is a desktop Electron app -- window globals are already accessible
+  // via devtools, so exposing the socket adds no meaningful attack surface.
+  if (typeof window !== 'undefined') {
+    (window as unknown as Record<string, unknown>).__testSocket = _socket;
+  }
+
+  return _socket;
+}
+
+/**
+ * Get the socket instance. Throws if not yet initialized.
+ */
+export function getSocket(): Socket {
+  if (!_socket) {
+    throw new Error('Socket not initialized. Call initializeSocket(port) first.');
+  }
+  return _socket;
+}
+
 export function connectSocket(): Promise<void> {
+  const socket = getSocket();
   return new Promise((resolve, reject) => {
     if (socket.connected) {
       resolve();
@@ -82,44 +143,9 @@ export function connectSocket(): Promise<void> {
 }
 
 export function disconnectSocket(): void {
-  if (socket.connected) {
-    socket.disconnect();
+  if (_socket?.connected) {
+    _socket.disconnect();
   }
-}
-
-// Connection event handlers
-socket.on('connect', () => {
-  logger.info('Connected to server');
-});
-
-socket.on('disconnect', reason => {
-  logger.warn('Disconnected:', reason);
-});
-
-socket.on('reconnect', attemptNumber => {
-  logger.info('Reconnected after', attemptNumber, 'attempts');
-});
-
-socket.on('reconnect_attempt', attemptNumber => {
-  logger.debug('Reconnection attempt', attemptNumber);
-});
-
-socket.on('reconnect_error', error => {
-  logger.error('Reconnection error:', error);
-});
-
-socket.on('reconnect_failed', () => {
-  logger.error('Reconnection failed after all attempts');
-});
-
-export default socket;
-
-// Expose socket instance on window for E2E testing.
-// Allows Playwright to trigger disconnect/reconnect scenarios.
-// This is a desktop Electron app -- window globals are already accessible
-// via devtools, so exposing the socket adds no meaningful attack surface.
-if (typeof window !== 'undefined') {
-  (window as unknown as Record<string, unknown>).__testSocket = socket;
 }
 
 // Re-export socket helpers for convenient access
