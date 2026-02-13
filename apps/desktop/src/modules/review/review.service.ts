@@ -41,6 +41,9 @@ export class ReviewService {
   /** Project path for the current session */
   private projectPath: string | null = null;
 
+  /** Tracks previousReviewId for re-review queue items (keyed by prNumber) */
+  private reReviewContext = new Map<number, string>();
+
   /** Logger with file transport for troubleshooting */
   private readonly logger: Logger;
 
@@ -86,6 +89,15 @@ export class ReviewService {
     if (this.currentReview === null) {
       this.processQueue();
     }
+  }
+
+  /**
+   * Queue a re-review for the given PR number with context from a previous review.
+   * The previous review's findings and score are passed to the AI for fair score progression.
+   */
+  queueReReview(prNumber: number, projectPath: string, previousReviewId: string): void {
+    this.reReviewContext.set(prNumber, previousReviewId);
+    this.queueReview(prNumber, projectPath);
   }
 
   /**
@@ -175,14 +187,23 @@ export class ReviewService {
       const repoInfo = await this.githubService.getRepoInfo(projectPath);
       const repoName = repoInfo?.fullName || 'unknown/unknown';
 
+      // Fetch HEAD commit SHA for chain tracking
+      let headCommitSha: string | undefined;
+      try {
+        headCommitSha = await this.githubService.getPrHeadSha(projectPath, prNumber);
+      } catch (error) {
+        this.logger.warn(`Failed to get HEAD SHA for PR #${prNumber}:`, error);
+      }
+
       // Get the Claude provider
       const provider = this.providerRegistry.getClaude();
       if (!provider) {
         throw new Error('Claude provider is not available');
       }
 
-      // Run the review generator
-      const generator = provider.review({
+      // Build review params — enriched with re-review context if available
+      const previousReviewId = this.reReviewContext.get(prNumber);
+      const reviewParams: import('@gitchorus/shared').ReviewParams = {
         diff,
         prNumber,
         prTitle: pr.title,
@@ -192,7 +213,45 @@ export class ReviewService {
         repoPath: projectPath,
         repoName,
         fileTransport: this.fileTransport,
-      });
+      };
+
+      if (previousReviewId) {
+        const previousEntry = this.historyService.getById(previousReviewId);
+        if (previousEntry) {
+          reviewParams.isReReview = true;
+          reviewParams.previousReview = previousEntry;
+          reviewParams.previousHeadCommitSha = previousEntry.headCommitSha;
+
+          // Get incremental diff if we have both SHAs
+          if (previousEntry.headCommitSha && headCommitSha) {
+            try {
+              reviewParams.incrementalDiff = await this.githubService.getCommitDiff(
+                projectPath,
+                previousEntry.headCommitSha,
+                headCommitSha
+              );
+              this.logger.info(
+                `Got incremental diff for PR #${prNumber}: ${previousEntry.headCommitSha.slice(0, 7)}..${headCommitSha.slice(0, 7)}`
+              );
+            } catch (error) {
+              this.logger.warn(
+                `Failed to get incremental diff for PR #${prNumber}, will use full diff only:`,
+                error
+              );
+            }
+          }
+        } else {
+          this.logger.warn(
+            `Previous review ${previousReviewId} not found in history, running as initial review`
+          );
+        }
+
+        // Clean up re-review context
+        this.reReviewContext.delete(prNumber);
+      }
+
+      // Run the review generator
+      const generator = provider.review(reviewParams);
 
       let result: ReviewResult | undefined;
 
@@ -215,6 +274,23 @@ export class ReviewService {
 
       if (!result) {
         throw new Error('Review completed without producing a result');
+      }
+
+      // Enrich result with chain metadata
+      if (headCommitSha) {
+        result.headCommitSha = headCommitSha;
+      }
+      if (previousReviewId) {
+        const previousEntry = this.historyService.getById(previousReviewId);
+        result.previousReviewId = previousReviewId;
+        result.isReReview = true;
+        if (previousEntry) {
+          result.previousScore = previousEntry.qualityScore;
+          // Calculate sequence from previous entry
+          result.reviewSequence = (previousEntry.reviewSequence || 1) + 1;
+        }
+      } else {
+        result.reviewSequence = 1;
       }
 
       // Save to history for local persistence

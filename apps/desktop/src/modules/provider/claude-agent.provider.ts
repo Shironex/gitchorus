@@ -198,6 +198,66 @@ const REVIEW_OUTPUT_SCHEMA = {
 };
 
 /**
+ * JSON schema for structured re-review output.
+ * Extends the standard review schema with addressedFindings and per-finding addressingStatus.
+ */
+const RE_REVIEW_OUTPUT_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    findings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          severity: { type: 'string', enum: ['critical', 'major', 'minor', 'nit'] },
+          category: {
+            type: 'string',
+            enum: ['security', 'logic', 'performance', 'style', 'codebase-fit'],
+          },
+          file: { type: 'string' },
+          line: { type: 'number' },
+          codeSnippet: { type: 'string' },
+          explanation: { type: 'string' },
+          suggestedFix: { type: 'string' },
+          title: { type: 'string' },
+          addressingStatus: { type: 'string', enum: ['new', 'persisting', 'regression'] },
+        },
+        required: [
+          'severity',
+          'category',
+          'file',
+          'line',
+          'codeSnippet',
+          'explanation',
+          'suggestedFix',
+          'title',
+          'addressingStatus',
+        ],
+      },
+    },
+    verdict: { type: 'string' },
+    qualityScore: { type: 'number', minimum: 1, maximum: 10 },
+    addressedFindings: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          title: { type: 'string' },
+          severity: { type: 'string', enum: ['critical', 'major', 'minor', 'nit'] },
+          status: {
+            type: 'string',
+            enum: ['addressed', 'partially-addressed', 'unaddressed', 'new-issue'],
+          },
+          explanation: { type: 'string' },
+        },
+        required: ['title', 'severity', 'status', 'explanation'],
+      },
+    },
+  },
+  required: ['findings', 'verdict', 'qualityScore', 'addressedFindings'],
+};
+
+/**
  * Build the system prompt for PR code review.
  */
 function buildReviewSystemPrompt(model: string, maxTurns: number): string {
@@ -255,6 +315,105 @@ ${params.diff}
 \`\`\`
 
 Analyze this PR against the codebase and produce your review findings. Read related files for context beyond the diff.`;
+}
+
+/**
+ * Build the system prompt for a re-review with previous review context.
+ */
+function buildReReviewSystemPrompt(model: string, maxTurns: number): string {
+  const multiplier = MODEL_TURN_MULTIPLIERS[model as ClaudeModel] ?? 1.0;
+  const isSmallModel = multiplier > 1.0;
+
+  const efficiencyGuidance = isSmallModel
+    ? `\n- Be efficient: you have a limited budget of ${maxTurns} turns. Focus on the incremental diff and changes since last review`
+    : '';
+
+  return `You are a senior software engineer performing a FOLLOW-UP code review of a pull request. You have full access to the codebase AND context from the previous review.
+
+Your task:
+1. Review the incremental changes (what changed since the last review)
+2. For each previous finding, determine if it was addressed, partially addressed, or unaddressed
+3. Look for NEW issues introduced by the changes
+4. Look for REGRESSIONS (new problems caused by fixing previous issues)
+5. Provide a FAIR, UPDATED quality score reflecting the CURRENT state of the code
+
+SCORE PROGRESSION PRINCIPLES:
+- If all critical/major findings were addressed: score should improve by 1-2+ points
+- If only minor/nit findings remain: score should be 8+
+- If regressions are introduced (new issues from fixes): score may not improve despite addressed findings
+- A score of 10/10 IS achievable when all findings are addressed and no new issues exist
+- ALWAYS explain why the score changed (or didn't change) from the previous review
+- Be FAIR: if genuine improvements were made, acknowledge them with a higher score
+
+For each finding in this re-review, mark its addressingStatus:
+- "new": This is a brand new issue not present in the previous review
+- "persisting": This issue existed in the previous review and is still present
+- "regression": This issue was introduced by changes that tried to fix previous findings
+
+For each PREVIOUS finding, produce an addressedFindings entry:
+- "addressed": The finding was fully resolved
+- "partially-addressed": The finding was partially resolved but still has issues
+- "unaddressed": The finding was not addressed at all
+- "new-issue": (Not applicable for previous findings — only used if you need to note a new issue)
+
+IMPORTANT RULES:
+- Focus primarily on the INCREMENTAL changes, but read the full diff for context
+- Be thorough: read related files beyond the diff to verify fixes
+- Be evidence-based: cite actual code from the diff and codebase
+- Be actionable: every finding should have a clear suggested fix
+- Use read-only tools only: Read, Grep, Glob, Bash (for non-destructive commands)${efficiencyGuidance}`;
+}
+
+/**
+ * Build the user prompt for a re-review with previous review context.
+ */
+function buildReReviewPrompt(params: ReviewParams): string {
+  const prev = params.previousReview!;
+
+  const previousFindingsList = prev.findings
+    .map(
+      (f, i) =>
+        `${i + 1}. [${f.severity.toUpperCase()}] ${f.title}\n   File: ${f.file}:${f.line}\n   Category: ${f.category}\n   Explanation: ${f.explanation}`
+    )
+    .join('\n');
+
+  let prompt = `This is a RE-REVIEW of PR #${params.prNumber} in ${params.repoName}. The developer has pushed new changes to address findings from the previous review.
+
+**Repository:** ${params.repoName}
+**PR #${params.prNumber}: ${params.prTitle}**
+**Branch:** ${params.headBranch} -> ${params.baseBranch}
+${params.prBody ? `\n**Description:**\n${params.prBody}` : '(No description provided)'}
+
+## Previous Review Context
+
+**Previous Score:** ${prev.qualityScore}/10
+**Previous Verdict:** ${prev.verdict}
+**Previous Findings (${prev.findings.length} total):**
+${previousFindingsList || '(No findings)'}
+`;
+
+  if (params.incrementalDiff) {
+    prompt += `
+## Incremental Changes (since last review)
+These are the changes made since the previous review. Focus on these to determine what was addressed:
+
+\`\`\`diff
+${params.incrementalDiff}
+\`\`\`
+`;
+  }
+
+  prompt += `
+## Full PR Diff
+For overall context, here is the full current PR diff:
+
+\`\`\`diff
+${params.diff}
+\`\`\`
+
+Analyze the changes, determine which previous findings were addressed, identify any new issues, and produce your re-review result with an updated quality score.`;
+
+  return prompt;
 }
 
 /**
@@ -646,28 +805,34 @@ export class ClaudeAgentProvider {
     // Capture stderr output for error diagnostics
     const stderrBuffer: string[] = [];
 
+    const isReReview = params.isReReview && params.previousReview;
+
     yield {
       step: 'initializing',
-      message: 'Starting Claude agent for PR review...',
+      message: isReReview
+        ? 'Starting Claude agent for PR re-review...'
+        : 'Starting Claude agent for PR review...',
       timestamp: new Date().toISOString(),
       stepType: 'init',
     };
 
     const agentQuery = query({
-      prompt: buildReviewPrompt(params),
+      prompt: isReReview ? buildReReviewPrompt(params) : buildReviewPrompt(params),
       options: {
         cwd: params.repoPath,
         tools: ['Read', 'Grep', 'Glob', 'Bash'],
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
         abortController: this.abortController,
-        systemPrompt: buildReviewSystemPrompt(model, maxTurns),
+        systemPrompt: isReReview
+          ? buildReReviewSystemPrompt(model, maxTurns)
+          : buildReviewSystemPrompt(model, maxTurns),
         model,
         maxTurns,
         maxBudgetUsd: params.config?.maxBudgetUsd,
         outputFormat: {
           type: 'json_schema',
-          schema: REVIEW_OUTPUT_SCHEMA,
+          schema: isReReview ? RE_REVIEW_OUTPUT_SCHEMA : REVIEW_OUTPUT_SCHEMA,
         },
         persistSession: false,
         stderr: this.createStderrHandler(stderrBuffer),
@@ -677,7 +842,9 @@ export class ClaudeAgentProvider {
 
     yield {
       step: 'reading-pr',
-      message: `Analyzing PR #${params.prNumber}: ${params.prTitle}`,
+      message: isReReview
+        ? `Re-reviewing PR #${params.prNumber}: ${params.prTitle}`
+        : `Analyzing PR #${params.prNumber}: ${params.prTitle}`,
       timestamp: new Date().toISOString(),
       stepType: 'analyzing',
     };
@@ -819,7 +986,7 @@ export class ClaudeAgentProvider {
     const verdict = (output['verdict'] || 'No verdict provided') as string;
     const qualityScore = (output['qualityScore'] || 5) as number;
 
-    return {
+    const result: ReviewResult = {
       prNumber: params.prNumber,
       prTitle: params.prTitle,
       repositoryFullName: params.repoName,
@@ -832,6 +999,13 @@ export class ClaudeAgentProvider {
       costUsd: resultMessage.total_cost_usd || 0,
       durationMs: Date.now() - startTime,
     };
+
+    // Include addressedFindings from re-review output
+    if (output['addressedFindings']) {
+      result.addressedFindings = output['addressedFindings'] as ReviewResult['addressedFindings'];
+    }
+
+    return result;
   }
 
   /**

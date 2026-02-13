@@ -54,6 +54,8 @@ interface ReviewState {
   reviewHistory: ReviewHistoryEntry[];
   /** Whether history is being loaded */
   historyLoading: boolean;
+  /** Review chains per PR number (chronological order, oldest first) */
+  reviewChains: Map<number, ReviewHistoryEntry[]>;
 }
 
 // ============================================
@@ -91,6 +93,12 @@ interface ReviewActions {
   setHistoryLoading: (loading: boolean) => void;
   /** Remove a single history entry by ID */
   removeHistoryEntry: (id: string) => void;
+  /** Set the review chain for a PR */
+  setReviewChain: (prNumber: number, chain: ReviewHistoryEntry[]) => void;
+  /** Clear review chain for a specific PR */
+  clearReviewChain: (prNumber: number) => void;
+  /** Clear review state for a re-review (steps + errors only, preserve result until new one arrives) */
+  clearReviewForReReview: (prNumber: number) => void;
 }
 
 // ============================================
@@ -121,6 +129,7 @@ export const useReviewStore = create<ReviewStore>()(
       reviewErrors: new Map(),
       reviewHistory: [],
       historyLoading: false,
+      reviewChains: new Map(),
 
       // Actions
       setPullRequests: (pullRequests: PullRequest[]) => {
@@ -247,6 +256,45 @@ export const useReviewStore = create<ReviewStore>()(
         );
       },
 
+      setReviewChain: (prNumber: number, chain: ReviewHistoryEntry[]) => {
+        set(
+          state => {
+            const updated = new Map(state.reviewChains);
+            updated.set(prNumber, chain);
+            return { reviewChains: updated };
+          },
+          undefined,
+          'review/setReviewChain'
+        );
+      },
+
+      clearReviewChain: (prNumber: number) => {
+        set(
+          state => {
+            const updated = new Map(state.reviewChains);
+            updated.delete(prNumber);
+            return { reviewChains: updated };
+          },
+          undefined,
+          'review/clearReviewChain'
+        );
+      },
+
+      clearReviewForReReview: (prNumber: number) => {
+        set(
+          state => {
+            const steps = new Map(state.reviewSteps);
+            const errors = new Map(state.reviewErrors);
+            steps.delete(prNumber);
+            errors.delete(prNumber);
+            // NOTE: we intentionally keep reviewResults so the old review stays visible
+            return { reviewSteps: steps, reviewErrors: errors };
+          },
+          undefined,
+          'review/clearReviewForReReview'
+        );
+      },
+
       clearPullRequests: () => {
         logger.info('Clearing pull requests');
         set(
@@ -262,6 +310,7 @@ export const useReviewStore = create<ReviewStore>()(
             reviewErrors: new Map(),
             reviewHistory: [],
             historyLoading: false,
+            reviewChains: new Map(),
           },
           undefined,
           'review/clearPullRequests'

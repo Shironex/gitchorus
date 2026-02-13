@@ -51,6 +51,22 @@ export interface ReviewFinding {
   suggestedFix: string;
   /** One-line summary for the finding */
   title: string;
+  /** For re-reviews: whether this finding is new, persisting, or a regression */
+  addressingStatus?: 'new' | 'persisting' | 'regression';
+}
+
+/**
+ * Summary of how a previous finding was addressed in a re-review
+ */
+export interface AddressedFindingSummary {
+  /** Title of the original finding */
+  title: string;
+  /** Severity of the original finding */
+  severity: ReviewSeverity;
+  /** Whether the finding was addressed */
+  status: 'addressed' | 'partially-addressed' | 'unaddressed' | 'new-issue';
+  /** AI explanation of how the finding was addressed or why it wasn't */
+  explanation: string;
 }
 
 // ============================================
@@ -83,6 +99,18 @@ export interface ReviewResult {
   costUsd: number;
   /** Duration in milliseconds */
   durationMs: number;
+  /** HEAD commit SHA at time of review (for detecting new commits) */
+  headCommitSha?: string;
+  /** Review sequence number: 1 for initial, 2+ for re-reviews */
+  reviewSequence?: number;
+  /** Links to the previous ReviewHistoryEntry.id (creates chain) */
+  previousReviewId?: string;
+  /** Whether this was a re-review with previous context */
+  isReReview?: boolean;
+  /** Score from the previous review (for delta display) */
+  previousScore?: number;
+  /** AI-determined status of findings from the previous review */
+  addressedFindings?: AddressedFindingSummary[];
 }
 
 // ============================================
@@ -162,4 +190,12 @@ export interface ReviewParams {
   config?: import('./provider').ProviderConfig;
   /** Optional file transport function for writing logs to disk */
   fileTransport?: (message: string) => void;
+  /** Full prior review result for AI context during re-review */
+  previousReview?: ReviewResult;
+  /** HEAD SHA at time of previous review */
+  previousHeadCommitSha?: string;
+  /** Whether this is a re-review with previous context */
+  isReReview?: boolean;
+  /** Diff of changes since the previous review */
+  incrementalDiff?: string;
 }
