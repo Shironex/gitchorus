@@ -882,4 +882,151 @@ describe('GithubService', () => {
       );
     });
   });
+
+  // ==================== parseDiffValidLines ====================
+
+  describe('parseDiffValidLines', () => {
+    it('should parse a simple diff with one file and one hunk', () => {
+      const diff = [
+        'diff --git a/src/app.ts b/src/app.ts',
+        '--- a/src/app.ts',
+        '+++ b/src/app.ts',
+        '@@ -10,6 +10,7 @@ import { foo } from "bar";',
+        ' const a = 1;',
+        ' const b = 2;',
+        '+const c = 3;',
+        ' const d = 4;',
+        ' const e = 5;',
+        ' const f = 6;',
+      ].join('\n');
+
+      const result = service.parseDiffValidLines(diff);
+
+      expect(result.has('src/app.ts')).toBe(true);
+      const lines = result.get('src/app.ts')!;
+      // Context lines: 10, 11, then added line 12, then context 13, 14, 15
+      expect(lines.has(10)).toBe(true);
+      expect(lines.has(11)).toBe(true);
+      expect(lines.has(12)).toBe(true); // added line
+      expect(lines.has(13)).toBe(true);
+      expect(lines.has(14)).toBe(true);
+      expect(lines.has(15)).toBe(true);
+    });
+
+    it('should parse a diff with multiple files', () => {
+      const diff = [
+        'diff --git a/src/a.ts b/src/a.ts',
+        '--- a/src/a.ts',
+        '+++ b/src/a.ts',
+        '@@ -1,3 +1,4 @@',
+        ' line1',
+        '+added',
+        ' line2',
+        ' line3',
+        'diff --git a/src/b.ts b/src/b.ts',
+        '--- a/src/b.ts',
+        '+++ b/src/b.ts',
+        '@@ -5,3 +5,3 @@',
+        ' x',
+        '-old',
+        '+new',
+        ' z',
+      ].join('\n');
+
+      const result = service.parseDiffValidLines(diff);
+
+      expect(result.has('src/a.ts')).toBe(true);
+      expect(result.has('src/b.ts')).toBe(true);
+
+      const aLines = result.get('src/a.ts')!;
+      expect(aLines.has(1)).toBe(true);
+      expect(aLines.has(2)).toBe(true); // added
+      expect(aLines.has(3)).toBe(true);
+      expect(aLines.has(4)).toBe(true);
+
+      const bLines = result.get('src/b.ts')!;
+      expect(bLines.has(5)).toBe(true);
+      expect(bLines.has(6)).toBe(true); // replacement line
+      expect(bLines.has(7)).toBe(true);
+    });
+
+    it('should handle deleted lines (not in right side)', () => {
+      const diff = [
+        'diff --git a/src/c.ts b/src/c.ts',
+        '--- a/src/c.ts',
+        '+++ b/src/c.ts',
+        '@@ -1,4 +1,3 @@',
+        ' keep',
+        '-removed',
+        ' also_keep',
+        ' end',
+      ].join('\n');
+
+      const result = service.parseDiffValidLines(diff);
+      const lines = result.get('src/c.ts')!;
+
+      expect(lines.has(1)).toBe(true); // keep
+      expect(lines.has(2)).toBe(true); // also_keep (line 2 after removal)
+      expect(lines.has(3)).toBe(true); // end
+      // Only 3 lines on right side
+      expect(lines.size).toBe(3);
+    });
+
+    it('should handle a new file (--- /dev/null)', () => {
+      const diff = [
+        'diff --git a/src/new.ts b/src/new.ts',
+        '--- /dev/null',
+        '+++ b/src/new.ts',
+        '@@ -0,0 +1,3 @@',
+        '+line1',
+        '+line2',
+        '+line3',
+      ].join('\n');
+
+      const result = service.parseDiffValidLines(diff);
+      const lines = result.get('src/new.ts')!;
+
+      expect(lines.has(1)).toBe(true);
+      expect(lines.has(2)).toBe(true);
+      expect(lines.has(3)).toBe(true);
+      expect(lines.size).toBe(3);
+    });
+
+    it('should handle multiple hunks in a single file', () => {
+      const diff = [
+        'diff --git a/src/multi.ts b/src/multi.ts',
+        '--- a/src/multi.ts',
+        '+++ b/src/multi.ts',
+        '@@ -1,3 +1,4 @@',
+        ' a',
+        '+b',
+        ' c',
+        ' d',
+        '@@ -20,3 +21,4 @@',
+        ' x',
+        '+y',
+        ' z',
+        ' w',
+      ].join('\n');
+
+      const result = service.parseDiffValidLines(diff);
+      const lines = result.get('src/multi.ts')!;
+
+      // First hunk
+      expect(lines.has(1)).toBe(true);
+      expect(lines.has(2)).toBe(true);
+      expect(lines.has(3)).toBe(true);
+      expect(lines.has(4)).toBe(true);
+      // Second hunk
+      expect(lines.has(21)).toBe(true);
+      expect(lines.has(22)).toBe(true);
+      expect(lines.has(23)).toBe(true);
+      expect(lines.has(24)).toBe(true);
+    });
+
+    it('should return empty map for empty diff', () => {
+      const result = service.parseDiffValidLines('');
+      expect(result.size).toBe(0);
+    });
+  });
 });

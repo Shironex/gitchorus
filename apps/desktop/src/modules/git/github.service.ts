@@ -579,30 +579,84 @@ export class GithubService {
    * Create a PR review with inline comments and a summary body.
    *
    * Uses the GitHub Reviews API (POST /repos/{owner}/{repo}/pulls/{prNumber}/reviews).
-   * If a comment cannot be placed inline (line not in diff), it's skipped and
-   * the caller is informed via `skippedComments` count so they can append to the summary.
+   * Pre-validates comments against the PR diff to prevent 422 errors.
+   * Comments targeting lines outside the diff are skipped and reported back
+   * so the caller can include them in the summary body.
    */
   async createPrReview(
     repoPath: string,
     prNumber: number,
     body: string,
     event: 'REQUEST_CHANGES' | 'COMMENT',
-    comments: Array<{ path: string; line: number; body: string }>
-  ): Promise<{ url: string; postedComments: number; skippedComments: number }> {
+    comments: Array<{ path: string; line: number; body: string; side?: 'LEFT' | 'RIGHT' }>
+  ): Promise<{
+    url: string;
+    postedComments: number;
+    skippedComments: number;
+    skippedDetails?: Array<{ path: string; line: number; body: string; reason: string }>;
+  }> {
     const repoInfo = await this.getRepoInfo(repoPath);
     if (!repoInfo) {
       throw new Error('Could not determine repository info for PR review');
     }
 
-    return this.createPrReviewWithStdin(repoPath, repoInfo.fullName, prNumber, {
-      body,
+    // Pre-validate comments against the PR diff
+    let validComments = comments;
+    let skippedDetails: Array<{ path: string; line: number; body: string; reason: string }> = [];
+
+    if (comments.length > 0) {
+      try {
+        const diff = await this.getPrDiff(repoPath, prNumber);
+        const validLines = this.parseDiffValidLines(diff);
+
+        const validated = this.validateCommentsAgainstDiff(comments, validLines);
+        validComments = validated.valid;
+        skippedDetails = validated.skipped;
+
+        if (skippedDetails.length > 0) {
+          this.logger.warn(
+            `PR #${prNumber}: ${skippedDetails.length} comment(s) skipped (line not in diff)`
+          );
+        }
+      } catch (error) {
+        // If diff fetching fails, proceed with all comments (best effort)
+        this.logger.warn(
+          `Failed to fetch diff for pre-validation of PR #${prNumber}, proceeding without validation:`,
+          error
+        );
+      }
+    }
+
+    // Append skipped comments to the review body so they're still visible
+    let finalBody = body;
+    if (skippedDetails.length > 0) {
+      const skippedSection = [
+        '',
+        '### Comments Not Placed Inline',
+        '',
+        '_The following findings could not be placed as inline comments (line not in diff):_',
+        '',
+        ...skippedDetails.map(s => `- **\`${s.path}:${s.line}\`** — ${s.reason}`),
+      ].join('\n');
+      finalBody = body + skippedSection;
+    }
+
+    const result = await this.createPrReviewWithStdin(repoPath, repoInfo.fullName, prNumber, {
+      body: finalBody,
       event,
-      comments,
+      comments: validComments,
     });
+
+    return {
+      ...result,
+      skippedComments: result.skippedComments + skippedDetails.length,
+      skippedDetails: skippedDetails.length > 0 ? skippedDetails : undefined,
+    };
   }
 
   /**
-   * Internal: create PR review using gh api with stdin JSON
+   * Internal: create PR review using gh api with stdin JSON.
+   * On 422 failure, retries once without inline comments as a fallback.
    */
   private async createPrReviewWithStdin(
     repoPath: string,
@@ -611,54 +665,13 @@ export class GithubService {
     payload: {
       body: string;
       event: string;
-      comments: Array<{ path: string; line: number; body: string }>;
+      comments: Array<{ path: string; line: number; body: string; side?: 'LEFT' | 'RIGHT' }>;
     }
   ): Promise<{ url: string; postedComments: number; skippedComments: number }> {
     const inputJson = JSON.stringify(payload);
 
     try {
-      const child = require('child_process').spawn(
-        'gh',
-        ['api', `repos/${repoFullName}/pulls/${prNumber}/reviews`, '-X', 'POST', '--input', '-'],
-        {
-          cwd: repoPath,
-          env: { ...process.env, ...GH_ENV },
-          stdio: ['pipe', 'pipe', 'pipe'],
-        }
-      );
-
-      // Write JSON to stdin
-      child.stdin.write(inputJson);
-      child.stdin.end();
-
-      const result = await new Promise<{ stdout: string; stderr: string; code: number }>(
-        (resolve, reject) => {
-          let stdout = '';
-          let stderr = '';
-
-          child.stdout.on('data', (d: Buffer) => {
-            stdout += d.toString();
-          });
-          child.stderr.on('data', (d: Buffer) => {
-            stderr += d.toString();
-          });
-
-          const timeout = setTimeout(() => {
-            child.kill();
-            reject(new Error('PR review creation timed out'));
-          }, GH_TIMEOUT_MS);
-
-          child.on('close', (code: number) => {
-            clearTimeout(timeout);
-            resolve({ stdout, stderr, code });
-          });
-
-          child.on('error', (err: Error) => {
-            clearTimeout(timeout);
-            reject(err);
-          });
-        }
-      );
+      const result = await this.spawnGhApiWithStdin(repoPath, repoFullName, prNumber, inputJson);
 
       if (result.code !== 0) {
         // Check for 422 (validation error -- inline comment on line not in diff)
@@ -669,7 +682,7 @@ export class GithubService {
         ) {
           // Try without inline comments -- post as summary-only review
           this.logger.warn(
-            `Some inline comments failed for PR #${prNumber}, retrying without inline comments`
+            `Some inline comments failed for PR #${prNumber} despite pre-validation, retrying without inline comments`
           );
           return this.createPrReviewSummaryOnly(
             repoPath,
@@ -706,6 +719,57 @@ export class GithubService {
   }
 
   /**
+   * Internal: spawn `gh api` with JSON piped to stdin and collect output.
+   */
+  private spawnGhApiWithStdin(
+    repoPath: string,
+    repoFullName: string,
+    prNumber: number,
+    inputJson: string
+  ): Promise<{ stdout: string; stderr: string; code: number }> {
+    const child = require('child_process').spawn(
+      'gh',
+      ['api', `repos/${repoFullName}/pulls/${prNumber}/reviews`, '-X', 'POST', '--input', '-'],
+      {
+        cwd: repoPath,
+        env: { ...process.env, ...GH_ENV },
+        stdio: ['pipe', 'pipe', 'pipe'],
+      }
+    );
+
+    // Write JSON to stdin
+    child.stdin.write(inputJson);
+    child.stdin.end();
+
+    return new Promise<{ stdout: string; stderr: string; code: number }>((resolve, reject) => {
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout.on('data', (d: Buffer) => {
+        stdout += d.toString();
+      });
+      child.stderr.on('data', (d: Buffer) => {
+        stderr += d.toString();
+      });
+
+      const timeout = setTimeout(() => {
+        child.kill();
+        reject(new Error('PR review creation timed out'));
+      }, GH_TIMEOUT_MS);
+
+      child.on('close', (code: number) => {
+        clearTimeout(timeout);
+        resolve({ stdout, stderr, code });
+      });
+
+      child.on('error', (err: Error) => {
+        clearTimeout(timeout);
+        reject(err);
+      });
+    });
+  }
+
+  /**
    * Internal: fallback to summary-only review when inline comments fail
    */
   private async createPrReviewSummaryOnly(
@@ -737,6 +801,135 @@ export class GithubService {
       postedComments: 0,
       skippedComments: totalComments,
     };
+  }
+
+  /**
+   * Parse a unified diff to extract valid (path, line) pairs on the RIGHT side.
+   * Returns a Map from normalized file path to a Set of valid line numbers.
+   */
+  parseDiffValidLines(diff: string): Map<string, Set<number>> {
+    const validLines = new Map<string, Set<number>>();
+    const lines = diff.split('\n');
+    let currentFile: string | null = null;
+    let rightLine = 0;
+
+    for (const line of lines) {
+      // Match +++ b/path/to/file (new file path)
+      const fileMatch = line.match(/^\+\+\+ b\/(.+)/);
+      if (fileMatch) {
+        currentFile = fileMatch[1];
+        if (!validLines.has(currentFile)) {
+          validLines.set(currentFile, new Set());
+        }
+        continue;
+      }
+
+      // Skip --- header lines and +++ /dev/null
+      if (line.startsWith('---') || line.startsWith('+++ /dev/null')) {
+        continue;
+      }
+
+      // Match @@ hunk header to get the starting line number on the right side
+      const hunkMatch = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
+      if (hunkMatch) {
+        rightLine = parseInt(hunkMatch[1], 10);
+        continue;
+      }
+
+      if (!currentFile) continue;
+
+      // Context line (unchanged) — counts on both sides
+      if (!line.startsWith('+') && !line.startsWith('-') && !line.startsWith('\\')) {
+        const fileLines = validLines.get(currentFile)!;
+        fileLines.add(rightLine);
+        rightLine++;
+        continue;
+      }
+
+      // Added line — counts on the right side only
+      if (line.startsWith('+')) {
+        const fileLines = validLines.get(currentFile)!;
+        fileLines.add(rightLine);
+        rightLine++;
+        continue;
+      }
+
+      // Removed line — only counts on the left side, skip right
+      if (line.startsWith('-')) {
+        continue;
+      }
+    }
+
+    return validLines;
+  }
+
+  /**
+   * Validate comments against the parsed diff.
+   * Tries to snap close line numbers (within ±3 lines) to a valid diff line.
+   * Returns valid and skipped comments.
+   */
+  private validateCommentsAgainstDiff(
+    comments: Array<{ path: string; line: number; body: string; side?: 'LEFT' | 'RIGHT' }>,
+    validLines: Map<string, Set<number>>
+  ): {
+    valid: Array<{ path: string; line: number; body: string; side?: 'LEFT' | 'RIGHT' }>;
+    skipped: Array<{ path: string; line: number; body: string; reason: string }>;
+  } {
+    const valid: Array<{ path: string; line: number; body: string; side?: 'LEFT' | 'RIGHT' }> = [];
+    const skipped: Array<{ path: string; line: number; body: string; reason: string }> = [];
+
+    for (const comment of comments) {
+      // Normalize the comment path to match diff paths
+      let normalizedPath = comment.path.replace(/\\/g, '/');
+      if (normalizedPath.startsWith('./')) normalizedPath = normalizedPath.slice(2);
+      if (normalizedPath.startsWith('/')) normalizedPath = normalizedPath.slice(1);
+
+      const fileLines = validLines.get(normalizedPath);
+
+      if (!fileLines) {
+        skipped.push({
+          path: comment.path,
+          line: comment.line,
+          body: comment.body,
+          reason: `File "${normalizedPath}" not found in diff`,
+        });
+        continue;
+      }
+
+      // Exact match
+      if (fileLines.has(comment.line)) {
+        valid.push({ ...comment, path: normalizedPath });
+        continue;
+      }
+
+      // Try snapping to nearest valid line within ±3 lines
+      let snappedLine: number | null = null;
+      let minDistance = Infinity;
+      for (const validLine of fileLines) {
+        const distance = Math.abs(validLine - comment.line);
+        if (distance <= 3 && distance < minDistance) {
+          minDistance = distance;
+          snappedLine = validLine;
+        }
+      }
+
+      if (snappedLine !== null) {
+        this.logger.debug(
+          `Snapped comment line ${comment.line} → ${snappedLine} for ${normalizedPath}`
+        );
+        valid.push({ ...comment, path: normalizedPath, line: snappedLine });
+        continue;
+      }
+
+      skipped.push({
+        path: comment.path,
+        line: comment.line,
+        body: comment.body,
+        reason: `Line ${comment.line} not in diff for "${normalizedPath}"`,
+      });
+    }
+
+    return { valid, skipped };
   }
 
   /**

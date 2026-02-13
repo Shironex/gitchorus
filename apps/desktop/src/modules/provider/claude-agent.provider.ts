@@ -281,7 +281,7 @@ For each finding, provide:
 - severity: critical (security holes, data loss, crashes) | major (bugs, logic errors, significant issues) | minor (code quality, edge cases) | nit (style, naming, formatting)
 - category: security | logic | performance | style | codebase-fit
 - file: the file path where the issue was found
-- line: the line number in the file (approximate is fine)
+- line: the EXACT line number in the NEW version of the file where the issue occurs. This must be a line that appears in the PR diff. Do NOT guess or use approximate line numbers — use the actual line from the diff
 - codeSnippet: the problematic code from the diff
 - explanation: clear explanation of why this is an issue
 - suggestedFix: suggested fix as a code block with inline comments

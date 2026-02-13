@@ -20,6 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import { Markdown } from '@/components/ui/markdown';
 import { useReview } from '@/hooks/useReview';
+import { formatReviewSummaryBody } from '@/lib/reviewFormatter';
 import type { ReviewFinding } from '@gitchorus/shared';
 
 // ============================================
@@ -37,12 +38,6 @@ interface ReviewPushModalProps {
 }
 
 type PushState = 'idle' | 'pushing' | 'success' | 'error';
-
-// ============================================
-// Constants
-// ============================================
-
-const GITCHORUS_MARKER = '<!-- gitchorus-review -->';
 
 // ============================================
 // Component
@@ -70,29 +65,11 @@ export function ReviewPushModal({
   const [skippedCount, setSkippedCount] = useState(0);
   const [postedCount, setPostedCount] = useState(0);
 
-  // Build the summary body that will be posted
-  const summaryBody = useMemo(() => {
-    const findingSummaryParts = selectedFindings.map(
-      (f, i) =>
-        `${i + 1}. **[${f.severity.toUpperCase()} - ${f.category}]** ${f.title} (\`${f.file}:${f.line}\`)`
-    );
-
-    return [
-      GITCHORUS_MARKER,
-      '## GitChorus AI Review',
-      '',
-      verdict,
-      '',
-      `**Quality Score:** ${qualityScore}/10`,
-      '',
-      '### Findings Summary',
-      '',
-      ...findingSummaryParts,
-      '',
-      '---',
-      '*via [GitChorus](https://github.com/Shironex/gitchorus)*',
-    ].join('\n');
-  }, [selectedFindings, verdict, qualityScore]);
+  // Build the summary body that will be posted (shared formatter eliminates duplication with useReview.ts)
+  const summaryBody = useMemo(
+    () => formatReviewSummaryBody(selectedFindings, verdict, qualityScore),
+    [selectedFindings, verdict, qualityScore]
+  );
 
   const handlePush = async () => {
     setPushState('pushing');
