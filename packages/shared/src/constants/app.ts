@@ -83,3 +83,10 @@ export const LOG_CLEANUP_INTERVAL_MS = 60 * 60 * 1000;
 
 /** Maximum length for project path */
 export const MAX_PATH_LENGTH = 1024;
+
+// =============================================================================
+// Review Markers
+// =============================================================================
+
+/** Hidden HTML comment used to identify GitChorus reviews on GitHub */
+export const GITCHORUS_REVIEW_MARKER = '<!-- gitchorus-review -->';

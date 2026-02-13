@@ -49,6 +49,7 @@ const mockHistoryService = {
   delete: jest.fn(),
   save: jest.fn(),
   clear: jest.fn(),
+  importFromGithub: jest.fn(),
 };
 
 const mockLogService = {

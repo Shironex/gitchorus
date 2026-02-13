@@ -24,11 +24,16 @@ import type {
   PullRequest,
   ReviewFinding,
   ReviewHistoryEntry,
+  ReviewResult,
   ValidationStep,
 } from '@gitchorus/shared';
 
 // Stable empty array reference to avoid infinite re-renders from Zustand selector
 const EMPTY_STEPS: ValidationStep[] = [];
+
+/** Check whether a review result was imported from GitHub rather than run locally. */
+const isImportedReview = (r: ReviewResult) =>
+  r.durationMs === 0 && r.model === 'unknown' && r.findings.length === 0;
 
 interface ReviewViewProps {
   pr: PullRequest;
@@ -94,11 +99,18 @@ export function ReviewView({ pr }: ReviewViewProps) {
       return;
     }
 
+    let cancelled = false;
     importCheckedRef.current = pr.number;
     setImportChecking(true);
     importGithubReview(pr.number, repositoryFullName).finally(() => {
-      setImportChecking(false);
+      if (!cancelled) {
+        setImportChecking(false);
+      }
     });
+
+    return () => {
+      cancelled = true;
+    };
   }, [
     pr.number,
     repositoryFullName,
@@ -213,7 +225,7 @@ export function ReviewView({ pr }: ReviewViewProps) {
       {/* Content */}
       <div data-testid="review-content" className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
         {/* Imported from GitHub indicator */}
-        {hasResult && result && result.durationMs === 0 && result.model === 'unknown' && (
+        {hasResult && result && isImportedReview(result) && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-500/20 bg-blue-500/5 text-xs text-muted-foreground">
             <Download size={14} className="text-blue-500" />
             <span>

@@ -7,6 +7,7 @@ import type { PullRequest, ValidationStep } from '@gitchorus/shared';
 const mockStartReview = vi.fn();
 const mockStartReReview = vi.fn();
 const mockCancelReview = vi.fn();
+const mockImportGithubReview = vi.fn().mockResolvedValue(null);
 const mockSetSelectedPr = vi.fn();
 
 vi.mock('@/hooks/useReview', () => ({
@@ -14,6 +15,7 @@ vi.mock('@/hooks/useReview', () => ({
     startReview: mockStartReview,
     startReReview: mockStartReReview,
     cancelReview: mockCancelReview,
+    importGithubReview: mockImportGithubReview,
   }),
 }));
 

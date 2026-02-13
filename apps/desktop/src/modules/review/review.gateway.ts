@@ -12,6 +12,7 @@ import { Server, Socket } from 'socket.io';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import {
   ReviewEvents,
+  GITCHORUS_REVIEW_MARKER,
   createLogger,
   extractErrorMessage,
   type ReviewStartPayload,
@@ -38,9 +39,6 @@ import { ReviewService, InternalReviewEvents } from './review.service';
 import { ReviewHistoryService } from './review-history.service';
 import { ReviewLogService } from './review-log.service';
 import { GithubService } from '../git/github.service';
-
-/** Hidden HTML comment used to identify GitChorus reviews on GitHub */
-const GITCHORUS_MARKER = '<!-- gitchorus-review -->';
 
 /**
  * WebSocket gateway for review events.
@@ -279,7 +277,7 @@ export class ReviewGateway implements OnGatewayInit {
 
       // Find the most recent GitChorus review
       const gitchorusReviews = reviews
-        .filter(r => r.body.includes(GITCHORUS_MARKER))
+        .filter(r => r.body.includes(GITCHORUS_REVIEW_MARKER))
         .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
 
       if (gitchorusReviews.length === 0) {
@@ -290,7 +288,8 @@ export class ReviewGateway implements OnGatewayInit {
 
       // Parse quality score from body: **Quality Score:** X/10
       const scoreMatch = latestReview.body.match(/\*\*Quality Score:\*\* (\d+)\/10/);
-      const qualityScore = scoreMatch ? parseInt(scoreMatch[1], 10) : 5;
+      const rawScore = scoreMatch ? parseInt(scoreMatch[1], 10) : 5;
+      const qualityScore = Math.max(1, Math.min(10, rawScore));
 
       // Parse verdict: text between "## GitChorus AI Review\n\n" and "\n\n**Quality Score:**"
       let verdict = 'Imported from GitHub';

@@ -6,13 +6,13 @@
  */
 
 import type { ReviewFinding, ReviewSeverity } from '@gitchorus/shared';
+import { GITCHORUS_REVIEW_MARKER } from '@gitchorus/shared';
 
-// ============================================
-// Constants
-// ============================================
-
-/** Hidden HTML comment used to identify GitChorus reviews on GitHub */
-export const GITCHORUS_MARKER = '<!-- gitchorus-review -->';
+/**
+ * Re-export the marker from shared for backward compatibility.
+ * @deprecated Use GITCHORUS_REVIEW_MARKER from @gitchorus/shared directly.
+ */
+export const GITCHORUS_MARKER = GITCHORUS_REVIEW_MARKER;
 
 // ============================================
 // Language detection

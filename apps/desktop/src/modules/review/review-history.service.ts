@@ -182,7 +182,7 @@ export class ReviewHistoryService {
       return alreadyImported;
     }
 
-    const result: import('@gitchorus/shared').ReviewResult = {
+    const result: ReviewResult = {
       prNumber: params.prNumber,
       prTitle: params.prTitle,
       repositoryFullName: params.repositoryFullName,

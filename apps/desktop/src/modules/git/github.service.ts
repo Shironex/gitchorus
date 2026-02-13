@@ -969,6 +969,7 @@ export class GithubService {
     const { stdout } = await this.execGh(repoPath, [
       'api',
       `repos/${repoInfo.fullName}/pulls/${prNumber}/reviews`,
+      '--paginate',
       '--jq',
       '[.[] | {id, body, state, commit_id, submitted_at, user: .user.login, html_url}]',
     ]);
