@@ -141,8 +141,7 @@ function buildStarRating(score: number): string {
 export function formatReviewSummaryBody(
   findings: ReviewFinding[],
   verdict: string,
-  qualityScore: number,
-  skippedComments?: Array<{ finding: ReviewFinding; reason: string }>
+  qualityScore: number
 ): string {
   // Sort findings by severity
   const sorted = [...findings].sort(
@@ -178,43 +177,6 @@ export function formatReviewSummaryBody(
     });
   } else {
     lines.push('No findings — the code looks good!');
-  }
-
-  // Append skipped inline comments (comments that couldn't be placed in the diff)
-  if (skippedComments && skippedComments.length > 0) {
-    lines.push('');
-    lines.push('### Comments Not Placed Inline');
-    lines.push('');
-    lines.push(
-      '_The following findings could not be placed as inline comments (line not in diff):_'
-    );
-    lines.push('');
-    for (const { finding } of skippedComments) {
-      const lang = getLanguageForFile(finding.file);
-      const emoji = getSeverityEmoji(finding.severity);
-      const severity = finding.severity.charAt(0).toUpperCase() + finding.severity.slice(1);
-      const category = finding.category.charAt(0).toUpperCase() + finding.category.slice(1);
-      lines.push(
-        `#### ${emoji} [${severity} - ${category}] ${finding.title} (\`${normalizeFindingPath(finding.file)}:${finding.line}\`)`
-      );
-      lines.push('');
-      lines.push(finding.explanation);
-      if (finding.codeSnippet) {
-        lines.push('');
-        lines.push(`**Problematic code:**`);
-        lines.push(`\`\`\`${lang}`);
-        lines.push(finding.codeSnippet);
-        lines.push('```');
-      }
-      if (finding.suggestedFix) {
-        lines.push('');
-        lines.push(`**Suggested fix:**`);
-        lines.push('```diff');
-        lines.push(finding.suggestedFix);
-        lines.push('```');
-      }
-      lines.push('');
-    }
   }
 
   lines.push('');

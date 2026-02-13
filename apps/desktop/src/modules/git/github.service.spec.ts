@@ -911,6 +911,7 @@ describe('GithubService', () => {
       expect(lines.has(13)).toBe(true);
       expect(lines.has(14)).toBe(true);
       expect(lines.has(15)).toBe(true);
+      expect(lines.size).toBe(6);
     });
 
     it('should parse a diff with multiple files', () => {
@@ -943,11 +944,13 @@ describe('GithubService', () => {
       expect(aLines.has(2)).toBe(true); // added
       expect(aLines.has(3)).toBe(true);
       expect(aLines.has(4)).toBe(true);
+      expect(aLines.size).toBe(4);
 
       const bLines = result.get('src/b.ts')!;
       expect(bLines.has(5)).toBe(true);
       expect(bLines.has(6)).toBe(true); // replacement line
       expect(bLines.has(7)).toBe(true);
+      expect(bLines.size).toBe(3);
     });
 
     it('should handle deleted lines (not in right side)', () => {
@@ -1022,6 +1025,7 @@ describe('GithubService', () => {
       expect(lines.has(22)).toBe(true);
       expect(lines.has(23)).toBe(true);
       expect(lines.has(24)).toBe(true);
+      expect(lines.size).toBe(8);
     });
 
     it('should return empty map for empty diff', () => {

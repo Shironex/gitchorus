@@ -806,26 +806,30 @@ export class GithubService {
   /**
    * Parse a unified diff to extract valid (path, line) pairs on the RIGHT side.
    * Returns a Map from normalized file path to a Set of valid line numbers.
+   * @internal Exposed as public for unit testing.
    */
   parseDiffValidLines(diff: string): Map<string, Set<number>> {
     const validLines = new Map<string, Set<number>>();
     const lines = diff.split('\n');
     let currentFile: string | null = null;
     let rightLine = 0;
+    let inHunk = false;
 
     for (const line of lines) {
       // Match +++ b/path/to/file (new file path)
       const fileMatch = line.match(/^\+\+\+ b\/(.+)/);
       if (fileMatch) {
         currentFile = fileMatch[1];
+        inHunk = false;
         if (!validLines.has(currentFile)) {
           validLines.set(currentFile, new Set());
         }
         continue;
       }
 
-      // Skip --- header lines and +++ /dev/null
-      if (line.startsWith('---') || line.startsWith('+++ /dev/null')) {
+      // Skip diff header lines (---, +++ /dev/null)
+      // Note: +++ b/path lines are handled by the fileMatch regex above
+      if (line.startsWith('--- ') || line === '+++ /dev/null') {
         continue;
       }
 
@@ -833,10 +837,17 @@ export class GithubService {
       const hunkMatch = line.match(/^@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
       if (hunkMatch) {
         rightLine = parseInt(hunkMatch[1], 10);
+        inHunk = true;
         continue;
       }
 
-      if (!currentFile) continue;
+      // Skip inter-file metadata lines (diff --git, index, etc.)
+      if (line.startsWith('diff ')) {
+        inHunk = false;
+        continue;
+      }
+
+      if (!currentFile || !inHunk) continue;
 
       // Context line (unchanged) — counts on both sides
       if (!line.startsWith('+') && !line.startsWith('-') && !line.startsWith('\\')) {
@@ -888,7 +899,7 @@ export class GithubService {
 
       if (!fileLines) {
         skipped.push({
-          path: comment.path,
+          path: normalizedPath,
           line: comment.line,
           body: comment.body,
           reason: `File "${normalizedPath}" not found in diff`,
@@ -922,7 +933,7 @@ export class GithubService {
       }
 
       skipped.push({
-        path: comment.path,
+        path: normalizedPath,
         line: comment.line,
         body: comment.body,
         reason: `Line ${comment.line} not in diff for "${normalizedPath}"`,
