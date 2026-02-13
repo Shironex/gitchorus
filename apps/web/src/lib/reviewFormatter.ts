@@ -170,7 +170,10 @@ export function formatReviewSummaryBody(
       const emoji = getSeverityEmoji(f.severity);
       const severity = f.severity.charAt(0).toUpperCase() + f.severity.slice(1);
       const category = f.category.charAt(0).toUpperCase() + f.category.slice(1);
-      const location = `\`${normalizeFindingPath(f.file)}:${f.line}\``;
+      // Use just the filename (not the full path) to keep the table compact
+      const normalizedPath = normalizeFindingPath(f.file);
+      const fileName = normalizedPath.split('/').pop() ?? normalizedPath;
+      const location = `\`${fileName}:${f.line}\``;
       lines.push(`| ${i + 1} | ${emoji} ${severity} | ${category} | ${f.title} | ${location} |`);
     });
   } else {
