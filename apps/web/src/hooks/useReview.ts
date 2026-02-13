@@ -23,6 +23,11 @@ import {
   type ReviewChainPayload,
   type ReviewChainResponse,
 } from '@gitchorus/shared';
+import {
+  formatReviewSummaryBody,
+  formatInlineCommentBody,
+  normalizeFindingPath,
+} from '@/lib/reviewFormatter';
 
 const logger = createLogger('useReview');
 
@@ -233,52 +238,21 @@ export function useReview() {
         throw new Error('No repository connected');
       }
 
-      const GITCHORUS_MARKER = '<!-- gitchorus-review -->';
+      // Build review body with rich formatting
+      const reviewBody = formatReviewSummaryBody(selectedFindings, verdict, qualityScore);
 
-      // Build finding summary for the review body
-      const findingSummaryParts = selectedFindings.map(
-        (f, i) =>
-          `${i + 1}. **[${f.severity.toUpperCase()} - ${f.category}]** ${f.title} (\`${f.file}:${f.line}\`)`
-      );
-
-      // Build review body
-      const bodyLines = [
-        GITCHORUS_MARKER,
-        '## GitChorus AI Review',
-        '',
-        verdict,
-        '',
-        `**Quality Score:** ${qualityScore}/10`,
-        '',
-        '### Findings Summary',
-        '',
-        ...findingSummaryParts,
-        '',
-        '---',
-        '*via [GitChorus](https://github.com/Shironex/gitchorus)*',
-      ];
-
-      // Build inline comments
+      // Build inline comments with GitHub alerts and syntax-highlighted code blocks
       const comments = selectedFindings.map(f => ({
-        path: f.file,
+        path: normalizeFindingPath(f.file),
         line: f.line,
-        body: [
-          `**[${f.severity.charAt(0).toUpperCase() + f.severity.slice(1)} - ${f.category.charAt(0).toUpperCase() + f.category.slice(1)}]** ${f.title}`,
-          '',
-          f.explanation,
-          '',
-          f.codeSnippet ? `**Problematic code:**\n\`\`\`\n${f.codeSnippet}\n\`\`\`` : '',
-          '',
-          f.suggestedFix ? `**Suggested fix:**\n\`\`\`\n${f.suggestedFix}\n\`\`\`` : '',
-        ]
-          .filter(Boolean)
-          .join('\n'),
+        body: formatInlineCommentBody(f),
+        side: 'RIGHT' as const,
       }));
 
       const payload: GithubCreatePrReviewPayload = {
         projectPath: repositoryPath,
         prNumber,
-        body: bodyLines.join('\n'),
+        body: reviewBody,
         event: reviewAction,
         comments,
       };

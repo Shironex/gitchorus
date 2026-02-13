@@ -565,6 +565,7 @@ export interface GithubCreatePrReviewPayload {
     path: string;
     line: number;
     body: string;
+    side?: 'LEFT' | 'RIGHT';
   }>;
 }
 

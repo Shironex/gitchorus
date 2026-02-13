@@ -1,6 +1,7 @@
 import { FileCode2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Markdown } from '@/components/ui/markdown';
+import { getLanguageForFile } from '@/lib/reviewFormatter';
 import type { ReviewFinding, ReviewSeverity, ReviewCategory } from '@gitchorus/shared';
 
 interface FindingCardProps {
@@ -34,40 +35,6 @@ const categoryColors: Record<ReviewCategory, string> = {
 };
 
 /**
- * Detect language from file extension for syntax highlighting.
- */
-function detectLanguage(filePath: string): string {
-  const ext = filePath.split('.').pop()?.toLowerCase();
-  const langMap: Record<string, string> = {
-    ts: 'typescript',
-    tsx: 'tsx',
-    js: 'javascript',
-    jsx: 'jsx',
-    py: 'python',
-    rs: 'rust',
-    go: 'go',
-    java: 'java',
-    rb: 'ruby',
-    swift: 'swift',
-    kt: 'kotlin',
-    c: 'c',
-    cpp: 'cpp',
-    cs: 'csharp',
-    php: 'php',
-    css: 'css',
-    html: 'html',
-    json: 'json',
-    yaml: 'yaml',
-    yml: 'yaml',
-    md: 'markdown',
-    sql: 'sql',
-    sh: 'bash',
-    bash: 'bash',
-  };
-  return langMap[ext ?? ''] || 'text';
-}
-
-/**
  * Individual finding card with severity/category badges, code snippet,
  * explanation, and suggested fix.
  *
@@ -75,7 +42,7 @@ function detectLanguage(filePath: string): string {
  * Selection checkbox on the left for parent-managed selection state.
  */
 export function FindingCard({ finding, index, selected, onToggle }: FindingCardProps) {
-  const lang = detectLanguage(finding.file);
+  const lang = getLanguageForFile(finding.file);
 
   // Wrap code in a fenced code block for Markdown component's shiki rendering
   const codeSnippetMd = finding.codeSnippet ? `\`\`\`${lang}\n${finding.codeSnippet}\n\`\`\`` : '';
