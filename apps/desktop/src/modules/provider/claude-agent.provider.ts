@@ -101,7 +101,8 @@ const VALIDATION_OUTPUT_SCHEMA = {
  * Build the system prompt for issue validation.
  */
 function buildSystemPrompt(model: string, maxTurns: number): string {
-  const isSmallModel = model.includes('haiku');
+  const multiplier = MODEL_TURN_MULTIPLIERS[model as ClaudeModel] ?? 1.0;
+  const isSmallModel = multiplier > 1.0;
 
   const efficiencyGuidance = isSmallModel
     ? `\n- Be efficient: you have a limited budget of ${maxTurns} turns. Batch searches, use Glob to discover structure before reading individual files, and avoid redundant explorations
@@ -200,7 +201,8 @@ const REVIEW_OUTPUT_SCHEMA = {
  * Build the system prompt for PR code review.
  */
 function buildReviewSystemPrompt(model: string, maxTurns: number): string {
-  const isSmallModel = model.includes('haiku');
+  const multiplier = MODEL_TURN_MULTIPLIERS[model as ClaudeModel] ?? 1.0;
+  const isSmallModel = multiplier > 1.0;
 
   const efficiencyGuidance = isSmallModel
     ? `\n- Be efficient: you have a limited budget of ${maxTurns} turns. Batch searches, read related files strategically, and avoid redundant explorations`
@@ -448,11 +450,12 @@ export class ClaudeAgentProvider {
     const startTime = Date.now();
     const settingsConfig = this.settingsService.getConfig();
     const model = params.config?.model || settingsConfig.model || DEFAULT_MODEL;
+    const explicitMaxTurns = params.config?.maxTurns;
     const baseTurns =
-      params.config?.maxTurns ||
+      explicitMaxTurns ||
       REVIEW_DEPTH_CONFIG[settingsConfig.validationDepth].validationMaxTurns ||
       DEFAULT_MAX_TURNS;
-    const maxTurns = applyModelMultiplier(baseTurns, model);
+    const maxTurns = explicitMaxTurns ? explicitMaxTurns : applyModelMultiplier(baseTurns, model);
 
     // Create logger — with file transport if provided
     const logger = createLogger('ClaudeAgentProvider', {
@@ -626,11 +629,12 @@ export class ClaudeAgentProvider {
     const startTime = Date.now();
     const settingsConfig = this.settingsService.getConfig();
     const model = params.config?.model || settingsConfig.model || DEFAULT_MODEL;
+    const explicitMaxTurns = params.config?.maxTurns;
     const baseTurns =
-      params.config?.maxTurns ||
+      explicitMaxTurns ||
       REVIEW_DEPTH_CONFIG[settingsConfig.reviewDepth].reviewMaxTurns ||
       DEFAULT_REVIEW_MAX_TURNS;
-    const maxTurns = applyModelMultiplier(baseTurns, model);
+    const maxTurns = explicitMaxTurns ? explicitMaxTurns : applyModelMultiplier(baseTurns, model);
 
     // Create logger -- with file transport if provided
     const logger = createLogger('ClaudeAgentProvider', {
