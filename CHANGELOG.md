@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.3.0 (2026-02-13)
+
+### New Features
+
+- **Dynamic port allocation** — NestJS backend now uses `listen(0)` for OS-assigned ports, eliminating port conflicts when running multiple Electron instances. Port flows through CSP headers, CORS config, and IPC to the renderer's lazy-initialized socket (#24)
+- **Unified detail views with agent activity hero** — Issue and PR detail views share a single layout with an animated hero section showing real-time agent activity, streaming steps, and progress visualization (#23)
+- **Husky pre-commit hook** — Added missing `.husky/pre-commit` that triggers `lint-staged` on commits (eslint --fix + prettier --write on staged files) and `.editorconfig` for editor-level formatting defaults (#26)
+
+### Bug Fixes
+
+- **Agent max_turns error handling** — Detect when Claude agent hits the turn limit and surface a user-friendly error with model-aware turn limits instead of a generic failure (#25)
+- **CSS custom properties typing** — Use `as` instead of `satisfies` for CSS custom property objects to fix TypeScript compilation errors (#23)
+- **Agent hero when queued** — Show the agent activity hero immediately when status is queued and steps start arriving, instead of waiting for a running status (#23)
+
 ## 0.2.0 (2026-02-12)
 
 ### Bug Fixes
