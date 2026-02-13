@@ -118,7 +118,14 @@ export function useReviewSocket() {
       socket.off(ReviewEvents.COMPLETE, onComplete);
       socket.off(ReviewEvents.ERROR, onError);
     };
-  }, [socketInitialized, addReviewStep, setReviewResult, setReviewError, setReviewStatus, fetchHistoryInternal]);
+  }, [
+    socketInitialized,
+    addReviewStep,
+    setReviewResult,
+    setReviewError,
+    setReviewStatus,
+    fetchHistoryInternal,
+  ]);
 
   // Fetch history when repository changes
   useEffect(() => {

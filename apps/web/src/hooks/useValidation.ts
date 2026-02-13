@@ -126,7 +126,15 @@ export function useValidationSocket() {
       socket.off(ValidationEvents.ERROR, onError);
       socket.off(ValidationEvents.QUEUE_UPDATE, onQueueUpdate);
     };
-  }, [socketInitialized, addStep, setResult, setError, updateQueue, setValidationStatus, fetchHistoryInternal]);
+  }, [
+    socketInitialized,
+    addStep,
+    setResult,
+    setError,
+    updateQueue,
+    setValidationStatus,
+    fetchHistoryInternal,
+  ]);
 
   // Fetch history when repository changes
   useEffect(() => {

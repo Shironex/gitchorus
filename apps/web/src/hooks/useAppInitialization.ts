@@ -84,5 +84,10 @@ export function useAppInitialization(): void {
       cleanupConnectionListeners();
       cleanupUpdateListeners?.();
     };
-  }, [initConnectionListeners, cleanupConnectionListeners, setSocketInitialized, initUpdateListeners]);
+  }, [
+    initConnectionListeners,
+    cleanupConnectionListeners,
+    setSocketInitialized,
+    initUpdateListeners,
+  ]);
 }
