@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowLeft, Play, RefreshCw, AlertCircle, Loader2, GitBranch } from 'lucide-react';
+import { ArrowLeft, Play, X, RefreshCw, AlertCircle, Loader2, GitBranch } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
@@ -122,6 +122,16 @@ export function ReviewView({ pr }: ReviewViewProps) {
                 )}
               </Button>
             )}
+            {(isRunning || isQueued) && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 gap-1.5"
+                onClick={() => cancelReview(pr.number)}
+              >
+                <X size={14} /> Cancel
+              </Button>
+            )}
           </div>
         </div>
       </div>
@@ -151,30 +161,22 @@ export function ReviewView({ pr }: ReviewViewProps) {
           </div>
         )}
 
-        {/* Queued indicator */}
-        {isQueued && (
+        {/* Queued indicator — only when no steps have arrived yet */}
+        {isQueued && steps.length === 0 && (
           <div className="flex items-center gap-2 py-4 justify-center">
             <Loader2 size={16} className="animate-spin text-primary" />
             <span className="text-sm text-muted-foreground">Waiting in queue...</span>
           </div>
         )}
 
-        {/* Running: show progress */}
-        {isRunning && (
-          <ReviewProgress steps={steps} isRunning={true} onCancel={() => cancelReview(pr.number)} />
-        )}
-
-        {/* Running with no steps yet */}
-        {isRunning && steps.length === 0 && (
-          <div className="flex items-center gap-2 py-8 justify-center">
-            <Loader2 size={16} className="animate-spin text-primary" />
-            <span className="text-sm text-muted-foreground">Starting review...</span>
-          </div>
+        {/* Running (or queued with steps): show agent activity hero */}
+        {(isRunning || (isQueued && steps.length > 0)) && (
+          <ReviewProgress steps={steps} isRunning={true} />
         )}
 
         {/* Completed: show collapsible log + results */}
-        {!isRunning && steps.length > 0 && (
-          <ReviewProgress steps={steps} isRunning={false} onCancel={() => {}} />
+        {!isRunning && !isQueued && steps.length > 0 && (
+          <ReviewProgress steps={steps} isRunning={false} />
         )}
 
         {/* Results */}

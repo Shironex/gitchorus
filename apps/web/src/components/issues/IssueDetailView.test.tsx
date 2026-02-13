@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { ValidationPanel } from './ValidationPanel';
-import type { ValidationStep } from '@gitchorus/shared';
+import { IssueDetailView } from './IssueDetailView';
+import type { Issue, ValidationStep } from '@gitchorus/shared';
 
 // Mock hooks
 const mockStartValidation = vi.fn();
@@ -9,6 +9,7 @@ const mockCancelValidation = vi.fn();
 const mockPushToGithub = vi.fn();
 const mockUpdateGithubComment = vi.fn();
 const mockListComments = vi.fn();
+const mockSetSelectedIssue = vi.fn();
 
 vi.mock('@/hooks/useValidation', () => ({
   useValidation: () => ({
@@ -20,11 +21,14 @@ vi.mock('@/hooks/useValidation', () => ({
   }),
 }));
 
-// Store state that tests can manipulate
-let mockIssueState: {
-  selectedIssueNumber: number | null;
-  issues: Array<{ number: number; title: string; updatedAt: string }>;
-};
+vi.mock('@/stores/useIssueStore', () => ({
+  useIssueStore: (selector: (state: Record<string, unknown>) => unknown) => {
+    const state = {
+      setSelectedIssue: mockSetSelectedIssue,
+    };
+    return selector(state);
+  },
+}));
 
 let mockValidationState: {
   queue: Array<{ issueNumber: number; status: string }>;
@@ -35,16 +39,6 @@ let mockValidationState: {
   pushStatus: string;
   postedCommentUrls: string | undefined;
 };
-
-vi.mock('@/stores/useIssueStore', () => ({
-  useIssueStore: (selector: (state: Record<string, unknown>) => unknown) => {
-    const state = {
-      selectedIssueNumber: mockIssueState.selectedIssueNumber,
-      issues: mockIssueState.issues,
-    };
-    return selector(state);
-  },
-}));
 
 vi.mock('@/stores/useValidationStore', () => ({
   useValidationStore: (selector: (state: Record<string, unknown>) => unknown) => {
@@ -61,13 +55,21 @@ vi.mock('@/stores/useValidationStore', () => ({
   },
 }));
 
-describe('ValidationPanel', () => {
+const mockIssue: Issue = {
+  number: 7,
+  title: 'Test issue',
+  state: 'open',
+  author: { login: 'testuser' },
+  url: 'https://github.com/test/repo/issues/7',
+  labels: [],
+  commentsCount: 0,
+  createdAt: '2025-01-01T00:00:00Z',
+  updatedAt: '2025-01-01T00:00:00Z',
+};
+
+describe('IssueDetailView', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIssueState = {
-      selectedIssueNumber: 7,
-      issues: [{ number: 7, title: 'Test issue', updatedAt: '2025-01-01T00:00:00Z' }],
-    };
     mockValidationState = {
       queue: [],
       steps: undefined,
@@ -79,11 +81,26 @@ describe('ValidationPanel', () => {
     };
   });
 
+  it('should render issue title and number', () => {
+    render(<IssueDetailView issue={mockIssue} />);
+
+    expect(screen.queryByText('#7')).not.toBeNull();
+    expect(screen.queryByText('Test issue')).not.toBeNull();
+  });
+
+  it('should navigate back when back button is clicked', () => {
+    render(<IssueDetailView issue={mockIssue} />);
+
+    fireEvent.click(screen.getByTitle('Back to issues'));
+
+    expect(mockSetSelectedIssue).toHaveBeenCalledWith(null);
+  });
+
   it('should render error alert as the first child in the content area when failed', () => {
     mockValidationState.queue = [{ issueNumber: 7, status: 'failed' }];
     mockValidationState.errors = 'Invalid model ID';
 
-    render(<ValidationPanel />);
+    render(<IssueDetailView issue={mockIssue} />);
 
     const contentArea = screen.getByTestId('validation-content');
 
@@ -101,7 +118,7 @@ describe('ValidationPanel', () => {
       { step: '2', message: 'Analyzing code...', timestamp: '2025-01-01T00:00:01Z' },
     ];
 
-    render(<ValidationPanel />);
+    render(<IssueDetailView issue={mockIssue} />);
 
     const contentArea = screen.getByTestId('validation-content');
 
@@ -115,7 +132,7 @@ describe('ValidationPanel', () => {
     mockValidationState.queue = [{ issueNumber: 7, status: 'failed' }];
     mockValidationState.errors = 'Something went wrong';
 
-    render(<ValidationPanel />);
+    render(<IssueDetailView issue={mockIssue} />);
 
     expect(screen.queryByText('Validation failed')).not.toBeNull();
     expect(screen.queryByText('Something went wrong')).not.toBeNull();
@@ -125,7 +142,7 @@ describe('ValidationPanel', () => {
     mockValidationState.queue = [{ issueNumber: 7, status: 'failed' }];
     mockValidationState.errors = 'Connection timeout';
 
-    render(<ValidationPanel />);
+    render(<IssueDetailView issue={mockIssue} />);
 
     expect(screen.queryByText('Retry')).not.toBeNull();
   });
@@ -133,7 +150,7 @@ describe('ValidationPanel', () => {
   it('should not render error alert when there is no error', () => {
     mockValidationState.queue = [{ issueNumber: 7, status: 'idle' }];
 
-    render(<ValidationPanel />);
+    render(<IssueDetailView issue={mockIssue} />);
 
     const contentArea = screen.getByTestId('validation-content');
     expect(contentArea.textContent).not.toContain('Validation failed');
@@ -143,18 +160,10 @@ describe('ValidationPanel', () => {
     mockValidationState.queue = [{ issueNumber: 7, status: 'running' }];
     mockValidationState.errors = 'Previous error';
 
-    render(<ValidationPanel />);
+    render(<IssueDetailView issue={mockIssue} />);
 
     const contentArea = screen.getByTestId('validation-content');
     expect(contentArea.textContent).not.toContain('Validation failed');
-  });
-
-  it('should show placeholder when no issue is selected', () => {
-    mockIssueState.selectedIssueNumber = null;
-
-    render(<ValidationPanel />);
-
-    expect(screen.queryByText('Select an issue to validate')).not.toBeNull();
   });
 
   describe('re-validate confirmation dialog', () => {
@@ -180,7 +189,7 @@ describe('ValidationPanel', () => {
       mockValidationState.queue = [{ issueNumber: 7, status: 'completed' }];
       mockValidationState.results = mockResult;
 
-      render(<ValidationPanel />);
+      render(<IssueDetailView issue={mockIssue} />);
 
       fireEvent.click(screen.getByRole('button', { name: /Re-validate/ }));
 
@@ -189,7 +198,7 @@ describe('ValidationPanel', () => {
     });
 
     it('should start validation directly when clicking Validate with no results', () => {
-      render(<ValidationPanel />);
+      render(<IssueDetailView issue={mockIssue} />);
 
       fireEvent.click(screen.getByRole('button', { name: /Validate/ }));
 
@@ -201,7 +210,7 @@ describe('ValidationPanel', () => {
       mockValidationState.queue = [{ issueNumber: 7, status: 'completed' }];
       mockValidationState.results = mockResult;
 
-      render(<ValidationPanel />);
+      render(<IssueDetailView issue={mockIssue} />);
 
       fireEvent.click(screen.getByRole('button', { name: /Re-validate/ }));
       fireEvent.click(screen.getByText('Discard & Re-validate'));
@@ -213,7 +222,7 @@ describe('ValidationPanel', () => {
       mockValidationState.queue = [{ issueNumber: 7, status: 'completed' }];
       mockValidationState.results = mockResult;
 
-      render(<ValidationPanel />);
+      render(<IssueDetailView issue={mockIssue} />);
 
       fireEvent.click(screen.getByRole('button', { name: /Re-validate/ }));
       fireEvent.click(screen.getByText('Cancel'));
@@ -225,7 +234,7 @@ describe('ValidationPanel', () => {
       mockValidationState.queue = [{ issueNumber: 7, status: 'failed' }];
       mockValidationState.errors = 'Something went wrong';
 
-      render(<ValidationPanel />);
+      render(<IssueDetailView issue={mockIssue} />);
 
       fireEvent.click(screen.getByText('Retry'));
 

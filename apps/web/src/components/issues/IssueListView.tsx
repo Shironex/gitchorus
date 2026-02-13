@@ -9,7 +9,7 @@ import { useIssueStore } from '@/stores/useIssueStore';
 import { IssueCard } from './IssueCard';
 import { IssueFilters } from './IssueFilters';
 import { EmptyIssuesState } from './EmptyIssuesState';
-import { ValidationPanel } from '../validation/ValidationPanel';
+import { IssueDetailView } from './IssueDetailView';
 import { ValidationHistory } from '../validation/ValidationHistory';
 
 interface IssueListViewProps {
@@ -44,6 +44,9 @@ function IssueCardSkeleton() {
  * Displays a header with title, count badge, and refresh button,
  * followed by sort/filter controls and a scrollable list of issue cards.
  * Shows loading skeletons while fetching and an empty state when no issues exist.
+ *
+ * When an issue is selected, renders a full-width IssueDetailView
+ * (matching the PR full-width replacement pattern).
  */
 export function IssueListView({ className }: IssueListViewProps) {
   const { isLoading, error, refetch } = useIssues();
@@ -78,7 +81,11 @@ export function IssueListView({ className }: IssueListViewProps) {
     return sorted;
   }, [issues, sortBy, filterLabels]);
 
-  const hasSelection = selectedIssueNumber !== null;
+  // Resolve selected issue for the detail view
+  const selectedIssue = useMemo(() => {
+    if (selectedIssueNumber === null) return null;
+    return issues.find(i => i.number === selectedIssueNumber) ?? null;
+  }, [issues, selectedIssueNumber]);
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -91,121 +98,120 @@ export function IssueListView({ className }: IssueListViewProps) {
     getItemKey: useCallback((index: number) => filteredIssues[index].number, [filteredIssues]),
   });
 
+  // Full-width IssueDetailView when an issue is selected
+  if (selectedIssueNumber !== null && selectedIssue) {
+    return (
+      <div className={cn('h-full', className)}>
+        <IssueDetailView issue={selectedIssue} />
+      </div>
+    );
+  }
+
   return (
-    <div className={cn('flex h-full', className)}>
-      {/* Issue list panel */}
-      <div className={cn('flex flex-col h-full', hasSelection ? 'w-1/2 border-r' : 'w-full')}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-2">
-          <div className="flex items-center gap-2">
-            <h2 className="text-lg font-semibold text-foreground">Issues</h2>
-            {totalIssues > 0 && (
-              <Badge variant="secondary" className="text-xs">
-                {totalIssues}
-              </Badge>
-            )}
-          </div>
+    <div className={cn('flex flex-col h-full', className)}>
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 pt-4 pb-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-foreground">Issues</h2>
+          {totalIssues > 0 && (
+            <Badge variant="secondary" className="text-xs">
+              {totalIssues}
+            </Badge>
+          )}
+        </div>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-8 w-8 p-0"
+          onClick={() => refetch()}
+          disabled={isLoading}
+          title="Refresh issues"
+        >
+          {isLoading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+        </Button>
+      </div>
+
+      {/* Filters */}
+      {totalIssues > 0 && (
+        <div className="px-4 pb-3">
+          <IssueFilters />
+        </div>
+      )}
+
+      {/* Error state */}
+      {error && (
+        <div className="mx-4 mb-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+          <p className="text-sm text-destructive">{error}</p>
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0"
+            className="mt-1 h-7 text-xs text-destructive hover:text-destructive"
             onClick={() => refetch()}
-            disabled={isLoading}
-            title="Refresh issues"
           >
-            {isLoading ? <Loader2 size={16} className="animate-spin" /> : <RefreshCw size={16} />}
+            Try again
           </Button>
         </div>
+      )}
 
-        {/* Filters */}
-        {totalIssues > 0 && (
-          <div className="px-4 pb-3">
-            <IssueFilters />
+      {/* Content */}
+      <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4">
+        {(!hasFetched || isLoading) && totalIssues === 0 ? (
+          /* Loading skeletons */
+          <div className="space-y-2">
+            <IssueCardSkeleton />
+            <IssueCardSkeleton />
+            <IssueCardSkeleton />
+            <IssueCardSkeleton />
+            <IssueCardSkeleton />
+          </div>
+        ) : totalIssues === 0 ? (
+          /* Empty state */
+          <EmptyIssuesState />
+        ) : filteredIssues.length === 0 ? (
+          /* Filtered empty */
+          <div className="flex flex-col items-center justify-center py-12">
+            <p className="text-sm text-muted-foreground">No issues match the selected filters.</p>
+          </div>
+        ) : (
+          /* Virtualized issue cards */
+          <div
+            style={{
+              height: virtualizer.getTotalSize(),
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {virtualizer.getVirtualItems().map(virtualItem => {
+              const issue = filteredIssues[virtualItem.index];
+              return (
+                <div
+                  key={virtualItem.key}
+                  data-index={virtualItem.index}
+                  ref={virtualizer.measureElement}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    transform: `translateY(${virtualItem.start}px)`,
+                  }}
+                >
+                  <IssueCard
+                    issue={issue}
+                    isSelected={selectedIssueNumber === issue.number}
+                    onClick={() =>
+                      setSelectedIssue(selectedIssueNumber === issue.number ? null : issue.number)
+                    }
+                  />
+                </div>
+              );
+            })}
           </div>
         )}
-
-        {/* Error state */}
-        {error && (
-          <div className="mx-4 mb-3 p-3 rounded-lg bg-destructive/10 border border-destructive/20">
-            <p className="text-sm text-destructive">{error}</p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1 h-7 text-xs text-destructive hover:text-destructive"
-              onClick={() => refetch()}
-            >
-              Try again
-            </Button>
-          </div>
-        )}
-
-        {/* Content */}
-        <div ref={scrollRef} className="flex-1 overflow-y-auto px-4 pb-4">
-          {(!hasFetched || isLoading) && totalIssues === 0 ? (
-            /* Loading skeletons */
-            <div className="space-y-2">
-              <IssueCardSkeleton />
-              <IssueCardSkeleton />
-              <IssueCardSkeleton />
-              <IssueCardSkeleton />
-              <IssueCardSkeleton />
-            </div>
-          ) : totalIssues === 0 ? (
-            /* Empty state */
-            <EmptyIssuesState />
-          ) : filteredIssues.length === 0 ? (
-            /* Filtered empty */
-            <div className="flex flex-col items-center justify-center py-12">
-              <p className="text-sm text-muted-foreground">No issues match the selected filters.</p>
-            </div>
-          ) : (
-            /* Virtualized issue cards */
-            <div
-              style={{
-                height: virtualizer.getTotalSize(),
-                width: '100%',
-                position: 'relative',
-              }}
-            >
-              {virtualizer.getVirtualItems().map(virtualItem => {
-                const issue = filteredIssues[virtualItem.index];
-                return (
-                  <div
-                    key={virtualItem.key}
-                    data-index={virtualItem.index}
-                    ref={virtualizer.measureElement}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualItem.start}px)`,
-                    }}
-                  >
-                    <IssueCard
-                      issue={issue}
-                      isSelected={selectedIssueNumber === issue.number}
-                      onClick={() =>
-                        setSelectedIssue(selectedIssueNumber === issue.number ? null : issue.number)
-                      }
-                    />
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Validation history (collapsible section below issue list) */}
-        <ValidationHistory />
       </div>
 
-      {/* Validation panel (right side, shown when issue selected) */}
-      {hasSelection && (
-        <div className="w-1/2 h-full">
-          <ValidationPanel />
-        </div>
-      )}
+      {/* Validation history (collapsible section below issue list) */}
+      <ValidationHistory />
     </div>
   );
 }

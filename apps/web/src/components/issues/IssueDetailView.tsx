@@ -1,61 +1,58 @@
 import { lazy, Suspense, useState, useEffect } from 'react';
 import {
+  ArrowLeft,
   Play,
   X,
   RefreshCw,
   AlertCircle,
   AlertTriangle,
   Loader2,
-  ChevronDown,
-  ChevronRight,
   Send,
   Check,
   ExternalLink,
+  MessageSquare,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useIssueStore } from '@/stores/useIssueStore';
 import { useValidationStore } from '@/stores/useValidationStore';
 import { useValidation } from '@/hooks/useValidation';
-import { ValidationStepLog } from './ValidationStepLog';
-import { ValidationResults } from './ValidationResults';
-import type { ValidationStatus } from '@gitchorus/shared';
+import { ValidationResults } from '../validation/ValidationResults';
+import { AgentActivityHero, CollapsibleActivityLog } from '../agent-activity';
+import type { Issue, ValidationStatus } from '@gitchorus/shared';
 
-const GithubPushPreview = lazy(() => import('./GithubPushPreview'));
+const GithubPushPreview = lazy(() => import('../validation/GithubPushPreview'));
+
+interface IssueDetailViewProps {
+  issue: Issue;
+}
 
 /**
- * Side panel that shows validation state for the selected issue.
+ * Full-width detail view for a selected issue.
  *
- * Displays step-by-step progress log, structured results, GitHub push preview,
- * error states with retry, and staleness banner with re-validate prompt.
- * Falls back to history results when no live result is available.
- * After completion, the step log collapses into an "Activity Log" section.
+ * Shows issue details, validation action buttons, streaming progress,
+ * structured results, and GitHub push preview.
+ * Matches the ReviewView layout pattern for consistency.
  */
-export function ValidationPanel() {
+export function IssueDetailView({ issue }: IssueDetailViewProps) {
   const { startValidation, cancelValidation, pushToGithub, updateGithubComment, listComments } =
     useValidation();
 
-  const selectedIssueNumber = useIssueStore(state => state.selectedIssueNumber);
-  const issues = useIssueStore(state => state.issues);
+  const setSelectedIssue = useIssueStore(state => state.setSelectedIssue);
+  const issueNumber = issue.number;
 
   const queue = useValidationStore(state => state.queue);
-  const steps = useValidationStore(state =>
-    selectedIssueNumber ? state.steps.get(selectedIssueNumber) : undefined
-  );
-  const liveResult = useValidationStore(state =>
-    selectedIssueNumber ? state.results.get(selectedIssueNumber) : undefined
-  );
-  const error = useValidationStore(state =>
-    selectedIssueNumber ? state.errors.get(selectedIssueNumber) : undefined
-  );
+  const steps = useValidationStore(state => state.steps.get(issueNumber));
+  const liveResult = useValidationStore(state => state.results.get(issueNumber));
+  const error = useValidationStore(state => state.errors.get(issueNumber));
 
-  // Get latest validation (live or history) for display and staleness — inline to avoid new closure per render
+  // Get latest validation (live or history) for display and staleness
   const latestValidation = useValidationStore(state => {
-    if (selectedIssueNumber === null) return undefined;
-    const live = state.results.get(selectedIssueNumber);
+    const live = state.results.get(issueNumber);
     if (live) return live;
-    return state.history.find(e => e.issueNumber === selectedIssueNumber);
+    return state.history.find(e => e.issueNumber === issueNumber);
   });
 
   // Use live result if available, otherwise fall back to history
@@ -67,41 +64,17 @@ export function ValidationPanel() {
 
   // Push modal state
   const [showPushModal, setShowPushModal] = useState(false);
-  const pushStatus = useValidationStore(state =>
-    selectedIssueNumber ? state.pushStatus.get(selectedIssueNumber) || 'idle' : 'idle'
-  );
-  const postedUrl = useValidationStore(state =>
-    selectedIssueNumber ? state.postedCommentUrls.get(selectedIssueNumber) : undefined
-  );
+  const pushStatus = useValidationStore(state => state.pushStatus.get(issueNumber) || 'idle');
+  const postedUrl = useValidationStore(state => state.postedCommentUrls.get(issueNumber));
 
-  // Collapsible activity log state — collapsed by default after completion
-  const [logExpanded, setLogExpanded] = useState(false);
-
-  // Reset logExpanded and showConfirm when issue changes
+  // Reset states when issue changes
   useEffect(() => {
-    setLogExpanded(false);
     setShowConfirm(false);
-  }, [selectedIssueNumber]);
+    setShowPushModal(false);
+  }, [issueNumber]);
 
-  if (selectedIssueNumber === null) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        <p className="text-sm">Select an issue to validate</p>
-      </div>
-    );
-  }
-
-  const issue = issues.find(i => i.number === selectedIssueNumber);
-  if (!issue) {
-    return (
-      <div className="flex items-center justify-center h-full text-muted-foreground">
-        <p className="text-sm">Issue not found</p>
-      </div>
-    );
-  }
-
-  // Get queue status for this issue
-  const queueItem = queue.find(q => q.issueNumber === selectedIssueNumber);
+  // Derive status from queue
+  const queueItem = queue.find(q => q.issueNumber === issueNumber);
   const status: ValidationStatus = queueItem?.status || 'idle';
   const isRunning = status === 'running';
   const isQueued = status === 'queued';
@@ -116,44 +89,87 @@ export function ValidationPanel() {
   const isStale =
     !!result && new Date(issue.updatedAt).getTime() > new Date(result.validatedAt).getTime();
 
-  // Whether to show step log as active (open, not collapsible) or as collapsible
+  // Step log visibility — treat "queued with steps" as actively running
   const hasSteps = steps && steps.length > 0;
-  const showActiveLog = hasSteps && isRunning;
-  const showCollapsibleLog = hasSteps && !isRunning;
+  const isActivelyRunning = isRunning || (isQueued && hasSteps);
+  const showCollapsibleLog = hasSteps && !isActivelyRunning;
 
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 pt-4 pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs text-muted-foreground font-mono">#{issue.number}</p>
-            <h3 className="text-sm font-semibold text-foreground leading-tight truncate">
+      <div className="px-6 pt-4 pb-3">
+        <div className="flex items-start gap-3">
+          {/* Back button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 shrink-0 mt-0.5"
+            onClick={() => setSelectedIssue(null)}
+            title="Back to issues"
+          >
+            <ArrowLeft size={16} />
+          </Button>
+
+          {/* Issue info */}
+          <div className="flex-1 min-w-0">
+            <span className="text-sm font-mono text-muted-foreground">#{issue.number}</span>
+            <h2 className="text-lg font-semibold text-foreground leading-tight mt-0.5">
               {issue.title}
-            </h3>
+            </h2>
+            <div className="flex items-center gap-2 mt-1 text-xs text-muted-foreground flex-wrap">
+              {/* Labels */}
+              {issue.labels.map(label => (
+                <Badge
+                  key={label.name}
+                  variant="outline"
+                  className="text-[10px] px-1.5 py-0"
+                  style={
+                    label.color
+                      ? {
+                          borderColor: `#${label.color}40`,
+                          backgroundColor: `#${label.color}15`,
+                          color: `#${label.color}`,
+                        }
+                      : undefined
+                  }
+                >
+                  {label.name}
+                </Badge>
+              ))}
+              {/* Comments count */}
+              {issue.commentsCount > 0 && (
+                <>
+                  {issue.labels.length > 0 && <span className="text-muted-foreground/40">|</span>}
+                  <span className="flex items-center gap-0.5">
+                    <MessageSquare size={12} />
+                    {issue.commentsCount} comments
+                  </span>
+                </>
+              )}
+            </div>
           </div>
 
           {/* Action buttons */}
-          <div className="flex items-center gap-1 shrink-0">
+          <div className="flex items-center gap-2 shrink-0">
             {(isIdle || canRevalidate) && (
               <Button
                 size="sm"
-                className="h-7 text-xs gap-1"
+                className="h-8 gap-1.5"
                 onClick={() => {
                   if (canRevalidate && hasResult) {
                     setShowConfirm(true);
                   } else {
-                    startValidation(selectedIssueNumber);
+                    startValidation(issueNumber);
                   }
                 }}
               >
                 {canRevalidate ? (
                   <>
-                    <RefreshCw size={12} /> Re-validate
+                    <RefreshCw size={14} /> Re-validate
                   </>
                 ) : (
                   <>
-                    <Play size={12} /> Validate
+                    <Play size={14} /> Validate
                   </>
                 )}
               </Button>
@@ -162,18 +178,18 @@ export function ValidationPanel() {
               <Button
                 size="sm"
                 variant="outline"
-                className="h-7 text-xs gap-1"
-                onClick={() => cancelValidation(selectedIssueNumber)}
+                className="h-8 gap-1.5"
+                onClick={() => cancelValidation(issueNumber)}
               >
-                <X size={12} /> Cancel
+                <X size={14} /> Cancel
               </Button>
             )}
           </div>
         </div>
 
-        {/* Status indicator */}
-        {isQueued && (
-          <div className="flex items-center gap-1.5 mt-2 text-xs text-muted-foreground">
+        {/* Queued status — only when no steps have arrived yet */}
+        {isQueued && !hasSteps && (
+          <div className="flex items-center gap-1.5 mt-2 ml-11 text-xs text-muted-foreground">
             <Loader2 size={12} className="animate-spin" />
             <span>Waiting in queue...</span>
           </div>
@@ -183,20 +199,20 @@ export function ValidationPanel() {
       <Separator />
 
       {/* Content */}
-      <div data-testid="validation-content" className="flex-1 overflow-y-auto px-4 py-3 space-y-4">
-        {/* Error state — shown at top for immediate visibility */}
+      <div data-testid="validation-content" className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        {/* Error state */}
         {(isFailed || (error && !isRunning)) && error && (
-          <div className="rounded-lg border p-3 border-destructive/30 bg-destructive/5">
+          <div className="rounded-lg border p-4 border-destructive/30 bg-destructive/5">
             <div className="flex items-start gap-2">
               <AlertCircle size={14} className="text-destructive mt-0.5 shrink-0" />
               <div className="flex-1">
-                <p className="text-xs font-medium text-destructive">Validation failed</p>
+                <p className="text-sm font-medium text-destructive">Validation failed</p>
                 <p className="text-xs text-muted-foreground mt-1">{error}</p>
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="h-6 text-xs mt-2 text-destructive hover:text-destructive"
-                  onClick={() => startValidation(selectedIssueNumber)}
+                  className="h-7 text-xs mt-2 text-destructive hover:text-destructive"
+                  onClick={() => startValidation(issueNumber)}
                 >
                   <RefreshCw size={12} className="mr-1" /> Retry
                 </Button>
@@ -242,39 +258,11 @@ export function ValidationPanel() {
           </div>
         )}
 
-        {/* Active step log — shown open while running */}
-        {showActiveLog && (
-          <div>
-            <h4 className="text-xs font-medium text-foreground mb-2">Progress</h4>
-            <ValidationStepLog steps={steps} isRunning={isRunning} />
-          </div>
-        )}
+        {/* Agent activity hero — shown while running or queued with steps */}
+        {isActivelyRunning && <AgentActivityHero steps={steps || []} isRunning={true} />}
 
         {/* Collapsible activity log — shown after completion */}
-        {showCollapsibleLog && (
-          <div>
-            <button
-              onClick={() => setLogExpanded(!logExpanded)}
-              className="flex items-center gap-1 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full text-left"
-            >
-              {logExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-              <span>Activity Log ({steps.length} steps)</span>
-            </button>
-            {logExpanded && (
-              <div className="mt-2">
-                <ValidationStepLog steps={steps} isRunning={false} />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Running indicator when no steps yet */}
-        {isRunning && (!steps || steps.length === 0) && (
-          <div className="flex items-center gap-2 py-8 justify-center">
-            <Loader2 size={16} className="animate-spin text-primary" />
-            <span className="text-sm text-muted-foreground">Starting validation...</span>
-          </div>
-        )}
+        {showCollapsibleLog && <CollapsibleActivityLog steps={steps!} isRunning={false} />}
 
         {/* Results */}
         {hasResult && result && (
@@ -311,7 +299,7 @@ export function ValidationPanel() {
               ) : (
                 <Button
                   size="sm"
-                  className="h-7 text-xs gap-1"
+                  className="h-8 text-xs gap-1.5"
                   onClick={() => setShowPushModal(true)}
                 >
                   <Send size={12} /> Push to GitHub
@@ -321,7 +309,7 @@ export function ValidationPanel() {
           </>
         )}
 
-        {/* Push modal (lazy loaded, only mounted when open) */}
+        {/* Push modal (lazy loaded) */}
         {showPushModal && hasResult && result && (
           <Suspense
             fallback={
@@ -333,7 +321,7 @@ export function ValidationPanel() {
             <GithubPushPreview
               open={showPushModal}
               onOpenChange={setShowPushModal}
-              issueNumber={selectedIssueNumber}
+              issueNumber={issueNumber}
               result={result}
               onPush={pushToGithub}
               onUpdate={updateGithubComment}
@@ -349,8 +337,8 @@ export function ValidationPanel() {
             <Button
               size="sm"
               variant="ghost"
-              className="h-6 text-xs mt-1"
-              onClick={() => startValidation(selectedIssueNumber)}
+              className="h-7 text-xs mt-1"
+              onClick={() => startValidation(issueNumber)}
             >
               <RefreshCw size={12} className="mr-1" /> Run again
             </Button>
@@ -359,7 +347,7 @@ export function ValidationPanel() {
 
         {/* Empty idle state */}
         {isIdle && !error && (
-          <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <p className="text-sm">No validation results yet</p>
             <p className="text-xs mt-1">
               Click <strong>Validate</strong> to analyze this issue
@@ -375,7 +363,7 @@ export function ValidationPanel() {
         title="Discard current validation?"
         description="Starting a new validation will discard all existing results for this issue. This action cannot be undone."
         confirmLabel="Discard & Re-validate"
-        onConfirm={() => startValidation(selectedIssueNumber)}
+        onConfirm={() => startValidation(issueNumber)}
       />
     </div>
   );
