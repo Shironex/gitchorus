@@ -196,6 +196,7 @@ export class ReviewHistoryService {
       durationMs: 0,
       headCommitSha: params.headCommitSha,
       reviewSequence: 1,
+      isImported: true,
     };
 
     const entry = this.save(result);

@@ -32,8 +32,7 @@ import type {
 const EMPTY_STEPS: ValidationStep[] = [];
 
 /** Check whether a review result was imported from GitHub rather than run locally. */
-const isImportedReview = (r: ReviewResult) =>
-  r.durationMs === 0 && r.model === 'unknown' && r.findings.length === 0;
+const isImportedReview = (r: ReviewResult) => r.isImported === true;
 
 interface ReviewViewProps {
   pr: PullRequest;
