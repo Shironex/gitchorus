@@ -12,7 +12,7 @@
 [![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)](https://github.com/Shironex/gitchorus)
-[![License](https://img.shields.io/badge/License-Custom-blue)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 **[Download Latest Release](https://github.com/Shironex/gitchorus/releases/latest)** | [macOS](https://github.com/Shironex/gitchorus/releases/latest) | [Windows](https://github.com/Shironex/gitchorus/releases/latest) | [Linux](https://github.com/Shironex/gitchorus/releases/latest)
 
@@ -190,7 +190,7 @@ gitchorus/
 
 ## Contributing
 
-Contributions are welcome! Feel free to:
+Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) before submitting a pull request.
 
 - [Submit an issue](https://github.com/Shironex/gitchorus/issues) for bugs or feature requests
 - Open a pull request with improvements
@@ -198,7 +198,7 @@ Contributions are welcome! Feel free to:
 
 ## License
 
-This project is licensed under a custom license — free to use, but you may not resell or redistribute it. See the [LICENSE](LICENSE) file for details.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
