@@ -193,12 +193,12 @@ export class ValidationGateway implements OnGatewayInit {
    * Handle request to get recent validation log entries.
    */
   @SubscribeMessage(ValidationEvents.LOG_ENTRIES)
-  handleLogEntries(
+  async handleLogEntries(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: ValidationLogEntriesPayload
-  ): ValidationLogEntriesResponse {
+  ): Promise<ValidationLogEntriesResponse> {
     try {
-      const entries = this.logService.getLogEntries(payload?.limit);
+      const entries = await this.logService.getLogEntries(payload?.limit);
       return { entries };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
