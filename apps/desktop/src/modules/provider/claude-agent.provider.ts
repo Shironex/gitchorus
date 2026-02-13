@@ -19,7 +19,8 @@ import type {
   ReviewParams,
   ReviewResult,
 } from '@gitchorus/shared';
-import { createLogger, REVIEW_DEPTH_CONFIG } from '@gitchorus/shared';
+import { createLogger, REVIEW_DEPTH_CONFIG, MODEL_TURN_MULTIPLIERS } from '@gitchorus/shared';
+import type { ClaudeModel } from '@gitchorus/shared';
 import { getClaudeCliStatus } from '../../main/utils';
 import { SettingsService } from '../settings';
 
@@ -99,7 +100,15 @@ const VALIDATION_OUTPUT_SCHEMA = {
 /**
  * Build the system prompt for issue validation.
  */
-function buildSystemPrompt(): string {
+function buildSystemPrompt(model: string, maxTurns: number): string {
+  const multiplier = MODEL_TURN_MULTIPLIERS[model as ClaudeModel] ?? 1.0;
+  const isSmallModel = multiplier > 1.0;
+
+  const efficiencyGuidance = isSmallModel
+    ? `\n- Be efficient: you have a limited budget of ${maxTurns} turns. Batch searches, use Glob to discover structure before reading individual files, and avoid redundant explorations
+- Prioritize: (1) understand project structure with Glob, (2) search for key terms with Grep, (3) read only the most relevant files, (4) produce your result`
+    : '';
+
   return `You are a senior software engineer performing deep code analysis to validate a GitHub issue against a codebase.
 
 Your task:
@@ -127,7 +136,7 @@ IMPORTANT RULES:
 - Be evidence-based: cite specific files and code when making claims
 - Be honest: if you are uncertain, say so with lower confidence
 - Focus on the codebase as it exists NOW, not hypothetical future states
-- Use read-only tools only: Read, Grep, Glob, Bash (for non-destructive commands like ls, find, cat)`;
+- Use read-only tools only: Read, Grep, Glob, Bash (for non-destructive commands like ls, find, cat)${efficiencyGuidance}`;
 }
 
 /**
@@ -191,7 +200,14 @@ const REVIEW_OUTPUT_SCHEMA = {
 /**
  * Build the system prompt for PR code review.
  */
-function buildReviewSystemPrompt(): string {
+function buildReviewSystemPrompt(model: string, maxTurns: number): string {
+  const multiplier = MODEL_TURN_MULTIPLIERS[model as ClaudeModel] ?? 1.0;
+  const isSmallModel = multiplier > 1.0;
+
+  const efficiencyGuidance = isSmallModel
+    ? `\n- Be efficient: you have a limited budget of ${maxTurns} turns. Batch searches, read related files strategically, and avoid redundant explorations`
+    : '';
+
   return `You are a senior software engineer performing a thorough code review of a pull request. You have full access to the codebase.
 
 Your task:
@@ -219,7 +235,7 @@ IMPORTANT RULES:
 - Be constructive: explain WHY something is an issue, not just WHAT
 - Review ALL changed files, no size limit
 - If the code looks good, say so — don't manufacture issues
-- Use read-only tools only: Read, Grep, Glob, Bash (for non-destructive commands)`;
+- Use read-only tools only: Read, Grep, Glob, Bash (for non-destructive commands)${efficiencyGuidance}`;
 }
 
 /**
@@ -239,6 +255,15 @@ ${params.diff}
 \`\`\`
 
 Analyze this PR against the codebase and produce your review findings. Read related files for context beyond the diff.`;
+}
+
+/**
+ * Apply model-specific turn multiplier.
+ * Smaller models like Haiku need more turns for the same task.
+ */
+function applyModelMultiplier(baseTurns: number, model: string): number {
+  const multiplier = MODEL_TURN_MULTIPLIERS[model as ClaudeModel] ?? 1.0;
+  return Math.ceil(baseTurns * multiplier);
 }
 
 /**
@@ -425,10 +450,12 @@ export class ClaudeAgentProvider {
     const startTime = Date.now();
     const settingsConfig = this.settingsService.getConfig();
     const model = params.config?.model || settingsConfig.model || DEFAULT_MODEL;
-    const maxTurns =
-      params.config?.maxTurns ||
+    const explicitMaxTurns = params.config?.maxTurns;
+    const baseTurns =
+      explicitMaxTurns ||
       REVIEW_DEPTH_CONFIG[settingsConfig.validationDepth].validationMaxTurns ||
       DEFAULT_MAX_TURNS;
+    const maxTurns = explicitMaxTurns ? explicitMaxTurns : applyModelMultiplier(baseTurns, model);
 
     // Create logger — with file transport if provided
     const logger = createLogger('ClaudeAgentProvider', {
@@ -455,7 +482,7 @@ export class ClaudeAgentProvider {
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
         abortController: this.abortController,
-        systemPrompt: buildSystemPrompt(),
+        systemPrompt: buildSystemPrompt(model, maxTurns),
         model,
         maxTurns,
         maxBudgetUsd: params.config?.maxBudgetUsd,
@@ -532,6 +559,11 @@ export class ClaudeAgentProvider {
             logger.info('Agent query completed successfully');
           } else {
             const errorResult = message as SDKResultError;
+            if (errorResult.subtype === 'error_max_turns') {
+              const errorMsg = `Agent ran out of turns (limit: ${maxTurns}). Try increasing the review depth in Settings or using a more capable model.`;
+              logger.error(errorMsg);
+              throw new Error(errorMsg);
+            }
             const errorMsg = `Agent query failed: ${errorResult.subtype} - ${errorResult.errors?.join(', ') || 'Unknown error'}`;
             logger.error(errorMsg);
             throw new Error(errorMsg);
@@ -597,10 +629,12 @@ export class ClaudeAgentProvider {
     const startTime = Date.now();
     const settingsConfig = this.settingsService.getConfig();
     const model = params.config?.model || settingsConfig.model || DEFAULT_MODEL;
-    const maxTurns =
-      params.config?.maxTurns ||
+    const explicitMaxTurns = params.config?.maxTurns;
+    const baseTurns =
+      explicitMaxTurns ||
       REVIEW_DEPTH_CONFIG[settingsConfig.reviewDepth].reviewMaxTurns ||
       DEFAULT_REVIEW_MAX_TURNS;
+    const maxTurns = explicitMaxTurns ? explicitMaxTurns : applyModelMultiplier(baseTurns, model);
 
     // Create logger -- with file transport if provided
     const logger = createLogger('ClaudeAgentProvider', {
@@ -627,7 +661,7 @@ export class ClaudeAgentProvider {
         permissionMode: 'bypassPermissions',
         allowDangerouslySkipPermissions: true,
         abortController: this.abortController,
-        systemPrompt: buildReviewSystemPrompt(),
+        systemPrompt: buildReviewSystemPrompt(model, maxTurns),
         model,
         maxTurns,
         maxBudgetUsd: params.config?.maxBudgetUsd,
@@ -701,6 +735,11 @@ export class ClaudeAgentProvider {
             logger.info('Review agent query completed successfully');
           } else {
             const errorResult = message as SDKResultError;
+            if (errorResult.subtype === 'error_max_turns') {
+              const errorMsg = `Review agent ran out of turns (limit: ${maxTurns}). Try increasing the review depth in Settings or using a more capable model.`;
+              logger.error(errorMsg);
+              throw new Error(errorMsg);
+            }
             const errorMsg = `Review agent query failed: ${errorResult.subtype} - ${errorResult.errors?.join(', ') || 'Unknown error'}`;
             logger.error(errorMsg);
             throw new Error(errorMsg);

@@ -89,6 +89,16 @@ export const DEPRECATED_MODEL_MAP: Record<string, ClaudeModel> = {
   'claude-opus-4-6-20250528': 'claude-opus-4-6',
 };
 
+/**
+ * Turn multipliers per model to account for capability differences.
+ * Smaller models (Haiku) tend to use more tool calls per task.
+ */
+export const MODEL_TURN_MULTIPLIERS: Record<ClaudeModel, number> = {
+  'claude-haiku-4-5-20251001': 1.5,
+  'claude-sonnet-4-5-20250929': 1.0,
+  'claude-opus-4-6': 1.0,
+};
+
 /** Review depth display labels and descriptions */
 export const REVIEW_DEPTH_CONFIG: Record<
   ReviewDepth,
@@ -97,8 +107,8 @@ export const REVIEW_DEPTH_CONFIG: Record<
   quick: {
     label: 'Quick',
     description: 'Fast scan, surface-level issues only',
-    validationMaxTurns: 25,
-    reviewMaxTurns: 40,
+    validationMaxTurns: 40,
+    reviewMaxTurns: 60,
   },
   standard: {
     label: 'Standard',
