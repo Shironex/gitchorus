@@ -16,5 +16,8 @@ export function getBackendPort(): number {
 }
 
 export function setBackendPort(port: number): void {
+  if (backendPort !== null) {
+    throw new Error(`Backend port already set to ${backendPort}`);
+  }
   backendPort = port;
 }

@@ -1,5 +1,5 @@
 import { io, Socket } from 'socket.io-client';
-import { createLogger } from '@gitchorus/shared';
+import { createLogger, LOCALHOST } from '@gitchorus/shared';
 
 const logger = createLogger('Socket');
 
@@ -41,7 +41,7 @@ export function initializeSocket(port: number): Socket {
     return _socket;
   }
 
-  const url = `ws://localhost:${port}`;
+  const url = `ws://${LOCALHOST}:${port}`;
   logger.info(`Initializing socket connection to ${url}`);
 
   _socket = io(url, {

@@ -52,8 +52,12 @@ export function useAppInitialization(): void {
 
         // Get the dynamically assigned backend port via IPC
         const port = await window.electronAPI?.app?.getBackendPort();
-        if (!port) {
-          throw new Error('Failed to get backend port from main process');
+        if (port == null) {
+          throw new Error(
+            window.electronAPI?.app
+              ? 'IPC call to get backend port returned no value'
+              : 'electronAPI not available — not running in Electron?'
+          );
         }
         logger.info(`Backend port: ${port}`);
 

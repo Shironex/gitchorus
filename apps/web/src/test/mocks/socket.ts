@@ -88,20 +88,20 @@ export const mockSocket: MockSocket = {
  * Use: vi.mock('@/lib/socket', () => mockSocketModule)
  */
 interface MockSocketModule {
-  socket: MockSocket;
+  getSocket: Mock;
+  initializeSocket: Mock;
   connectSocket: Mock;
   disconnectSocket: Mock;
-  default: MockSocket;
   emitAsync: Mock;
   emitWithErrorHandling: Mock;
   emitWithSuccessHandling: Mock;
 }
 
 export const mockSocketModule: MockSocketModule = {
-  socket: mockSocket,
+  getSocket: vi.fn(() => mockSocket),
+  initializeSocket: vi.fn(() => mockSocket),
   connectSocket: vi.fn().mockResolvedValue(undefined),
   disconnectSocket: vi.fn(),
-  default: mockSocket,
   // Re-export socket helpers stubs (these are re-exported from socket.ts)
   emitAsync: vi.fn(),
   emitWithErrorHandling: vi.fn(),
