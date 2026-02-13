@@ -2,12 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.4.0-beta.1 (2026-02-13)
+## 0.4.0 (2026-02-14)
 
 ### New Features
 
 - **PR re-review with review chains** — Re-review a PR with full context from the previous review. The AI receives the prior findings, score, and incremental diff (commit-to-commit) to fairly assess whether issues were addressed. Results include chain metadata: `reviewSequence`, `previousScore`, `isReReview`, and `addressedFindings` with per-finding status (addressed / partially-addressed / unaddressed / new-issue). UI shows a sequence indicator ("Review #N"), previous score comparison, and a "Previous Findings Status" section with 8-status breakdown (#28, #30)
 - **Re-review chaining from history** — Clicking "Re-review" on a completed review automatically chains from the latest history entry for that PR and repository, skipping the discard confirmation dialog. Falls back to a fresh review with confirmation if no history exists (#30)
+- **Cross-PC review detection** — When switching machines, GitChorus now auto-detects previously posted reviews on GitHub by searching for the `<!-- gitchorus-review -->` marker, parsing quality score and verdict, and importing them to local history so re-reviews can chain from them (#33)
+- **Improved PR review formatting** — GitHub review comments now use severity-based alert syntax (`[!CAUTION]`, `[!WARNING]`, etc.), language-hinted code blocks for syntax highlighting, and a compact summary table with severity-sorted findings. Inline comments are posted on the exact diff line for reliable positioning (#32)
 
 ### Refactoring
 
@@ -15,6 +17,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
+- **Review stuck at StructuredOutput** — Added missing `break` after capturing the result message in the Claude Agent SDK `for await` loop, preventing the UI from hanging while waiting for the subprocess to fully terminate (#33)
 - **Duplicate getById() call** — Eliminated redundant `historyService.getById()` call in review result enrichment by hoisting `previousEntry` to a `let` variable and reusing it (#30)
 - **Stale reReviewContext** — Fixed orphaned map entries when `queueReReview` was called for an already-queued PR by adding an early return guard (#30)
 - **Cross-repo history collision** — History entry lookup in `ReviewView` now filters by `repositoryFullName` to prevent chaining from the wrong repository's review (#30)
@@ -22,9 +25,13 @@ All notable changes to this project will be documented in this file.
 - **SHA validation for git diff** — Added hex-character regex validation on commit SHAs before passing to `git diff` for defense-in-depth (#30)
 - **Array.reverse() mutation** — Changed `entries.reverse()` to `[...entries].reverse()` in `getReviewChain` to avoid in-place mutation (#30)
 
+### Maintenance
+
+- **Community health files** — Added CODE_OF_CONDUCT.md, CONTRIBUTING.md, SECURITY.md, and switched to MIT license (#31)
+
 ### Testing
 
-- 81 new unit tests for the review module: `ReviewService` (14), `ReviewGateway` (33), `ReviewHistoryService` (19), `ReviewView` (5), `GithubService` (6), SHA validation (4) — total test count: 503
+- 81 new unit tests for the review module: `ReviewService` (14), `ReviewGateway` (33), `ReviewHistoryService` (19), `ReviewView` (5), `GithubService` (6), SHA validation (4) — total test count: 510
 
 ## 0.3.0 (2026-02-13)
 
