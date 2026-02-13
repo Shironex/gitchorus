@@ -836,7 +836,7 @@ describe('GithubService', () => {
         stderr: '',
       });
 
-      const diff = await service.getCommitDiff('/repo', 'sha1', 'sha2');
+      const diff = await service.getCommitDiff('/repo', 'abc123', 'def456');
 
       expect(diff).toContain('diff --git');
       // First call is git fetch origin
@@ -844,7 +844,7 @@ describe('GithubService', () => {
       expect(mockExecFileAsync.mock.calls[0][1]).toEqual(['fetch', 'origin']);
       // Second call is git diff
       expect(mockExecFileAsync.mock.calls[1][0]).toBe('git');
-      expect(mockExecFileAsync.mock.calls[1][1]).toEqual(['diff', 'sha1..sha2']);
+      expect(mockExecFileAsync.mock.calls[1][1]).toEqual(['diff', 'abc123..def456']);
     });
 
     it('should still return diff when git fetch fails', async () => {
@@ -856,7 +856,7 @@ describe('GithubService', () => {
         stderr: '',
       });
 
-      const diff = await service.getCommitDiff('/repo', 'sha1', 'sha2');
+      const diff = await service.getCommitDiff('/repo', 'abc123', 'def456');
 
       expect(diff).toBe('diff content here');
     });
@@ -867,7 +867,19 @@ describe('GithubService', () => {
       // git diff fails
       mockExecFileAsync.mockRejectedValueOnce(new Error('diff failed'));
 
-      await expect(service.getCommitDiff('/repo', 'sha1', 'sha2')).rejects.toThrow('diff failed');
+      await expect(service.getCommitDiff('/repo', 'abc123', 'def456')).rejects.toThrow(
+        'diff failed'
+      );
+    });
+
+    it('should throw when SHA format is invalid', async () => {
+      await expect(service.getCommitDiff('/repo', '--malicious', 'def456')).rejects.toThrow(
+        'Invalid commit SHA format'
+      );
+
+      await expect(service.getCommitDiff('/repo', 'abc123', 'not valid')).rejects.toThrow(
+        'Invalid commit SHA format'
+      );
     });
   });
 });

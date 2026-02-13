@@ -765,6 +765,12 @@ export class GithubService {
    * Fetches from origin first to ensure commits are available locally.
    */
   async getCommitDiff(repoPath: string, fromSha: string, toSha: string): Promise<string> {
+    // Validate SHA format (basic hex check)
+    const shaRegex = /^[0-9a-f]{4,40}$/i;
+    if (!shaRegex.test(fromSha) || !shaRegex.test(toSha)) {
+      throw new Error(`Invalid commit SHA format: ${fromSha}..${toSha}`);
+    }
+
     // Fetch latest to ensure both SHAs are available locally
     try {
       await execFileAsync('git', ['fetch', 'origin'], {

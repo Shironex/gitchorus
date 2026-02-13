@@ -125,8 +125,8 @@ export class ReviewHistoryService {
   ): ReviewHistoryEntry[] {
     const entries = this.list({ repositoryFullName, prNumber });
 
-    // list() returns newest-first; reverse to get oldest-first (chronological chain order)
-    const chain = entries.reverse();
+    // list() returns newest-first; use spread to avoid in-place mutation
+    const chain = [...entries].reverse();
 
     // Cap at limit
     if (limit > 0 && chain.length > limit) {

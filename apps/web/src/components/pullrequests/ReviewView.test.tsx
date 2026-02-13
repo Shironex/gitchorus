@@ -40,6 +40,15 @@ vi.mock('@/stores/useReviewStore', () => ({
   },
 }));
 
+vi.mock('@/stores/useRepositoryStore', () => ({
+  useRepositoryStore: (selector: (state: Record<string, unknown>) => unknown) => {
+    const state = {
+      githubInfo: { fullName: 'test/repo' },
+    };
+    return selector(state);
+  },
+}));
+
 const basePr: PullRequest = {
   number: 42,
   title: 'Test PR',
@@ -232,7 +241,9 @@ describe('ReviewView', () => {
     it('should call startReReview (not show confirm) when history entry exists', () => {
       mockStoreState.reviewStatus = 'completed';
       mockStoreState.reviewResults = mockResult;
-      mockStoreState.reviewHistory = [{ id: 'rh-42-abc', prNumber: 42 }];
+      mockStoreState.reviewHistory = [
+        { id: 'rh-42-abc', prNumber: 42, repositoryFullName: 'test/repo' },
+      ];
 
       render(<ReviewView pr={basePr} />);
 
@@ -297,7 +308,7 @@ describe('ReviewView', () => {
       render(<ReviewView pr={basePr} />);
 
       const contentArea = screen.getByTestId('review-content');
-      expect(contentArea.textContent).toContain('Re-review #2');
+      expect(contentArea.textContent).toContain('Review #3');
       expect(contentArea.textContent).toContain('Previous score: 7/10');
     });
 
@@ -321,7 +332,7 @@ describe('ReviewView', () => {
       render(<ReviewView pr={basePr} />);
 
       const contentArea = screen.getByTestId('review-content');
-      expect(contentArea.textContent).not.toContain('Re-review #');
+      expect(contentArea.textContent).not.toContain('Review #');
     });
   });
 });

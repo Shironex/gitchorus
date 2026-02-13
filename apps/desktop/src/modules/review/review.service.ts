@@ -96,6 +96,12 @@ export class ReviewService {
    * The previous review's findings and score are passed to the AI for fair score progression.
    */
   queueReReview(prNumber: number, projectPath: string, previousReviewId: string): void {
+    // Only set re-review context if the review will actually be queued
+    const existing = this.reviewQueue.get(prNumber);
+    if (existing && (existing.status === 'queued' || existing.status === 'running')) {
+      this.logger.info(`PR #${prNumber} already ${existing.status}, skipping re-review queue`);
+      return;
+    }
     this.reReviewContext.set(prNumber, previousReviewId);
     this.queueReview(prNumber, projectPath);
   }
@@ -215,8 +221,11 @@ export class ReviewService {
         fileTransport: this.fileTransport,
       };
 
+      // Lookup previous entry once — reused later for result enrichment
+      let previousEntry: import('@gitchorus/shared').ReviewHistoryEntry | null = null;
+
       if (previousReviewId) {
-        const previousEntry = this.historyService.getById(previousReviewId);
+        previousEntry = this.historyService.getById(previousReviewId);
         if (previousEntry) {
           reviewParams.isReReview = true;
           reviewParams.previousReview = previousEntry;
@@ -280,16 +289,17 @@ export class ReviewService {
       if (headCommitSha) {
         result.headCommitSha = headCommitSha;
       }
-      if (previousReviewId) {
-        const previousEntry = this.historyService.getById(previousReviewId);
+      if (previousReviewId && previousEntry) {
         result.previousReviewId = previousReviewId;
         result.isReReview = true;
-        if (previousEntry) {
-          result.previousScore = previousEntry.qualityScore;
-          // Calculate sequence from previous entry
-          result.reviewSequence = (previousEntry.reviewSequence || 1) + 1;
-        }
+        result.previousScore = previousEntry.qualityScore;
+        result.reviewSequence = (previousEntry.reviewSequence || 1) + 1;
       } else {
+        if (previousReviewId) {
+          this.logger.warn(
+            `Previous review ${previousReviewId} not found during enrichment, treating as initial`
+          );
+        }
         result.reviewSequence = 1;
       }
 

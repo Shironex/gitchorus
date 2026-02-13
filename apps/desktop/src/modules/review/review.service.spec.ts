@@ -306,8 +306,12 @@ describe('ReviewService', () => {
       const reviewParams = mockProvider.review.mock.calls[0][0];
       expect(reviewParams.isReReview).toBeUndefined();
 
-      // Should still complete
+      // Should still complete with initial review metadata
       expect(mockHistoryService.save).toHaveBeenCalled();
+      const savedResult = mockHistoryService.save.mock.calls[0][0] as ReviewResult;
+      expect(savedResult.reviewSequence).toBe(1);
+      expect(savedResult.isReReview).toBeUndefined();
+      expect(savedResult.previousReviewId).toBeUndefined();
     });
 
     it('should emit error event when PR is not found', async () => {

@@ -104,7 +104,7 @@ function AddressedFindingsSection({ findings }: { findings: AddressedFindingSumm
           const Icon = config.icon;
           return (
             <div
-              key={i}
+              key={`${finding.title}-${finding.severity}-${i}`}
               className={cn('flex items-start gap-2 px-3 py-2 rounded-md text-xs', config.bgClass)}
             >
               <Icon size={14} className={cn('shrink-0 mt-0.5', config.colorClass)} />

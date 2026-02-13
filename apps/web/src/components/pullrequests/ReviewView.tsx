@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { ConfirmDialog } from '@/components/shared/ConfirmDialog';
 import { useReviewStore } from '@/stores/useReviewStore';
+import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import { useReview } from '@/hooks/useReview';
 import { ReviewProgress } from './ReviewProgress';
 import { ReviewSummary } from './ReviewSummary';
@@ -67,8 +68,11 @@ export function ReviewView({ pr }: ReviewViewProps) {
   const canRestart = isCompleted || isFailed || isCancelled;
 
   // Find the latest history entry for this PR (used for re-review chaining)
+  const repositoryFullName = useRepositoryStore(state => state.githubInfo?.fullName);
   const latestHistoryEntry = useReviewStore(state =>
-    state.reviewHistory.find(e => e.prNumber === pr.number)
+    state.reviewHistory.find(
+      e => e.prNumber === pr.number && e.repositoryFullName === repositoryFullName
+    )
   ) as ReviewHistoryEntry | undefined;
 
   /** Start a re-review with chain context, or a fresh review if no history */
@@ -179,7 +183,7 @@ export function ReviewView({ pr }: ReviewViewProps) {
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground">
             <GitCommitHorizontal size={14} />
             <span>
-              Re-review #{result.reviewSequence - 1} of PR #{pr.number}
+              Review #{result.reviewSequence} of PR #{pr.number}
               {result.previousScore != null && <> — Previous score: {result.previousScore}/10</>}
             </span>
           </div>
