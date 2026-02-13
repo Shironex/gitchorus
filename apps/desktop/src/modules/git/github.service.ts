@@ -944,6 +944,52 @@ export class GithubService {
   }
 
   /**
+   * List reviews on a pull request via the GitHub API.
+   * Returns reviews with their body, state, commit_id, and metadata.
+   */
+  async listPrReviews(
+    repoPath: string,
+    prNumber: number
+  ): Promise<
+    Array<{
+      id: number;
+      body: string;
+      state: string;
+      commitId: string;
+      submittedAt: string;
+      user: string;
+      htmlUrl: string;
+    }>
+  > {
+    const repoInfo = await this.getRepoInfo(repoPath);
+    if (!repoInfo) {
+      throw new Error('Could not determine repository info for listing PR reviews');
+    }
+
+    const { stdout } = await this.execGh(repoPath, [
+      'api',
+      `repos/${repoInfo.fullName}/pulls/${prNumber}/reviews`,
+      '--jq',
+      '[.[] | {id, body, state, commit_id, submitted_at, user: .user.login, html_url}]',
+    ]);
+
+    if (!stdout.trim()) {
+      return [];
+    }
+
+    const data = JSON.parse(stdout) as Array<Record<string, unknown>>;
+    return data.map(r => ({
+      id: r.id as number,
+      body: (r.body as string) || '',
+      state: (r.state as string) || '',
+      commitId: (r.commit_id as string) || '',
+      submittedAt: (r.submitted_at as string) || '',
+      user: (r.user as string) || 'unknown',
+      htmlUrl: (r.html_url as string) || '',
+    }));
+  }
+
+  /**
    * Get the HEAD commit SHA for a pull request
    */
   async getPrHeadSha(repoPath: string, prNumber: number): Promise<string> {

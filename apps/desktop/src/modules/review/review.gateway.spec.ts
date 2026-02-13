@@ -5,6 +5,7 @@ import { ReviewGateway } from './review.gateway';
 import { ReviewService } from './review.service';
 import { ReviewHistoryService } from './review-history.service';
 import { ReviewLogService } from './review-log.service';
+import { GithubService } from '../git/github.service';
 
 // ---------------------------------------------------------------------------
 // Mock helpers
@@ -55,6 +56,12 @@ const mockLogService = {
   getLogTransport: jest.fn().mockReturnValue(() => {}),
 };
 
+const mockGithubService = {
+  listPrReviews: jest.fn(),
+  getPullRequest: jest.fn(),
+  getRepoInfo: jest.fn(),
+};
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -72,6 +79,7 @@ describe('ReviewGateway', () => {
         { provide: ReviewService, useValue: mockReviewService },
         { provide: ReviewHistoryService, useValue: mockHistoryService },
         { provide: ReviewLogService, useValue: mockLogService },
+        { provide: GithubService, useValue: mockGithubService },
       ],
     }).compile();
 

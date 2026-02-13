@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   ArrowLeft,
   Play,
@@ -8,6 +8,7 @@ import {
   Loader2,
   GitBranch,
   GitCommitHorizontal,
+  Download,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -42,7 +43,7 @@ type ReviewAction = 'REQUEST_CHANGES' | 'COMMENT';
  * and review results when complete.
  */
 export function ReviewView({ pr }: ReviewViewProps) {
-  const { startReview, startReReview, cancelReview } = useReview();
+  const { startReview, startReReview, cancelReview, importGithubReview } = useReview();
   const setSelectedPr = useReviewStore(state => state.setSelectedPr);
 
   // Confirmation dialog state
@@ -52,6 +53,10 @@ export function ReviewView({ pr }: ReviewViewProps) {
   const [pushModalOpen, setPushModalOpen] = useState(false);
   const [pushFindings, setPushFindings] = useState<ReviewFinding[]>([]);
   const [pushAction, setPushAction] = useState<ReviewAction>('COMMENT');
+
+  // GitHub import state
+  const [importChecking, setImportChecking] = useState(false);
+  const importCheckedRef = useRef<number | null>(null);
 
   const status = useReviewStore(state => state.reviewStatus.get(pr.number) || 'idle');
   const steps = useReviewStore(state => state.reviewSteps.get(pr.number) ?? EMPTY_STEPS);
@@ -69,11 +74,40 @@ export function ReviewView({ pr }: ReviewViewProps) {
 
   // Find the latest history entry for this PR (used for re-review chaining)
   const repositoryFullName = useRepositoryStore(state => state.githubInfo?.fullName);
+  const historyLoading = useReviewStore(state => state.historyLoading);
   const latestHistoryEntry = useReviewStore(state =>
     state.reviewHistory.find(
       e => e.prNumber === pr.number && e.repositoryFullName === repositoryFullName
     )
   ) as ReviewHistoryEntry | undefined;
+
+  // Auto-check GitHub for existing GitChorus reviews when no local history exists
+  useEffect(() => {
+    if (
+      !repositoryFullName ||
+      historyLoading ||
+      latestHistoryEntry ||
+      hasResult ||
+      !isIdle ||
+      importCheckedRef.current === pr.number
+    ) {
+      return;
+    }
+
+    importCheckedRef.current = pr.number;
+    setImportChecking(true);
+    importGithubReview(pr.number, repositoryFullName).finally(() => {
+      setImportChecking(false);
+    });
+  }, [
+    pr.number,
+    repositoryFullName,
+    historyLoading,
+    latestHistoryEntry,
+    hasResult,
+    isIdle,
+    importGithubReview,
+  ]);
 
   /** Start a re-review with chain context, or a fresh review if no history */
   const handleReReview = () => {
@@ -178,6 +212,17 @@ export function ReviewView({ pr }: ReviewViewProps) {
 
       {/* Content */}
       <div data-testid="review-content" className="flex-1 overflow-y-auto px-6 py-4 space-y-4">
+        {/* Imported from GitHub indicator */}
+        {hasResult && result && result.durationMs === 0 && result.model === 'unknown' && (
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg border border-blue-500/20 bg-blue-500/5 text-xs text-muted-foreground">
+            <Download size={14} className="text-blue-500" />
+            <span>
+              Previous review imported from GitHub — score: {result.qualityScore}/10. You can
+              re-review to get full findings.
+            </span>
+          </div>
+        )}
+
         {/* Re-review sequence indicator */}
         {result?.isReReview && result.reviewSequence && result.reviewSequence > 1 && (
           <div className="flex items-center gap-2 px-3 py-2 rounded-lg border bg-muted/30 text-xs text-muted-foreground">
@@ -259,8 +304,18 @@ export function ReviewView({ pr }: ReviewViewProps) {
           </div>
         )}
 
+        {/* Checking GitHub for existing reviews */}
+        {importChecking && (
+          <div className="flex items-center gap-2 py-4 justify-center">
+            <Download size={14} className="text-muted-foreground animate-pulse" />
+            <span className="text-sm text-muted-foreground">
+              Checking GitHub for existing reviews...
+            </span>
+          </div>
+        )}
+
         {/* Empty idle state */}
-        {isIdle && !error && (
+        {isIdle && !error && !importChecking && (
           <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
             <p className="text-sm">No review results yet</p>
             <p className="text-xs mt-1">
