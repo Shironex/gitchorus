@@ -193,12 +193,12 @@ export class ReviewGateway implements OnGatewayInit {
    * Handle request to get recent review log entries.
    */
   @SubscribeMessage(ReviewEvents.LOG_ENTRIES)
-  handleLogEntries(
+  async handleLogEntries(
     @ConnectedSocket() _client: Socket,
     @MessageBody() payload: ReviewLogEntriesPayload
-  ): ReviewLogEntriesResponse {
+  ): Promise<ReviewLogEntriesResponse> {
     try {
-      const entries = this.logService.getLogEntries(payload?.limit);
+      const entries = await this.logService.getLogEntries(payload?.limit);
       return { entries };
     } catch (error) {
       const message = extractErrorMessage(error, 'Unknown error');
