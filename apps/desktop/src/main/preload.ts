@@ -38,6 +38,7 @@ export interface ElectronAPI {
     isValidProject: (projectPath: string) => Promise<{ valid: boolean; reason?: string }>;
     openLogsFolder: () => Promise<void>;
     clipboardWrite: (text: string) => Promise<void>;
+    getBackendPort: () => Promise<number>;
   };
   github: {
     getStatus: () => Promise<GhCliStatus>;
@@ -94,6 +95,7 @@ const electronAPI: ElectronAPI = {
       ipcRenderer.invoke('app:is-valid-project', projectPath),
     openLogsFolder: () => ipcRenderer.invoke('app:open-logs-folder') as Promise<void>,
     clipboardWrite: (text: string) => ipcRenderer.invoke('app:clipboard-write', text),
+    getBackendPort: () => ipcRenderer.invoke('app:get-backend-port') as Promise<number>,
   },
   github: {
     getStatus: () => ipcRenderer.invoke('github:get-status') as Promise<GhCliStatus>,

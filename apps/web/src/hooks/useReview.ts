@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import { useReviewStore } from '@/stores/useReviewStore';
 import {
@@ -29,6 +30,7 @@ const logger = createLogger('useReview');
  * Multiple calls will result in duplicate event handling.
  */
 export function useReviewSocket() {
+  const socketInitialized = useConnectionStore(state => state.socketInitialized);
   const addReviewStep = useReviewStore(state => state.addReviewStep);
   const setReviewResult = useReviewStore(state => state.setReviewResult);
   const setReviewError = useReviewStore(state => state.setReviewError);
@@ -80,6 +82,10 @@ export function useReviewSocket() {
   );
 
   useEffect(() => {
+    if (!socketInitialized) return;
+
+    const socket = getSocket();
+
     const onProgress = (data: ReviewProgressResponse) => {
       logger.debug(`Progress PR #${data.prNumber}: ${data.step.message}`);
       addReviewStep(data.prNumber, data.step);
@@ -112,7 +118,7 @@ export function useReviewSocket() {
       socket.off(ReviewEvents.COMPLETE, onComplete);
       socket.off(ReviewEvents.ERROR, onError);
     };
-  }, [addReviewStep, setReviewResult, setReviewError, setReviewStatus, fetchHistoryInternal]);
+  }, [socketInitialized, addReviewStep, setReviewResult, setReviewError, setReviewStatus, fetchHistoryInternal]);
 
   // Fetch history when repository changes
   useEffect(() => {

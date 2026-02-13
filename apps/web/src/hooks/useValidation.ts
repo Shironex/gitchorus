@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from 'react';
-import { socket } from '@/lib/socket';
+import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
+import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import { useValidationStore } from '@/stores/useValidationStore';
 import { useIssueStore } from '@/stores/useIssueStore';
@@ -38,6 +39,7 @@ const logger = createLogger('useValidation');
  * Multiple calls will result in duplicate event handling.
  */
 export function useValidationSocket() {
+  const socketInitialized = useConnectionStore(state => state.socketInitialized);
   const updateQueue = useValidationStore(state => state.updateQueue);
   const addStep = useValidationStore(state => state.addStep);
   const setResult = useValidationStore(state => state.setResult);
@@ -75,8 +77,12 @@ export function useValidationSocket() {
     [setHistory, setHistoryLoading]
   );
 
-  // Set up Socket.io listeners — exactly once
+  // Set up Socket.io listeners — deferred until socket is initialized
   useEffect(() => {
+    if (!socketInitialized) return;
+
+    const socket = getSocket();
+
     const onProgress = (data: ValidationProgressResponse) => {
       logger.debug(`Progress #${data.issueNumber}: ${data.step.message}`);
       addStep(data.issueNumber, data.step);
@@ -120,7 +126,7 @@ export function useValidationSocket() {
       socket.off(ValidationEvents.ERROR, onError);
       socket.off(ValidationEvents.QUEUE_UPDATE, onQueueUpdate);
     };
-  }, [addStep, setResult, setError, updateQueue, setValidationStatus, fetchHistoryInternal]);
+  }, [socketInitialized, addStep, setResult, setError, updateQueue, setValidationStatus, fetchHistoryInternal]);
 
   // Fetch history when repository changes
   useEffect(() => {

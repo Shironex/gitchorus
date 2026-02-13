@@ -46,6 +46,34 @@ pnpm --filter @gitchorus/shared build && pnpm --filter @gitchorus/desktop build
 
 - **[docs/packaging.md](docs/packaging.md)** — Electron packaging gotchas: asar unpacking, electron-builder schema rules, shell PATH resolution, Claude CLI detection, platform-specific notes
 
+## Dynamic ports & socket architecture
+
+The NestJS backend uses **dynamic port allocation** (`listen(0)`) — the OS assigns a free port at startup. This avoids port conflicts when running multiple Electron apps simultaneously.
+
+**Port flow:**
+
+```
+NestJS listen(0) → OS assigns port → backend-port.ts stores it
+  ├→ CSP headers (window.ts) — uses port for connect-src
+  ├→ CORS config — regex matches any localhost port
+  └→ IPC handler (app:get-backend-port) → preload → renderer → socket.ts
+```
+
+**Frontend socket is lazy-initialized.** The socket is NOT created at import time. Instead:
+
+1. `useAppInitialization` fetches the port via `window.electronAPI.app.getBackendPort()`
+2. Calls `initializeSocket(port)` to create the socket.io client
+3. Sets `socketInitialized` in the connection store
+4. Consumer hooks (`useValidationSocket`, `useReviewSocket`, `useSettings`) guard their effects with `if (!socketInitialized) return` — they only register socket listeners after the socket exists
+
+**Key files:**
+
+- `apps/desktop/src/main/backend-port.ts` — get/set backend port (avoids circular imports)
+- `apps/web/src/lib/socket.ts` — `initializeSocket(port)` / `getSocket()` (lazy singleton)
+- `apps/web/src/stores/useConnectionStore.ts` — `socketInitialized` flag gates consumer hooks
+
+**When adding new socket consumers:** Always import `getSocket` (not a bare `socket`), and guard `useEffect` bodies with `socketInitialized` from `useConnectionStore`.
+
 ## Key gotchas
 
 - **electron-builder.json** has strict schema validation — no unknown properties allowed, no `_comment` fields
@@ -53,6 +81,8 @@ pnpm --filter @gitchorus/shared build && pnpm --filter @gitchorus/desktop build
 - **Shell PATH** on macOS/Linux GUI apps is minimal — `shell-path.ts` resolves the full PATH at startup
 - **Claude auth on macOS** uses Keychain, not credential files — detection falls back to checking `oauthAccount` in config
 - The AI agent runs in **read-only mode** with `permissionMode: 'bypassPermissions'` — it can only use Read, Grep, Glob, and Bash tools
+- **Backend port is dynamic** — never hardcode port numbers. Use `getBackendPort()` on the main process side and `getSocket()` on the frontend side
+- **Vite dev server** runs on port **15173** (not the default 5173) to avoid conflicts with other projects
 
 ## Code style
 

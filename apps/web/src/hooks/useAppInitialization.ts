@@ -3,7 +3,7 @@ import { createLogger } from '@gitchorus/shared';
 import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
-import { connectSocket } from '@/lib/socket';
+import { connectSocket, initializeSocket } from '@/lib/socket';
 
 const logger = createLogger('AppInit');
 
@@ -37,6 +37,7 @@ export function useAppInitialization(): void {
   // Connection store (global socket connection state)
   const initConnectionListeners = useConnectionStore(state => state.initListeners);
   const cleanupConnectionListeners = useConnectionStore(state => state.cleanupListeners);
+  const setSocketInitialized = useConnectionStore(state => state.setSocketInitialized);
 
   // Update store (uses IPC, not socket -- init separately)
   const initUpdateListeners = useUpdateStore(state => state.initListeners);
@@ -48,6 +49,18 @@ export function useAppInitialization(): void {
     const init = async () => {
       try {
         logger.info('Initializing app...');
+
+        // Get the dynamically assigned backend port via IPC
+        const port = await window.electronAPI?.app?.getBackendPort();
+        if (!port) {
+          throw new Error('Failed to get backend port from main process');
+        }
+        logger.info(`Backend port: ${port}`);
+
+        // Initialize socket with the dynamic port
+        initializeSocket(port);
+        setSocketInitialized();
+
         // Register connection listeners BEFORE connecting
         initConnectionListeners();
         logger.info('All listeners registered');
@@ -71,5 +84,5 @@ export function useAppInitialization(): void {
       cleanupConnectionListeners();
       cleanupUpdateListeners?.();
     };
-  }, [initConnectionListeners, cleanupConnectionListeners, initUpdateListeners]);
+  }, [initConnectionListeners, cleanupConnectionListeners, setSocketInitialized, initUpdateListeners]);
 }

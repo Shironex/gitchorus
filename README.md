@@ -171,6 +171,7 @@ gitchorus/
 - **Read-only analysis** — The AI agent never writes code or makes changes, only reads and analyzes
 - **Evidence-backed** — Every finding includes actual code references, not generic advice
 - **Local-first** — All history and settings stored locally via electron-store
+- **Dynamic ports** — The NestJS backend binds to an OS-assigned port at startup, avoiding conflicts with other applications
 
 ## Tech Stack
 
