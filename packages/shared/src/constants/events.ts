@@ -76,6 +76,7 @@ export const ReviewEvents = {
   HISTORY_DELETE: 'review:history-delete',
   CHAIN: 'review:chain',
   LOG_ENTRIES: 'review:log-entries',
+  IMPORT_GITHUB_REVIEW: 'review:import-github',
 } as const;
 
 // ============================================

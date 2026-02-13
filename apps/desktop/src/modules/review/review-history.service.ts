@@ -156,6 +156,57 @@ export class ReviewHistoryService {
   }
 
   /**
+   * Import a review from GitHub review data.
+   * Creates a ReviewHistoryEntry with parsed quality score and verdict
+   * so that re-reviews can chain from it on a different machine.
+   */
+  importFromGithub(params: {
+    prNumber: number;
+    prTitle: string;
+    repositoryFullName: string;
+    qualityScore: number;
+    verdict: string;
+    reviewedAt: string;
+    headCommitSha?: string;
+  }): ReviewHistoryEntry {
+    // Check if we already have a local entry for this PR at this timestamp
+    const existing = this.list({
+      repositoryFullName: params.repositoryFullName,
+      prNumber: params.prNumber,
+    });
+    const alreadyImported = existing.find(e => e.reviewedAt === params.reviewedAt);
+    if (alreadyImported) {
+      logger.info(
+        `Review for PR #${params.prNumber} already exists locally (imported or ran), skipping import`
+      );
+      return alreadyImported;
+    }
+
+    const result: ReviewResult = {
+      prNumber: params.prNumber,
+      prTitle: params.prTitle,
+      repositoryFullName: params.repositoryFullName,
+      findings: [],
+      verdict: params.verdict,
+      qualityScore: params.qualityScore,
+      reviewedAt: params.reviewedAt,
+      providerType: 'claude',
+      model: 'unknown',
+      costUsd: 0,
+      durationMs: 0,
+      headCommitSha: params.headCommitSha,
+      reviewSequence: 1,
+      isImported: true,
+    };
+
+    const entry = this.save(result);
+    logger.info(
+      `Imported GitHub review for PR #${params.prNumber} (${params.repositoryFullName}), score: ${params.qualityScore}/10`
+    );
+    return entry;
+  }
+
+  /**
    * Clear all history entries, optionally filtered by repository.
    */
   clear(repositoryFullName?: string): void {

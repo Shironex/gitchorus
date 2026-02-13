@@ -404,6 +404,29 @@ export interface ReviewChainResponse {
 }
 
 // ============================================
+// Review Import Payloads
+// ============================================
+
+/**
+ * Payload to import a previously posted GitChorus review from GitHub.
+ * Checks the PR's reviews for the GitChorus marker and imports the most recent one.
+ */
+export interface ReviewImportGithubPayload {
+  projectPath: string;
+  prNumber: number;
+  repositoryFullName: string;
+}
+
+/**
+ * Response for importing a GitHub review
+ */
+export interface ReviewImportGithubResponse {
+  /** The imported history entry, or null if no GitChorus review was found */
+  entry: ReviewHistoryEntry | null;
+  error?: string;
+}
+
+// ============================================
 // Validation Payloads
 // ============================================
 

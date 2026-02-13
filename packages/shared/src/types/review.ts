@@ -111,6 +111,8 @@ export interface ReviewResult {
   previousScore?: number;
   /** AI-determined status of findings from the previous review */
   addressedFindings?: AddressedFindingSummary[];
+  /** Whether this result was imported from a GitHub review rather than run locally */
+  isImported?: boolean;
 }
 
 // ============================================

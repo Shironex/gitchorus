@@ -716,6 +716,7 @@ export class ClaudeAgentProvider {
           if (message.subtype === 'success') {
             resultMessage = message as SDKResultSuccess;
             logger.info('Agent query completed successfully');
+            break;
           } else {
             const errorResult = message as SDKResultError;
             if (errorResult.subtype === 'error_max_turns') {
@@ -900,6 +901,7 @@ export class ClaudeAgentProvider {
           if (message.subtype === 'success') {
             resultMessage = message as SDKResultSuccess;
             logger.info('Review agent query completed successfully');
+            break;
           } else {
             const errorResult = message as SDKResultError;
             if (errorResult.subtype === 'error_max_turns') {

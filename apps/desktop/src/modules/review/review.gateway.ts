@@ -12,6 +12,7 @@ import { Server, Socket } from 'socket.io';
 import { WsThrottlerGuard } from '../shared/ws-throttler.guard';
 import {
   ReviewEvents,
+  GITCHORUS_REVIEW_MARKER,
   createLogger,
   extractErrorMessage,
   type ReviewStartPayload,
@@ -30,11 +31,14 @@ import {
   type ReviewChainResponse,
   type ReviewLogEntriesPayload,
   type ReviewLogEntriesResponse,
+  type ReviewImportGithubPayload,
+  type ReviewImportGithubResponse,
 } from '@gitchorus/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 import { ReviewService, InternalReviewEvents } from './review.service';
 import { ReviewHistoryService } from './review-history.service';
 import { ReviewLogService } from './review-log.service';
+import { GithubService } from '../git/github.service';
 
 /**
  * WebSocket gateway for review events.
@@ -55,7 +59,8 @@ export class ReviewGateway implements OnGatewayInit {
   constructor(
     private readonly reviewService: ReviewService,
     private readonly historyService: ReviewHistoryService,
-    private readonly logService: ReviewLogService
+    private readonly logService: ReviewLogService,
+    private readonly githubService: GithubService
   ) {}
 
   afterInit(): void {
@@ -237,6 +242,84 @@ export class ReviewGateway implements OnGatewayInit {
       const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error getting review chain: ${message}`);
       return { chain: [], error: message };
+    }
+  }
+
+  // ============================================
+  // GitHub Import handler
+  // ============================================
+
+  /**
+   * Handle request to import a previously posted GitChorus review from GitHub.
+   * Checks the PR's reviews for the GitChorus marker, parses quality score and
+   * verdict, and imports it to local history so re-reviews can chain from it.
+   */
+  @SubscribeMessage(ReviewEvents.IMPORT_GITHUB_REVIEW)
+  async handleImportGithubReview(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: ReviewImportGithubPayload
+  ): Promise<ReviewImportGithubResponse> {
+    try {
+      const { projectPath, prNumber, repositoryFullName } = payload;
+
+      if (!projectPath || !prNumber || !repositoryFullName) {
+        return { entry: null, error: 'projectPath, prNumber, and repositoryFullName are required' };
+      }
+
+      // Check if we already have a local entry for this PR
+      const existing = this.historyService.getLatestForPR(repositoryFullName, prNumber);
+      if (existing) {
+        return { entry: existing };
+      }
+
+      // Fetch reviews from GitHub
+      const reviews = await this.githubService.listPrReviews(projectPath, prNumber);
+
+      // Find the most recent GitChorus review
+      const gitchorusReviews = reviews
+        .filter(r => r.body.includes(GITCHORUS_REVIEW_MARKER))
+        .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+      if (gitchorusReviews.length === 0) {
+        return { entry: null };
+      }
+
+      const latestReview = gitchorusReviews[0];
+
+      // Parse quality score from body: **Quality Score:** X/10
+      const scoreMatch = latestReview.body.match(/\*\*Quality Score:\*\* (\d+)\/10/);
+      const rawScore = scoreMatch ? parseInt(scoreMatch[1], 10) : 5;
+      const qualityScore = Math.max(1, Math.min(10, rawScore));
+
+      // Parse verdict: text between "## GitChorus AI Review\n\n" and "\n\n**Quality Score:**"
+      let verdict = 'Imported from GitHub';
+      const verdictMatch = latestReview.body.match(
+        /## GitChorus AI Review\n\n([\s\S]*?)\n\n\*\*Quality Score:\*\*/
+      );
+      if (verdictMatch) {
+        verdict = verdictMatch[1].trim();
+      }
+
+      // Get PR title for the history entry
+      const pr = await this.githubService.getPullRequest(projectPath, prNumber);
+      const prTitle = pr?.title || `PR #${prNumber}`;
+
+      // Import to local history
+      const entry = this.historyService.importFromGithub({
+        prNumber,
+        prTitle,
+        repositoryFullName,
+        qualityScore,
+        verdict,
+        reviewedAt: latestReview.submittedAt,
+        headCommitSha: latestReview.commitId || undefined,
+      });
+
+      return { entry };
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error importing GitHub review: ${message}`);
+      return { entry: null, error: message };
     }
   }
 

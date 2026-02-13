@@ -22,6 +22,8 @@ import {
   type ReviewHistoryDeletePayload,
   type ReviewChainPayload,
   type ReviewChainResponse,
+  type ReviewImportGithubPayload,
+  type ReviewImportGithubResponse,
 } from '@gitchorus/shared';
 import {
   formatReviewSummaryBody,
@@ -361,6 +363,56 @@ export function useReview() {
     [removeHistoryEntry]
   );
 
+  /**
+   * Check GitHub for a previously posted GitChorus review and import it to local history.
+   * Returns the imported entry or null if no GitChorus review was found.
+   */
+  const importGithubReview = useCallback(
+    async (prNumber: number, repositoryFullName: string) => {
+      if (!repositoryPath) return null;
+
+      try {
+        const response = await emitAsync<ReviewImportGithubPayload, ReviewImportGithubResponse>(
+          ReviewEvents.IMPORT_GITHUB_REVIEW,
+          {
+            projectPath: repositoryPath,
+            prNumber,
+            repositoryFullName,
+          },
+          { timeout: 30000 }
+        );
+
+        if (response.error) {
+          logger.warn('Error importing GitHub review:', response.error);
+          return null;
+        }
+
+        if (response.entry) {
+          logger.info(
+            `Imported GitHub review for PR #${prNumber}: score ${response.entry.qualityScore}/10`
+          );
+          // Hydrate the store with the imported entry
+          const setResult = useReviewStore.getState().setReviewResult;
+          const setStatus = useReviewStore.getState().setReviewStatus;
+          const currentHistory = useReviewStore.getState().reviewHistory;
+          setResult(prNumber, response.entry);
+          setStatus(prNumber, 'completed');
+          // Add to history if not already present
+          if (!currentHistory.find(e => e.id === response.entry!.id)) {
+            setReviewHistory([response.entry, ...currentHistory]);
+          }
+        }
+
+        return response.entry;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Failed to import GitHub review';
+        logger.warn('Failed to import GitHub review:', message);
+        return null;
+      }
+    },
+    [repositoryPath, setReviewHistory]
+  );
+
   return {
     startReview,
     startReReview,
@@ -369,5 +421,6 @@ export function useReview() {
     fetchHistory,
     fetchReviewChain,
     deleteHistoryEntry,
+    importGithubReview,
   };
 }
