@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { execFile, ExecException } from 'child_process';
+import { execFile, spawn as cpSpawn, ExecException } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
@@ -595,6 +595,9 @@ export class GithubService {
     skippedComments: number;
     skippedDetails?: Array<{ path: string; line: number; body: string; reason: string }>;
   }> {
+    this.logger.debug(
+      `createPrReview: PR #${prNumber}, event=${event}, commentsCount=${comments.length}`
+    );
     const repoInfo = await this.getRepoInfo(repoPath);
     if (!repoInfo) {
       throw new Error('Could not determine repository info for PR review');
@@ -669,9 +672,18 @@ export class GithubService {
     }
   ): Promise<{ url: string; postedComments: number; skippedComments: number }> {
     const inputJson = JSON.stringify(payload);
+    this.logger.debug(
+      `createPrReviewWithStdin: PR #${prNumber}, event=${payload.event}, comments=${payload.comments.length}, payloadSize=${inputJson.length}`
+    );
 
     try {
       const result = await this.spawnGhApiWithStdin(repoPath, repoFullName, prNumber, inputJson);
+      this.logger.debug(
+        `spawnGhApiWithStdin response: code=${result.code}, stdoutLen=${result.stdout.length}, stderrLen=${result.stderr.length}`
+      );
+      if (result.stderr) {
+        this.logger.debug(`spawnGhApiWithStdin stderr: ${result.stderr.substring(0, 500)}`);
+      }
 
       if (result.code !== 0) {
         // Check for 422 (validation error -- inline comment on line not in diff)
@@ -698,6 +710,18 @@ export class GithubService {
 
       // Parse response
       const data = JSON.parse(result.stdout);
+      this.logger.debug(
+        `PR review API response: id=${data.id}, state=${data.state}, url=${data.html_url}`
+      );
+
+      // Defensive: catch reviews stuck in PENDING state
+      if (data.state === 'PENDING') {
+        throw new Error(
+          `Failed to create PR review: review was created in PENDING state instead of ${payload.event}. ` +
+            `This usually indicates the API did not process the event field correctly.`
+        );
+      }
+
       const url =
         data.html_url ||
         `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
@@ -727,15 +751,22 @@ export class GithubService {
     prNumber: number,
     inputJson: string
   ): Promise<{ stdout: string; stderr: string; code: number }> {
-    const child = require('child_process').spawn(
-      'gh',
-      ['api', `repos/${repoFullName}/pulls/${prNumber}/reviews`, '-X', 'POST', '--input', '-'],
-      {
-        cwd: repoPath,
-        env: { ...process.env, ...GH_ENV },
-        stdio: ['pipe', 'pipe', 'pipe'],
-      }
-    );
+    const args = [
+      'api',
+      `repos/${repoFullName}/pulls/${prNumber}/reviews`,
+      '-X',
+      'POST',
+      '-H',
+      'Content-Type: application/json',
+      '--input',
+      '-',
+    ];
+    this.logger.debug(`spawnGhApiWithStdin: spawning gh ${args.join(' ')}`);
+    const child = cpSpawn('gh', args, {
+      cwd: repoPath,
+      env: { ...process.env, ...GH_ENV },
+      stdio: ['pipe', 'pipe', 'pipe'],
+    });
 
     // Write JSON to stdin
     child.stdin.write(inputJson);
@@ -792,6 +823,15 @@ export class GithubService {
     ]);
 
     const data = JSON.parse(stdout);
+
+    // Defensive: catch reviews stuck in PENDING state
+    if (data.state === 'PENDING') {
+      throw new Error(
+        `Failed to create PR review: review was created in PENDING state instead of ${event}. ` +
+          `This usually indicates the API did not process the event field correctly.`
+      );
+    }
+
     const url =
       data.html_url ||
       `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
@@ -968,9 +1008,7 @@ export class GithubService {
 
     const { stdout } = await this.execGh(repoPath, [
       'api',
-      `repos/${repoInfo.fullName}/pulls/${prNumber}/reviews`,
-      '-f',
-      'per_page=100',
+      `repos/${repoInfo.fullName}/pulls/${prNumber}/reviews?per_page=100`,
       '--jq',
       '[.[] | {id, body, state, commit_id, submitted_at, user: .user.login, html_url}]',
     ]);

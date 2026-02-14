@@ -10,7 +10,7 @@
   "private": true,
   "main": "dist/main/index.js",
   "scripts": {
-    "dev": "tsc -p tsconfig.build.json && cross-env NODE_ENV=development electron .",
+    "dev": "tsc -p tsconfig.build.json && cross-env NODE_ENV=development LOG_LEVEL=debug electron .",
     "build:dev": "tsc -p tsconfig.build.json",
     "build": "tsc -p tsconfig.build.json && node scripts/copy-renderer.mjs",
     "typecheck": "tsc -p tsconfig.build.json --noEmit",
