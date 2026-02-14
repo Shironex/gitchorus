@@ -1018,7 +1018,7 @@ describe('GithubService', () => {
         service.createPrReview(repoPath, 1, 'Changes needed', 'REQUEST_CHANGES', [
           { path: 'src/file.ts', line: 2, body: 'Fix this' },
         ])
-      ).rejects.toThrow('PR review was created in PENDING state instead of REQUEST_CHANGES');
+      ).rejects.toThrow('review was created in PENDING state instead of REQUEST_CHANGES');
     });
 
     it('should fallback to summary-only review on 422 error', async () => {
