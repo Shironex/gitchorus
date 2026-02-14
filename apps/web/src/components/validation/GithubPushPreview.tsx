@@ -13,12 +13,14 @@ import {
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { Markdown } from '@/components/ui/markdown';
 import { useValidationStore, type PushStatus } from '@/stores/useValidationStore';
-import type {
-  ValidationResult,
-  BugValidation,
-  FeatureValidation,
-  IssueComment,
-} from '@gitchorus/shared';
+import {
+  GITCHORUS_VALIDATION_MARKER,
+  formatValidationCommentBody,
+  buildFeatureDetailsText,
+  type SectionToggles,
+  type SectionEdits,
+} from '@/lib/validationFormatter';
+import type { ValidationResult, FeatureValidation, IssueComment } from '@gitchorus/shared';
 
 // ============================================
 // Props
@@ -32,168 +34,6 @@ interface GithubPushPreviewProps {
   onPush: (issueNumber: number, body: string) => Promise<string | null>;
   onUpdate: (issueNumber: number, commentId: string, body: string) => Promise<string | null>;
   onListComments: (issueNumber: number) => Promise<IssueComment[]>;
-}
-
-// ============================================
-// Section toggle state
-// ============================================
-
-interface SectionToggles {
-  verdict: boolean;
-  affectedFiles: boolean;
-  approach: boolean;
-  reasoning: boolean;
-  featureDetails: boolean;
-}
-
-// ============================================
-// Section edit overrides
-// ============================================
-
-interface SectionEdits {
-  approach?: string;
-  reasoning?: string;
-  featureDetails?: string;
-}
-
-// ============================================
-// Constants
-// ============================================
-
-const GITCHORUS_MARKER = '<!-- gitchorus-validation -->';
-
-// ============================================
-// Build comment body
-// ============================================
-
-function buildCommentBody(
-  result: ValidationResult,
-  toggles: SectionToggles,
-  sectionEdits?: SectionEdits
-): string {
-  const isFeature = result.issueType === 'feature';
-  const lines: string[] = [GITCHORUS_MARKER];
-
-  // Header
-  const typeLabel = isFeature ? 'Feature Feasibility' : 'Bug Validation';
-  lines.push(
-    `## ${typeLabel}: ${result.verdict.charAt(0).toUpperCase() + result.verdict.slice(1)} (${result.confidence}% confidence)`
-  );
-  lines.push('');
-
-  // Verdict section
-  if (toggles.verdict) {
-    const complexityLabel = result.complexity.replace('-', ' ');
-    lines.push(`**Issue type:** ${isFeature ? 'Feature Request' : 'Bug Report'}  `);
-    lines.push(`**Complexity:** ${complexityLabel}  `);
-
-    if (isFeature && toggles.featureDetails) {
-      const feat = result as FeatureValidation;
-      if (feat.effortEstimate) {
-        lines.push(`**Effort estimate:** ${feat.effortEstimate}  `);
-      }
-    }
-    lines.push('');
-  }
-
-  // Approach
-  if (toggles.approach) {
-    const approachText = sectionEdits?.approach ?? result.suggestedApproach;
-    lines.push('### Suggested Approach');
-    lines.push('');
-    lines.push(approachText);
-    lines.push('');
-  }
-
-  // Feature details
-  if (isFeature && toggles.featureDetails) {
-    const feat = result as FeatureValidation;
-
-    if (sectionEdits?.featureDetails !== undefined) {
-      // User edited the combined prerequisites & conflicts text
-      lines.push('### Prerequisites & Conflicts');
-      lines.push('');
-      lines.push(sectionEdits.featureDetails);
-      lines.push('');
-    } else {
-      if (feat.prerequisites.length > 0) {
-        lines.push('### Prerequisites');
-        lines.push('');
-        for (const prereq of feat.prerequisites) {
-          lines.push(`- ${prereq}`);
-        }
-        lines.push('');
-      }
-
-      if (feat.potentialConflicts.length > 0) {
-        lines.push('### Potential Conflicts');
-        lines.push('');
-        for (const conflict of feat.potentialConflicts) {
-          lines.push(`- ${conflict}`);
-        }
-        lines.push('');
-      }
-    }
-  }
-
-  // Affected files
-  if (toggles.affectedFiles && result.affectedFiles.length > 0) {
-    lines.push('<details>');
-    lines.push(
-      `<summary><strong>Affected Files (${result.affectedFiles.length})</strong></summary>`
-    );
-    lines.push('');
-    for (const file of result.affectedFiles) {
-      lines.push(`- \`${file.path}\` - ${file.reason}`);
-      if (file.snippet) {
-        lines.push('  ```');
-        lines.push(`  ${file.snippet}`);
-        lines.push('  ```');
-      }
-    }
-    lines.push('</details>');
-    lines.push('');
-  }
-
-  // Reasoning
-  if (toggles.reasoning) {
-    const reasoningText =
-      sectionEdits?.reasoning ?? (result as BugValidation | FeatureValidation).reasoning;
-    lines.push('<details>');
-    lines.push('<summary><strong>Reasoning</strong></summary>');
-    lines.push('');
-    lines.push(reasoningText);
-    lines.push('</details>');
-    lines.push('');
-  }
-
-  // Footer
-  lines.push('---');
-  lines.push('*via [GitChorus](https://github.com/Shironex/gitchorus)*');
-
-  return lines.join('\n');
-}
-
-// ============================================
-// Helper: build default feature details text from result
-// ============================================
-
-function buildFeatureDetailsText(result: FeatureValidation): string {
-  const lines: string[] = [];
-  if (result.prerequisites.length > 0) {
-    lines.push('**Prerequisites:**');
-    for (const prereq of result.prerequisites) {
-      lines.push(`- ${prereq}`);
-    }
-  }
-  if (result.potentialConflicts.length > 0) {
-    if (lines.length > 0) lines.push('');
-    lines.push('**Potential Conflicts:**');
-    for (const conflict of result.potentialConflicts) {
-      lines.push(`- ${conflict}`);
-    }
-  }
-  return lines.join('\n');
 }
 
 // ============================================
@@ -268,7 +108,7 @@ export default function GithubPushPreview({
 
   // Build comment body with current toggles and edits
   const commentBody = useMemo(
-    () => buildCommentBody(result, toggles, sectionEdits),
+    () => formatValidationCommentBody(result, toggles, sectionEdits),
     [result, toggles, sectionEdits]
   );
 
@@ -277,7 +117,7 @@ export default function GithubPushPreview({
     setCheckingPrior(true);
     try {
       const comments = await onListComments(issueNumber);
-      const gitchorusComment = comments.find(c => c.body.includes(GITCHORUS_MARKER));
+      const gitchorusComment = comments.find(c => c.body.includes(GITCHORUS_VALIDATION_MARKER));
       if (gitchorusComment) {
         setPriorComment(gitchorusComment);
       }
@@ -437,10 +277,7 @@ export default function GithubPushPreview({
                   >
                     <textarea
                       className="w-full min-h-[80px] p-2.5 text-xs font-mono bg-muted/50 border rounded-md resize-y focus:outline-none focus:ring-1 focus:ring-primary"
-                      value={
-                        sectionEdits.reasoning ??
-                        (result as BugValidation | FeatureValidation).reasoning
-                      }
+                      value={sectionEdits.reasoning ?? result.reasoning}
                       onChange={e => handleSectionEdit('reasoning', e.target.value)}
                     />
                   </SectionRow>
