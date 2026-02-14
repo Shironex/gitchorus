@@ -1101,6 +1101,106 @@ describe('GithubService', () => {
     });
   });
 
+  // ==================== listPrReviews ====================
+
+  describe('listPrReviews', () => {
+    it('should use GET (not POST) to list reviews', async () => {
+      // getRepoInfo
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          name: 'my-repo',
+          nameWithOwner: 'user/my-repo',
+          url: 'https://github.com/user/my-repo',
+          defaultBranchRef: { name: 'main' },
+          visibility: 'PUBLIC',
+        }),
+        stderr: '',
+      });
+      // listPrReviews
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify([
+          {
+            id: 1,
+            body: 'Looks good',
+            state: 'COMMENTED',
+            commit_id: 'abc123',
+            submitted_at: '2024-01-01T00:00:00Z',
+            user: { login: 'reviewer' },
+            html_url: 'https://github.com/user/my-repo/pull/1#pullrequestreview-1',
+          },
+        ]),
+        stderr: '',
+      });
+
+      await service.listPrReviews('/repo', 1);
+
+      const args = mockExecFileAsync.mock.calls[1][1] as string[];
+      // Must NOT use -f flag (which causes gh to default to POST)
+      expect(args).not.toContain('-f');
+      // Must use query string for per_page instead
+      expect(args.some((a: string) => a.includes('per_page=100'))).toBe(true);
+      // Must NOT use -X POST
+      expect(args).not.toContain('POST');
+    });
+
+    it('should return mapped review data', async () => {
+      // getRepoInfo
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          name: 'my-repo',
+          nameWithOwner: 'user/my-repo',
+          url: 'https://github.com/user/my-repo',
+          defaultBranchRef: { name: 'main' },
+          visibility: 'PUBLIC',
+        }),
+        stderr: '',
+      });
+      // listPrReviews - jq-processed output
+      const jqOutput = [
+        {
+          id: 1,
+          body: 'Looks good',
+          state: 'COMMENTED',
+          commit_id: 'abc123',
+          submitted_at: '2024-01-01T00:00:00Z',
+          user: 'reviewer',
+          html_url: 'https://github.com/user/my-repo/pull/1#pullrequestreview-1',
+        },
+      ];
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify(jqOutput),
+        stderr: '',
+      });
+
+      const result = await service.listPrReviews('/repo', 1);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe(1);
+      expect(result[0].state).toBe('COMMENTED');
+      expect(result[0].user).toBe('reviewer');
+    });
+
+    it('should return empty array for empty response', async () => {
+      // getRepoInfo
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify({
+          name: 'my-repo',
+          nameWithOwner: 'user/my-repo',
+          url: 'https://github.com/user/my-repo',
+          defaultBranchRef: { name: 'main' },
+          visibility: 'PUBLIC',
+        }),
+        stderr: '',
+      });
+      // listPrReviews - empty
+      mockExecFileAsync.mockResolvedValueOnce({ stdout: '  \n', stderr: '' });
+
+      const result = await service.listPrReviews('/repo', 1);
+
+      expect(result).toEqual([]);
+    });
+  });
+
   // ==================== parseDiffValidLines ====================
 
   describe('parseDiffValidLines', () => {
