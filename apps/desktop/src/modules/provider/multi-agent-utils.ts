@@ -13,22 +13,23 @@
 import type { ReviewFinding, ReviewSeverity, SubAgentScore } from '@gitchorus/shared';
 
 /**
- * Severity level ordering for comparison.
+ * Ordered severity levels — single source of truth for ordering and bumping.
  */
-const SEVERITY_ORDER: Record<ReviewSeverity, number> = {
-  nit: 0,
-  minor: 1,
-  major: 2,
-  critical: 3,
-};
+const SEVERITY_LEVELS: ReviewSeverity[] = ['nit', 'minor', 'major', 'critical'];
+
+/**
+ * Severity level ordering for comparison (derived from SEVERITY_LEVELS).
+ */
+const SEVERITY_ORDER: Record<ReviewSeverity, number> = Object.fromEntries(
+  SEVERITY_LEVELS.map((level, index) => [level, index])
+) as Record<ReviewSeverity, number>;
 
 /**
  * Bump a severity level up by one.
  */
 function bumpSeverity(severity: ReviewSeverity): ReviewSeverity {
-  const levels: ReviewSeverity[] = ['nit', 'minor', 'major', 'critical'];
-  const idx = levels.indexOf(severity);
-  return levels[Math.min(idx + 1, levels.length - 1)];
+  const idx = SEVERITY_LEVELS.indexOf(severity);
+  return SEVERITY_LEVELS[Math.min(idx + 1, SEVERITY_LEVELS.length - 1)];
 }
 
 /**
@@ -36,7 +37,8 @@ function bumpSeverity(severity: ReviewSeverity): ReviewSeverity {
  * Lines 1-5 -> 1, lines 6-10 -> 6, etc.
  */
 function lineGroup(line: number): number {
-  return Math.floor((line - 1) / 5) * 5 + 1;
+  const safeLine = Math.max(1, line);
+  return Math.floor((safeLine - 1) / 5) * 5 + 1;
 }
 
 /**
@@ -64,7 +66,7 @@ export function deduplicateFindings(findings: ReviewFinding[]): ReviewFinding[] 
     }
 
     // Multiple agents flagged the same area — keep most detailed, bump severity
-    const sorted = group.sort((a, b) => {
+    const sorted = [...group].sort((a, b) => {
       // Prefer higher severity
       const sevDiff = SEVERITY_ORDER[b.severity] - SEVERITY_ORDER[a.severity];
       if (sevDiff !== 0) return sevDiff;

@@ -11,6 +11,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Markdown } from '@/components/ui/markdown';
 import type { ReviewResult, ReviewSeverity, SubAgentScore } from '@gitchorus/shared';
+import { AGENT_FULL_LABELS } from '@/lib/agent-display';
 
 interface ReviewSummaryProps {
   result: ReviewResult;
@@ -81,15 +82,7 @@ function ScoreDelta({ previous, current }: { previous: number; current: number }
   );
 }
 
-/**
- * Agent display labels
- */
-const AGENT_LABELS: Record<string, string> = {
-  context: 'Context',
-  'code-quality': 'Code Quality',
-  'code-patterns': 'Code Patterns',
-  'security-performance': 'Security & Perf',
-};
+// Agent labels imported from @/lib/agent-display (AGENT_FULL_LABELS)
 
 /**
  * Expandable sub-agent score breakdown for multi-agent reviews.
@@ -113,7 +106,7 @@ function SubAgentScoreBreakdown({ scores }: { scores: SubAgentScore[] }) {
           {scores.map(agentScore => (
             <div key={agentScore.agent} className="flex items-center gap-2">
               <span className="text-xs text-muted-foreground w-28 shrink-0">
-                {AGENT_LABELS[agentScore.agent] || agentScore.agent}
+                {AGENT_FULL_LABELS[agentScore.agent] || agentScore.agent}
               </span>
               {agentScore.weight > 0 ? (
                 <>
@@ -127,7 +120,9 @@ function SubAgentScoreBreakdown({ scores }: { scores: SubAgentScore[] }) {
                             ? 'bg-amber-500'
                             : 'bg-red-500'
                       )}
-                      style={{ width: `${(agentScore.score / 10) * 100}%` }}
+                      style={{
+                        width: `${Math.min(100, Math.max(0, (agentScore.score / 10) * 100))}%`,
+                      }}
                     />
                   </div>
                   <span className="text-xs font-medium text-foreground w-8 text-right">

@@ -2,12 +2,8 @@ import { FileCode2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Markdown } from '@/components/ui/markdown';
 import { getLanguageForFile } from '@/lib/reviewFormatter';
-import type {
-  ReviewFinding,
-  ReviewSeverity,
-  ReviewCategory,
-  ReviewAgentType,
-} from '@gitchorus/shared';
+import type { ReviewFinding, ReviewSeverity, ReviewCategory } from '@gitchorus/shared';
+import { AGENT_BADGE_COLORS, AGENT_SHORT_LABELS } from '@/lib/agent-display';
 
 interface FindingCardProps {
   finding: ReviewFinding;
@@ -39,23 +35,7 @@ const categoryColors: Record<ReviewCategory, string> = {
   'codebase-fit': 'bg-amber-500/5 text-amber-500 dark:text-amber-300 border-amber-500/15',
 };
 
-// ============================================
-// Agent source badge colors (multi-agent mode)
-// ============================================
-
-const agentColors: Record<ReviewAgentType, string> = {
-  context: 'bg-slate-500/5 text-slate-500 dark:text-slate-300 border-slate-500/15',
-  'code-quality': 'bg-cyan-500/5 text-cyan-500 dark:text-cyan-300 border-cyan-500/15',
-  'code-patterns': 'bg-indigo-500/5 text-indigo-500 dark:text-indigo-300 border-indigo-500/15',
-  'security-performance': 'bg-rose-500/5 text-rose-500 dark:text-rose-300 border-rose-500/15',
-};
-
-const agentLabels: Record<ReviewAgentType, string> = {
-  context: 'Context',
-  'code-quality': 'Quality',
-  'code-patterns': 'Patterns',
-  'security-performance': 'Sec & Perf',
-};
+// Agent badge colors and labels imported from @/lib/agent-display
 
 /**
  * Individual finding card with severity/category badges, code snippet,
@@ -135,10 +115,10 @@ export function FindingCard({ finding, index, selected, onToggle }: FindingCardP
                 <span
                   className={cn(
                     'text-[10px] px-1.5 py-0.5 rounded-full border font-medium',
-                    agentColors[finding.agentSource]
+                    AGENT_BADGE_COLORS[finding.agentSource]
                   )}
                 >
-                  {agentLabels[finding.agentSource]}
+                  {AGENT_SHORT_LABELS[finding.agentSource]}
                 </span>
               )}
             </div>

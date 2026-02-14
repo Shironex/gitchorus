@@ -242,6 +242,4 @@ export interface ReviewParams {
   isReReview?: boolean;
   /** Diff of changes since the previous review */
   incrementalDiff?: string;
-  /** Review mode: single-agent or multi-agent pipeline */
-  reviewMode?: ReviewMode;
 }
