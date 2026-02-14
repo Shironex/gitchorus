@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventEmitter } from 'events';
 import { GithubService } from './github.service';
 
 // The promisified execFile mock function.
@@ -14,6 +15,7 @@ jest.mock('util', () => {
 
 jest.mock('child_process', () => ({
   execFile: jest.fn(),
+  spawn: jest.fn(),
 }));
 
 jest.mock('fs', () => ({
@@ -21,6 +23,42 @@ jest.mock('fs', () => ({
 }));
 
 const mockExistsSync = require('fs').existsSync as jest.Mock;
+const mockSpawn = require('child_process').spawn as jest.Mock;
+
+/**
+ * Creates a mock child process for testing spawnGhApiWithStdin.
+ * Emits stdout/stderr data and close/error events asynchronously.
+ */
+function createMockChildProcess(opts: {
+  stdout?: string;
+  stderr?: string;
+  code?: number;
+  error?: Error;
+}) {
+  const proc = new EventEmitter() as EventEmitter & {
+    stdin: { write: jest.Mock; end: jest.Mock };
+    stdout: EventEmitter;
+    stderr: EventEmitter;
+    kill: jest.Mock;
+  };
+  proc.stdin = { write: jest.fn(), end: jest.fn() };
+  proc.stdout = new EventEmitter();
+  proc.stderr = new EventEmitter();
+  proc.kill = jest.fn();
+
+  // Schedule events asynchronously so the Promise is set up before they fire
+  process.nextTick(() => {
+    if (opts.error) {
+      proc.emit('error', opts.error);
+      return;
+    }
+    if (opts.stdout) proc.stdout.emit('data', Buffer.from(opts.stdout));
+    if (opts.stderr) proc.stderr.emit('data', Buffer.from(opts.stderr));
+    proc.emit('close', opts.code ?? 0);
+  });
+
+  return proc;
+}
 
 describe('GithubService', () => {
   let service: GithubService;
@@ -34,6 +72,7 @@ describe('GithubService', () => {
 
     service = module.get<GithubService>(GithubService);
     mockExecFileAsync.mockReset();
+    mockSpawn.mockReset();
     mockExistsSync.mockReset().mockReturnValue(false);
 
     // Clear the internal cache between tests
@@ -880,6 +919,185 @@ describe('GithubService', () => {
       await expect(service.getCommitDiff('/repo', 'abc123', 'not valid')).rejects.toThrow(
         'Invalid commit SHA format'
       );
+    });
+  });
+
+  // ==================== createPrReview (with spawnGhApiWithStdin) ====================
+
+  describe('createPrReview', () => {
+    const repoPath = '/repo';
+    const repoInfo = {
+      name: 'my-repo',
+      nameWithOwner: 'user/my-repo',
+      description: 'A repo',
+      url: 'https://github.com/user/my-repo',
+      defaultBranchRef: { name: 'main' },
+      visibility: 'PUBLIC',
+      isFork: false,
+      isArchived: false,
+    };
+    const simpleDiff = [
+      'diff --git a/src/file.ts b/src/file.ts',
+      '--- a/src/file.ts',
+      '+++ b/src/file.ts',
+      '@@ -1,3 +1,4 @@',
+      ' line1',
+      '+added',
+      ' line2',
+      ' line3',
+    ].join('\n');
+
+    function mockRepoInfoAndDiff() {
+      // getRepoInfo
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify(repoInfo),
+        stderr: '',
+      });
+      // getPrDiff
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: simpleDiff,
+        stderr: '',
+      });
+    }
+
+    it('should include Content-Type: application/json header in spawn args', async () => {
+      mockRepoInfoAndDiff();
+
+      const reviewResponse = {
+        id: 1,
+        state: 'COMMENTED',
+        html_url: 'https://github.com/user/my-repo/pull/1#pullrequestreview-1',
+      };
+      mockSpawn.mockReturnValueOnce(
+        createMockChildProcess({ stdout: JSON.stringify(reviewResponse), code: 0 })
+      );
+
+      await service.createPrReview(repoPath, 1, 'Review body', 'COMMENT', [
+        { path: 'src/file.ts', line: 2, body: 'Nice addition' },
+      ]);
+
+      const spawnArgs = mockSpawn.mock.calls[0][1] as string[];
+      expect(spawnArgs).toContain('-H');
+      expect(spawnArgs).toContain('Content-Type: application/json');
+    });
+
+    it('should succeed when review state matches the requested event', async () => {
+      mockRepoInfoAndDiff();
+
+      const reviewResponse = {
+        id: 42,
+        state: 'COMMENTED',
+        html_url: 'https://github.com/user/my-repo/pull/1#pullrequestreview-42',
+      };
+      mockSpawn.mockReturnValueOnce(
+        createMockChildProcess({ stdout: JSON.stringify(reviewResponse), code: 0 })
+      );
+
+      const result = await service.createPrReview(repoPath, 1, 'Looks good', 'COMMENT', [
+        { path: 'src/file.ts', line: 2, body: 'Nice' },
+      ]);
+
+      expect(result.url).toBe('https://github.com/user/my-repo/pull/1#pullrequestreview-42');
+      expect(result.postedComments).toBe(1);
+      expect(result.skippedComments).toBe(0);
+    });
+
+    it('should throw when review is created in PENDING state instead of requested event', async () => {
+      mockRepoInfoAndDiff();
+
+      const reviewResponse = {
+        id: 42,
+        state: 'PENDING',
+        html_url: 'https://github.com/user/my-repo/pull/1#pullrequestreview-42',
+      };
+      mockSpawn.mockReturnValueOnce(
+        createMockChildProcess({ stdout: JSON.stringify(reviewResponse), code: 0 })
+      );
+
+      await expect(
+        service.createPrReview(repoPath, 1, 'Changes needed', 'REQUEST_CHANGES', [
+          { path: 'src/file.ts', line: 2, body: 'Fix this' },
+        ])
+      ).rejects.toThrow('PR review was created in PENDING state instead of REQUEST_CHANGES');
+    });
+
+    it('should fallback to summary-only review on 422 error', async () => {
+      mockRepoInfoAndDiff();
+
+      // spawnGhApiWithStdin returns 422 error
+      mockSpawn.mockReturnValueOnce(
+        createMockChildProcess({
+          stderr: 'Validation Failed (422): pull_request_review_thread.path',
+          code: 1,
+        })
+      );
+
+      // createPrReviewSummaryOnly fallback via execGh
+      const fallbackResponse = {
+        id: 99,
+        state: 'COMMENTED',
+        html_url: 'https://github.com/user/my-repo/pull/1#pullrequestreview-99',
+      };
+      mockExecFileAsync.mockResolvedValueOnce({
+        stdout: JSON.stringify(fallbackResponse),
+        stderr: '',
+      });
+
+      const result = await service.createPrReview(repoPath, 1, 'Review body', 'COMMENT', [
+        { path: 'src/file.ts', line: 2, body: 'Nice' },
+      ]);
+
+      expect(result.url).toBe('https://github.com/user/my-repo/pull/1#pullrequestreview-99');
+      expect(result.postedComments).toBe(0);
+      expect(result.skippedComments).toBe(1);
+    });
+
+    it('should pipe the correct JSON payload to stdin', async () => {
+      mockRepoInfoAndDiff();
+
+      const reviewResponse = {
+        id: 1,
+        state: 'COMMENTED',
+        html_url: 'https://github.com/user/my-repo/pull/1#pullrequestreview-1',
+      };
+      mockSpawn.mockReturnValueOnce(
+        createMockChildProcess({ stdout: JSON.stringify(reviewResponse), code: 0 })
+      );
+
+      await service.createPrReview(repoPath, 1, 'Body text', 'COMMENT', [
+        { path: 'src/file.ts', line: 2, body: 'Comment' },
+      ]);
+
+      const mockChild = mockSpawn.mock.results[0].value;
+      const writtenData = mockChild.stdin.write.mock.calls[0][0];
+      const payload = JSON.parse(writtenData);
+
+      expect(payload.body).toBe('Body text');
+      expect(payload.event).toBe('COMMENT');
+      expect(payload.comments).toEqual([{ path: 'src/file.ts', line: 2, body: 'Comment' }]);
+    });
+
+    it('should skip comments targeting lines outside the diff', async () => {
+      mockRepoInfoAndDiff();
+
+      const reviewResponse = {
+        id: 1,
+        state: 'COMMENTED',
+        html_url: 'https://github.com/user/my-repo/pull/1#pullrequestreview-1',
+      };
+      mockSpawn.mockReturnValueOnce(
+        createMockChildProcess({ stdout: JSON.stringify(reviewResponse), code: 0 })
+      );
+
+      const result = await service.createPrReview(repoPath, 1, 'Body', 'COMMENT', [
+        { path: 'src/file.ts', line: 2, body: 'Valid comment' },
+        { path: 'src/file.ts', line: 999, body: 'Line not in diff' },
+      ]);
+
+      expect(result.postedComments).toBe(1);
+      expect(result.skippedComments).toBe(1);
+      expect(result.skippedDetails).toHaveLength(1);
+      expect(result.skippedDetails![0].line).toBe(999);
     });
   });
 

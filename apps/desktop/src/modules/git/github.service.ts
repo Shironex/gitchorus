@@ -698,6 +698,15 @@ export class GithubService {
 
       // Parse response
       const data = JSON.parse(result.stdout);
+
+      // Defensive: catch reviews stuck in PENDING state
+      if (data.state === 'PENDING' && payload.event !== 'PENDING') {
+        throw new Error(
+          `PR review was created in PENDING state instead of ${payload.event}. ` +
+            `This usually indicates the API did not process the event field correctly.`
+        );
+      }
+
       const url =
         data.html_url ||
         `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
@@ -729,7 +738,16 @@ export class GithubService {
   ): Promise<{ stdout: string; stderr: string; code: number }> {
     const child = require('child_process').spawn(
       'gh',
-      ['api', `repos/${repoFullName}/pulls/${prNumber}/reviews`, '-X', 'POST', '--input', '-'],
+      [
+        'api',
+        `repos/${repoFullName}/pulls/${prNumber}/reviews`,
+        '-X',
+        'POST',
+        '-H',
+        'Content-Type: application/json',
+        '--input',
+        '-',
+      ],
       {
         cwd: repoPath,
         env: { ...process.env, ...GH_ENV },
