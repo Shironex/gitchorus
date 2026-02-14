@@ -5,15 +5,14 @@
  * Mirrors the structure of reviewFormatter.ts for PR reviews.
  */
 
-import type {
-  ValidationResult,
-  BugValidation,
-  FeatureValidation,
-  ValidationVerdict,
-} from '@gitchorus/shared';
+import type { ValidationResult, FeatureValidation, ValidationVerdict } from '@gitchorus/shared';
 import { GITCHORUS_VALIDATION_MARKER } from '@gitchorus/shared';
 import { getLanguageForFile, normalizeFindingPath } from './reviewFormatter';
 
+/**
+ * Re-export the marker from shared for convenience.
+ * @deprecated Use GITCHORUS_VALIDATION_MARKER from @gitchorus/shared directly.
+ */
 export { GITCHORUS_VALIDATION_MARKER };
 
 // ============================================
@@ -230,7 +229,8 @@ export function formatValidationCommentBody(
     lines.push('|------|--------|');
     for (const file of result.affectedFiles) {
       const normalized = normalizeFindingPath(file.path);
-      lines.push(`| \`${normalized}\` | ${file.reason} |`);
+      const escapedReason = file.reason.replace(/\|/g, '\\|');
+      lines.push(`| \`${normalized}\` | ${escapedReason} |`);
     }
     lines.push('');
 
@@ -246,8 +246,10 @@ export function formatValidationCommentBody(
         const normalized = normalizeFindingPath(file.path);
         const lang = getLanguageForFile(file.path);
         lines.push(`**\`${normalized}\`** — ${file.reason}`);
+        // Strip accidental markdown fencing from AI-generated snippets
+        const cleanSnippet = file.snippet!.replace(/^```[\w]*\n?/, '').replace(/\n?```$/, '');
         lines.push(`\`\`\`${lang}`);
-        lines.push(file.snippet!);
+        lines.push(cleanSnippet);
         lines.push('```');
         lines.push('');
       }
@@ -258,8 +260,7 @@ export function formatValidationCommentBody(
 
   // ---- Reasoning ----
   if (toggles.reasoning) {
-    const reasoningText =
-      sectionEdits?.reasoning ?? (result as BugValidation | FeatureValidation).reasoning;
+    const reasoningText = sectionEdits?.reasoning ?? result.reasoning;
     lines.push('<details>');
     lines.push('<summary><strong>Reasoning</strong></summary>');
     lines.push('');
