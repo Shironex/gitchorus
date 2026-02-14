@@ -136,6 +136,8 @@ export interface ReviewConfig {
   defaultReviewAction: DefaultReviewAction;
   /** Skip preview modal and push directly */
   autoPush: boolean;
+  /** Review mode: single agent or multi-agent pipeline */
+  reviewMode: import('./review').ReviewMode;
 }
 
 /** Default review config */
@@ -145,6 +147,7 @@ export const DEFAULT_REVIEW_CONFIG: ReviewConfig = {
   reviewDepth: 'standard',
   defaultReviewAction: 'COMMENT',
   autoPush: false,
+  reviewMode: 'single-agent',
 };
 
 /**

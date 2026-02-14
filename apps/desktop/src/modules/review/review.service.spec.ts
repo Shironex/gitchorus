@@ -5,7 +5,9 @@ import { ReviewHistoryService } from './review-history.service';
 import { ReviewLogService } from './review-log.service';
 import { ProviderRegistry } from '../provider/provider.registry';
 import { GithubService } from '../git/github.service';
+import { SettingsService } from '../settings/settings.service';
 import type { ReviewResult, ReviewHistoryEntry } from '@gitchorus/shared';
+import { DEFAULT_REVIEW_CONFIG } from '@gitchorus/shared';
 
 // ---------------------------------------------------------------------------
 // Test helpers
@@ -82,6 +84,11 @@ const mockLogService = {
   getLogEntries: jest.fn(),
 };
 
+const mockSettingsService = {
+  getConfig: jest.fn().mockReturnValue({ ...DEFAULT_REVIEW_CONFIG }),
+  updateConfig: jest.fn(),
+};
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -98,6 +105,7 @@ describe('ReviewService', () => {
         { provide: EventEmitter2, useValue: mockEventEmitter },
         { provide: ReviewHistoryService, useValue: mockHistoryService },
         { provide: ReviewLogService, useValue: mockLogService },
+        { provide: SettingsService, useValue: mockSettingsService },
       ],
     }).compile();
 
@@ -403,6 +411,70 @@ describe('ReviewService', () => {
         InternalReviewEvents.COMPLETE,
         expect.objectContaining({ prNumber: 42 })
       );
+    });
+  });
+
+  // ========================================================================
+  // Multi-agent branching
+  // ========================================================================
+
+  describe('multi-agent review mode', () => {
+    it('should use reviewMultiAgent when reviewMode is multi-agent', async () => {
+      mockSettingsService.getConfig.mockReturnValue({
+        ...DEFAULT_REVIEW_CONFIG,
+        reviewMode: 'multi-agent',
+      });
+
+      const result = createMockResult({ multiAgent: true });
+      mockProvider.reviewMultiAgent = jest.fn().mockReturnValue(createMockGenerator(result));
+
+      service.queueReview(42, '/repo');
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockProvider.reviewMultiAgent).toHaveBeenCalled();
+      expect(mockProvider.review).not.toHaveBeenCalled();
+    });
+
+    it('should use single-agent review for re-reviews even when multi-agent mode is on', async () => {
+      mockSettingsService.getConfig.mockReturnValue({
+        ...DEFAULT_REVIEW_CONFIG,
+        reviewMode: 'multi-agent',
+      });
+
+      const previousEntry = createMockHistoryEntry({
+        prNumber: 42,
+        qualityScore: 6,
+        headCommitSha: 'prev-sha',
+        reviewSequence: 1,
+      });
+      mockHistoryService.getById.mockReturnValue(previousEntry);
+
+      const result = createMockResult({ qualityScore: 8 });
+      mockProvider.review.mockReturnValue(createMockGenerator(result));
+      mockProvider.reviewMultiAgent = jest.fn();
+
+      service.queueReReview(42, '/repo', 'rh-42-prev');
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockProvider.review).toHaveBeenCalled();
+      expect(mockProvider.reviewMultiAgent).not.toHaveBeenCalled();
+    });
+
+    it('should use single-agent review when reviewMode is single-agent', async () => {
+      mockSettingsService.getConfig.mockReturnValue({
+        ...DEFAULT_REVIEW_CONFIG,
+        reviewMode: 'single-agent',
+      });
+
+      const result = createMockResult();
+      mockProvider.review.mockReturnValue(createMockGenerator(result));
+      mockProvider.reviewMultiAgent = jest.fn();
+
+      service.queueReview(42, '/repo');
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockProvider.review).toHaveBeenCalled();
+      expect(mockProvider.reviewMultiAgent).not.toHaveBeenCalled();
     });
   });
 

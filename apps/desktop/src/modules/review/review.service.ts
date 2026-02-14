@@ -10,6 +10,7 @@ import type {
 } from '@gitchorus/shared';
 import { GithubService } from '../git/github.service';
 import { ProviderRegistry } from '../provider/provider.registry';
+import { SettingsService } from '../settings/settings.service';
 import { ReviewHistoryService } from './review-history.service';
 import { ReviewLogService } from './review-log.service';
 
@@ -55,7 +56,8 @@ export class ReviewService {
     private readonly githubService: GithubService,
     private readonly eventEmitter: EventEmitter2,
     private readonly historyService: ReviewHistoryService,
-    private readonly logService: ReviewLogService
+    private readonly logService: ReviewLogService,
+    private readonly settingsService: SettingsService
   ) {
     this.fileTransport = this.logService.getLogTransport();
     this.logger = createLogger('ReviewService', { fileTransport: this.fileTransport });
@@ -259,8 +261,17 @@ export class ReviewService {
         this.reReviewContext.delete(prNumber);
       }
 
-      // Run the review generator
-      const generator = provider.review(reviewParams);
+      // Determine review mode and run the appropriate generator
+      const reviewMode = this.settingsService.getConfig().reviewMode || 'single-agent';
+      // Multi-agent mode is only used for initial reviews (not re-reviews)
+      const useMultiAgent = reviewMode === 'multi-agent' && !reviewParams.isReReview;
+      const generator = useMultiAgent
+        ? provider.reviewMultiAgent(reviewParams)
+        : provider.review(reviewParams);
+
+      if (useMultiAgent) {
+        this.logger.info(`Using multi-agent review pipeline for PR #${prNumber}`);
+      }
 
       let result: ReviewResult | undefined;
 

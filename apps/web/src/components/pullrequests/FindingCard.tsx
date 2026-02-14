@@ -2,7 +2,12 @@ import { FileCode2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Markdown } from '@/components/ui/markdown';
 import { getLanguageForFile } from '@/lib/reviewFormatter';
-import type { ReviewFinding, ReviewSeverity, ReviewCategory } from '@gitchorus/shared';
+import type {
+  ReviewFinding,
+  ReviewSeverity,
+  ReviewCategory,
+  ReviewAgentType,
+} from '@gitchorus/shared';
 
 interface FindingCardProps {
   finding: ReviewFinding;
@@ -32,6 +37,24 @@ const categoryColors: Record<ReviewCategory, string> = {
   performance: 'bg-purple-500/5 text-purple-500 dark:text-purple-300 border-purple-500/15',
   style: 'bg-teal-500/5 text-teal-500 dark:text-teal-300 border-teal-500/15',
   'codebase-fit': 'bg-amber-500/5 text-amber-500 dark:text-amber-300 border-amber-500/15',
+};
+
+// ============================================
+// Agent source badge colors (multi-agent mode)
+// ============================================
+
+const agentColors: Record<ReviewAgentType, string> = {
+  context: 'bg-slate-500/5 text-slate-500 dark:text-slate-300 border-slate-500/15',
+  'code-quality': 'bg-cyan-500/5 text-cyan-500 dark:text-cyan-300 border-cyan-500/15',
+  'code-patterns': 'bg-indigo-500/5 text-indigo-500 dark:text-indigo-300 border-indigo-500/15',
+  'security-performance': 'bg-rose-500/5 text-rose-500 dark:text-rose-300 border-rose-500/15',
+};
+
+const agentLabels: Record<ReviewAgentType, string> = {
+  context: 'Context',
+  'code-quality': 'Quality',
+  'code-patterns': 'Patterns',
+  'security-performance': 'Sec & Perf',
 };
 
 /**
@@ -105,6 +128,17 @@ export function FindingCard({ finding, index, selected, onToggle }: FindingCardP
                   )}
                 >
                   {finding.addressingStatus}
+                </span>
+              )}
+              {/* Agent source badge (multi-agent mode only) */}
+              {finding.agentSource && (
+                <span
+                  className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded-full border font-medium',
+                    agentColors[finding.agentSource]
+                  )}
+                >
+                  {agentLabels[finding.agentSource]}
                 </span>
               )}
             </div>
