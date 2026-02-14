@@ -49,7 +49,7 @@ async function* createMockGenerator(result: ReviewResult) {
 // ---------------------------------------------------------------------------
 
 const mockProvider = {
-  review: jest.fn(),
+  reviewAuto: jest.fn(),
   cancel: jest.fn(),
 };
 
@@ -156,7 +156,7 @@ describe('ReviewService', () => {
     it('should allow queueing different PRs', () => {
       // Mock review to not start processing (provider returns generator)
       const neverResolve = new Promise(() => {});
-      mockProvider.review.mockReturnValue({
+      mockProvider.reviewAuto.mockReturnValue({
         next: () => neverResolve,
       });
 
@@ -197,7 +197,7 @@ describe('ReviewService', () => {
     it('should mark queued review as cancelled', () => {
       // Queue a review but prevent processing
       const neverResolve = new Promise(() => {});
-      mockProvider.review.mockReturnValue({
+      mockProvider.reviewAuto.mockReturnValue({
         next: () => neverResolve,
       });
 
@@ -219,7 +219,7 @@ describe('ReviewService', () => {
   describe('runReview (via queueReview)', () => {
     it('should run review and emit progress + complete events', async () => {
       const result = createMockResult();
-      mockProvider.review.mockReturnValue(createMockGenerator(result));
+      mockProvider.reviewAuto.mockReturnValue(createMockGenerator(result));
 
       service.queueReview(42, '/repo');
 
@@ -250,7 +250,7 @@ describe('ReviewService', () => {
 
     it('should enrich result with headCommitSha and reviewSequence for initial review', async () => {
       const result = createMockResult();
-      mockProvider.review.mockReturnValue(createMockGenerator(result));
+      mockProvider.reviewAuto.mockReturnValue(createMockGenerator(result));
 
       service.queueReview(42, '/repo');
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -274,13 +274,13 @@ describe('ReviewService', () => {
       mockGithubService.getCommitDiff.mockResolvedValue('incremental diff content');
 
       const result = createMockResult({ qualityScore: 8 });
-      mockProvider.review.mockReturnValue(createMockGenerator(result));
+      mockProvider.reviewAuto.mockReturnValue(createMockGenerator(result));
 
       service.queueReReview(42, '/repo', 'rh-42-prev');
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Check provider was called with re-review params
-      const reviewParams = mockProvider.review.mock.calls[0][0];
+      const reviewParams = mockProvider.reviewAuto.mock.calls[0][0];
       expect(reviewParams.isReReview).toBe(true);
       expect(reviewParams.previousReview).toEqual(previousEntry);
       expect(reviewParams.incrementalDiff).toBe('incremental diff content');
@@ -297,13 +297,13 @@ describe('ReviewService', () => {
       mockHistoryService.getById.mockReturnValue(null);
 
       const result = createMockResult();
-      mockProvider.review.mockReturnValue(createMockGenerator(result));
+      mockProvider.reviewAuto.mockReturnValue(createMockGenerator(result));
 
       service.queueReReview(42, '/repo', 'nonexistent-id');
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Should still have run the review (as initial — no isReReview on params)
-      const reviewParams = mockProvider.review.mock.calls[0][0];
+      const reviewParams = mockProvider.reviewAuto.mock.calls[0][0];
       expect(reviewParams.isReReview).toBeUndefined();
 
       // Should still complete with initial review metadata
@@ -363,7 +363,7 @@ describe('ReviewService', () => {
       mockGithubService.getPrHeadSha.mockRejectedValue(new Error('sha fetch failed'));
 
       const result = createMockResult();
-      mockProvider.review.mockReturnValue(createMockGenerator(result));
+      mockProvider.reviewAuto.mockReturnValue(createMockGenerator(result));
 
       service.queueReview(42, '/repo');
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -388,13 +388,13 @@ describe('ReviewService', () => {
       mockGithubService.getCommitDiff.mockRejectedValue(new Error('diff failed'));
 
       const result = createMockResult();
-      mockProvider.review.mockReturnValue(createMockGenerator(result));
+      mockProvider.reviewAuto.mockReturnValue(createMockGenerator(result));
 
       service.queueReReview(42, '/repo', 'rh-42-prev');
       await new Promise(resolve => setTimeout(resolve, 50));
 
       // Should still run the review
-      const reviewParams = mockProvider.review.mock.calls[0][0];
+      const reviewParams = mockProvider.reviewAuto.mock.calls[0][0];
       expect(reviewParams.isReReview).toBe(true);
       expect(reviewParams.incrementalDiff).toBeUndefined();
 
@@ -403,6 +403,42 @@ describe('ReviewService', () => {
         InternalReviewEvents.COMPLETE,
         expect.objectContaining({ prNumber: 42 })
       );
+    });
+  });
+
+  // ========================================================================
+  // Provider delegation (review mode selection is in the provider layer)
+  // ========================================================================
+
+  describe('provider delegation', () => {
+    it('should always delegate to provider.reviewAuto', async () => {
+      const result = createMockResult();
+      mockProvider.reviewAuto.mockReturnValue(createMockGenerator(result));
+
+      service.queueReview(42, '/repo');
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      expect(mockProvider.reviewAuto).toHaveBeenCalled();
+    });
+
+    it('should pass isReReview flag to provider.reviewAuto for re-reviews', async () => {
+      const previousEntry = createMockHistoryEntry({
+        prNumber: 42,
+        qualityScore: 6,
+        headCommitSha: 'prev-sha',
+        reviewSequence: 1,
+      });
+      mockHistoryService.getById.mockReturnValue(previousEntry);
+      mockGithubService.getCommitDiff.mockResolvedValue('incremental diff');
+
+      const result = createMockResult({ qualityScore: 8 });
+      mockProvider.reviewAuto.mockReturnValue(createMockGenerator(result));
+
+      service.queueReReview(42, '/repo', 'rh-42-prev');
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      const reviewParams = mockProvider.reviewAuto.mock.calls[0][0];
+      expect(reviewParams.isReReview).toBe(true);
     });
   });
 

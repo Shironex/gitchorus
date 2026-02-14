@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { Markdown } from '@/components/ui/markdown';
 import { getLanguageForFile } from '@/lib/reviewFormatter';
 import type { ReviewFinding, ReviewSeverity, ReviewCategory } from '@gitchorus/shared';
+import { AGENT_BADGE_COLORS, AGENT_SHORT_LABELS } from '@/lib/agent-display';
 
 interface FindingCardProps {
   finding: ReviewFinding;
@@ -33,6 +34,8 @@ const categoryColors: Record<ReviewCategory, string> = {
   style: 'bg-teal-500/5 text-teal-500 dark:text-teal-300 border-teal-500/15',
   'codebase-fit': 'bg-amber-500/5 text-amber-500 dark:text-amber-300 border-amber-500/15',
 };
+
+// Agent badge colors and labels imported from @/lib/agent-display
 
 /**
  * Individual finding card with severity/category badges, code snippet,
@@ -105,6 +108,17 @@ export function FindingCard({ finding, index, selected, onToggle }: FindingCardP
                   )}
                 >
                   {finding.addressingStatus}
+                </span>
+              )}
+              {/* Agent source badge (multi-agent mode only) */}
+              {finding.agentSource && (
+                <span
+                  className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded-full border font-medium',
+                    AGENT_BADGE_COLORS[finding.agentSource]
+                  )}
+                >
+                  {AGENT_SHORT_LABELS[finding.agentSource]}
                 </span>
               )}
             </div>

@@ -259,8 +259,8 @@ export class ReviewService {
         this.reReviewContext.delete(prNumber);
       }
 
-      // Run the review generator
-      const generator = provider.review(reviewParams);
+      // Provider handles single-agent vs multi-agent mode selection internally
+      const generator = provider.reviewAuto(reviewParams);
 
       let result: ReviewResult | undefined;
 
