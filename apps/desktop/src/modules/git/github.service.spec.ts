@@ -1137,8 +1137,8 @@ describe('GithubService', () => {
       const args = mockExecFileAsync.mock.calls[1][1] as string[];
       // Must NOT use -f flag (which causes gh to default to POST)
       expect(args).not.toContain('-f');
-      // Must use query string for per_page instead
-      expect(args.some((a: string) => a.includes('per_page=100'))).toBe(true);
+      // Must use query string for per_page in the URL
+      expect(args).toContain('repos/user/my-repo/pulls/1/reviews?per_page=100');
       // Must NOT use -X POST
       expect(args).not.toContain('POST');
     });

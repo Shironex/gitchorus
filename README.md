@@ -127,8 +127,8 @@ pnpm format
 # Check formatting
 pnpm format:check
 
-# Run with debug logging
-pnpm dev:debug
+# Dev mode has debug logging enabled by default
+pnpm dev
 ```
 
 ## Architecture

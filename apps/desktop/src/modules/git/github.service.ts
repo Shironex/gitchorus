@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { execFile, ExecException } from 'child_process';
+import { execFile, spawn as cpSpawn, ExecException } from 'child_process';
 import { promisify } from 'util';
 import { existsSync } from 'fs';
 import { homedir } from 'os';
@@ -762,7 +762,7 @@ export class GithubService {
       '-',
     ];
     this.logger.debug(`spawnGhApiWithStdin: spawning gh ${args.join(' ')}`);
-    const child = require('child_process').spawn('gh', args, {
+    const child = cpSpawn('gh', args, {
       cwd: repoPath,
       env: { ...process.env, ...GH_ENV },
       stdio: ['pipe', 'pipe', 'pipe'],
@@ -823,6 +823,15 @@ export class GithubService {
     ]);
 
     const data = JSON.parse(stdout);
+
+    // Defensive: catch reviews stuck in PENDING state
+    if (data.state === 'PENDING') {
+      throw new Error(
+        `Failed to create PR review: review was created in PENDING state instead of ${event}. ` +
+          `This usually indicates the API did not process the event field correctly.`
+      );
+    }
+
     const url =
       data.html_url ||
       `https://github.com/${repoFullName}/pull/${prNumber}#pullrequestreview-${data.id}`;
