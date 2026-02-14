@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.5.0-beta.1 (2026-02-14)
+
+### New Features
+
+- **Multi-agent review pipeline** — New review mode that delegates to 4 specialized sub-agents (Context/haiku, Code Quality, Code Patterns, Security & Performance) running in parallel via the Claude Agent SDK's native sub-agent support. An orchestrator aggregates findings with weighted scoring, deduplication, and TypeScript validation. Includes a Review Mode toggle in settings, sub-agent score breakdown in ReviewSummary, and agent attribution badges on FindingCard (#34)
+
+### Bug Fixes
+
+- **Sub-agent security hardening** — Removed Bash from sub-agent tools to prevent prompt injection via arbitrary command execution, added `<user-content>` delimiters to all review prompts, and capped turn budgets at `MAX_ALLOWED_TURNS` (#34)
+- **Runtime validation for AI output** — Added type guards, `Array.isArray` checks, and finite number validation to both single-agent and multi-agent review result parsing instead of blind `as` casts (#34)
+- **Concurrent abort controller** — Added `acquireAbortController()` guard to prevent concurrent review operations from sharing the same AbortController instance (#34)
+- **Single-agent max turns cap** — Capped `explicitMaxTurns` with `MAX_ALLOWED_TURNS` in the review method for defense-in-depth (#34)
+- **Review module cleanup** — Moved `reviewMode` decision to provider layer via `reviewAuto()` method, removing `SettingsModule` from `ReviewModule` to match `ValidationModule` pattern (#34)
+
+### Refactoring
+
+- **Extracted shared helpers** — Extracted `processAgentMessages`/`extractStructuredOutput` helpers and `BASE_FINDING_ITEM_SCHEMA` constant, eliminating ~120 lines of duplication between single-agent and multi-agent review paths (#34)
+- **Agent display constants** — Extracted shared agent display constants to `agent-display.ts` for consistent UI rendering (#34)
+
+### Testing
+
+- 22 new tests (19 unit + 3 integration) for the multi-agent review pipeline — total test count: 509
+
 ## 0.4.0 (2026-02-14)
 
 ### New Features
