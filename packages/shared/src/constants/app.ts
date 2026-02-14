@@ -90,3 +90,6 @@ export const MAX_PATH_LENGTH = 1024;
 
 /** Hidden HTML comment used to identify GitChorus reviews on GitHub */
 export const GITCHORUS_REVIEW_MARKER = '<!-- gitchorus-review -->';
+
+/** Hidden HTML comment used to identify GitChorus validation comments on GitHub */
+export const GITCHORUS_VALIDATION_MARKER = '<!-- gitchorus-validation -->';

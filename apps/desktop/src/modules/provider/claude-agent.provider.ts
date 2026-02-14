@@ -90,14 +90,26 @@ const VALIDATION_OUTPUT_SCHEMA = {
         properties: {
           path: { type: 'string' },
           reason: { type: 'string' },
-          snippet: { type: 'string' },
+          snippet: {
+            type: 'string',
+            description:
+              'The relevant code snippet from this file. Include enough context (5-15 lines) to understand the issue. Provide raw code only — do NOT wrap in markdown fencing.',
+          },
         },
         required: ['path', 'reason'],
       },
     },
     complexity: { type: 'string', enum: ['trivial', 'low', 'medium', 'high', 'very-high'] },
-    suggestedApproach: { type: 'string' },
-    reasoning: { type: 'string' },
+    suggestedApproach: {
+      type: 'string',
+      description:
+        'A well-structured implementation approach using markdown. Use numbered steps for the main workflow, bold (**text**) for emphasis, and inline code (`backticks`) for file paths, function names, and code references. For complex issues, group steps by priority or phase.',
+    },
+    reasoning: {
+      type: 'string',
+      description:
+        'A clear, structured analysis using markdown. Use bold (**text**) for headings of each point. Use inline code (`backticks`) when referencing specific files, functions, or code patterns. Lead with key evidence, then explain implications.',
+    },
     // Feature-specific fields (optional for bugs)
     prerequisites: { type: 'array', items: { type: 'string' } },
     potentialConflicts: { type: 'array', items: { type: 'string' } },
@@ -153,7 +165,12 @@ IMPORTANT RULES:
 - Be evidence-based: cite specific files and code when making claims
 - Be honest: if you are uncertain, say so with lower confidence
 - Focus on the codebase as it exists NOW, not hypothetical future states
-- Use read-only tools only: Read, Grep, Glob, Bash (for non-destructive commands like ls, find, cat)${efficiencyGuidance}`;
+- Use read-only tools only: Read, Grep, Glob, Bash (for non-destructive commands like ls, find, cat)
+
+OUTPUT FORMATTING:
+- In suggestedApproach: use numbered lists for sequential steps, group by priority/phase for complex issues, use inline code (\`backticks\`) for file paths and function names, use bold (**text**) for key terms
+- In reasoning: use bold (**text**) to label each point of evidence, use inline code for file references, keep each point focused on one piece of evidence
+- In affectedFiles snippets: provide raw code only (no markdown fencing), include 5-15 lines of context${efficiencyGuidance}`;
 }
 
 /**
