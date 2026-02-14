@@ -12,7 +12,6 @@
   },
   "scripts": {
     "dev": "pnpm --filter @gitchorus/shared build && concurrently -k -n web,desktop -c cyan,yellow \"pnpm dev:web\" \"wait-on http://localhost:15173 && pnpm --filter @gitchorus/desktop dev\"",
-    "dev:debug": "LOG_LEVEL=debug pnpm dev",
     "dev:web": "pnpm --filter @gitchorus/web dev",
     "build": "pnpm --filter @gitchorus/shared build && pnpm --filter @gitchorus/web build && pnpm --filter @gitchorus/desktop build",
     "build:packages": "pnpm --filter @gitchorus/shared build",
