@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
 import { emitAsync } from '@/lib/socketHelpers';
+import { saveRecentProject } from '@/lib/recentProjects';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import {
   RepositoryEvents,
@@ -75,14 +76,14 @@ export function useRepositoryConnection() {
       }
 
       // Step 4: Update the repository store
-      setRepository(
-        selectedPath,
-        validation.repoName || selectedPath.split('/').pop() || 'Unknown',
-        validation.currentBranch || 'main',
-        githubInfo
-      );
+      const repoName = validation.repoName || selectedPath.split('/').pop() || 'Unknown';
+      const branch = validation.currentBranch || 'main';
+      setRepository(selectedPath, repoName, branch, githubInfo);
 
-      logger.info('Repository connected successfully:', validation.repoName);
+      // Persist to recent projects
+      saveRecentProject(selectedPath, repoName, branch, githubInfo);
+
+      logger.info('Repository connected successfully:', repoName);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to connect repository';
       logger.error('Repository connection failed:', message);

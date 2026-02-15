@@ -19,6 +19,9 @@ export * from './types/review';
 // Repository types
 export * from './types/repository';
 
+// Recent project types
+export * from './types/recent-project';
+
 // Settings types
 export * from './types/settings';
 

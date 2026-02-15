@@ -25,6 +25,7 @@ function App() {
   useReviewSocket();
 
   const repositoryPath = useRepositoryStore(state => state.repositoryPath);
+  const isRestoring = useRepositoryStore(state => state.isRestoring);
   const connectionStatus = useConnectionStore(state => state.status);
   const settingsOpen = useSettingsStore(state => state.isOpen);
   const isConnected = repositoryPath !== null;
@@ -50,7 +51,13 @@ function App() {
       {isConnected && <TabBar activeTab={activeTab} onTabChange={setActiveTab} />}
       <div className="flex-1 overflow-hidden">
         {!isConnected ? (
-          <WelcomeView />
+          isRestoring ? (
+            <div className="flex items-center justify-center h-full">
+              <Loader2 size={32} className="animate-spin text-primary" />
+            </div>
+          ) : (
+            <WelcomeView />
+          )
         ) : activeTab === 'dashboard' ? (
           <DashboardView
             onNavigateToIssue={handleNavigateToIssue}
