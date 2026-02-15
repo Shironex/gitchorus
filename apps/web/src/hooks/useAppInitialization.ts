@@ -4,6 +4,7 @@ import { useUpdateStore } from '@/stores/useUpdateStore';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import { connectSocket, initializeSocket } from '@/lib/socket';
+import { getMostRecentProject, connectToProject } from '@/lib/recentProjects';
 
 const logger = createLogger('AppInit');
 
@@ -71,6 +72,18 @@ export function useAppInitialization(): void {
         await connectSocket();
         if (!mounted) return;
         logger.info('Socket connected');
+
+        // Auto-restore last opened project
+        try {
+          const lastProject = await getMostRecentProject();
+          if (lastProject && mounted) {
+            logger.info('Auto-restoring last project:', lastProject.name);
+            await connectToProject(lastProject);
+          }
+        } catch (err) {
+          logger.warn('Failed to auto-restore last project:', err);
+        }
+
         // Detect GitHub CLI status
         detectGithubCliStatus().catch(() => {});
         // Init updater listeners (IPC-based, not socket)

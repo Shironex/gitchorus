@@ -21,6 +21,8 @@ interface RepositoryState {
   isConnecting: boolean;
   /** Error message from last connection attempt */
   error: string | null;
+  /** Whether auto-restoration of last project is in progress */
+  isRestoring: boolean;
 }
 
 /**
@@ -35,6 +37,8 @@ interface RepositoryActions {
   setConnecting: (connecting: boolean) => void;
   /** Set error message */
   setError: (error: string | null) => void;
+  /** Set restoring state */
+  setRestoring: (restoring: boolean) => void;
 }
 
 /**
@@ -59,6 +63,7 @@ export const useRepositoryStore = create<RepositoryStore>()(
       githubInfo: null,
       isConnecting: false,
       error: null,
+      isRestoring: false,
 
       // Actions
       setRepository: (path: string, name: string, branch: string, github: RepoInfo | null) => {
@@ -103,6 +108,10 @@ export const useRepositoryStore = create<RepositoryStore>()(
         }
         set({ error, isConnecting: false }, undefined, 'repository/setError');
       },
+
+      setRestoring: (restoring: boolean) => {
+        set({ isRestoring: restoring }, undefined, 'repository/setRestoring');
+      },
     }),
     { name: 'repository' }
   )
@@ -130,3 +139,6 @@ export const selectIsConnecting = (state: RepositoryStore) => state.isConnecting
 
 /** Select error message */
 export const selectError = (state: RepositoryStore) => state.error;
+
+/** Select whether restoration is in progress */
+export const selectIsRestoring = (state: RepositoryStore) => state.isRestoring;
