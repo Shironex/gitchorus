@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.0 (2026-02-17)
+
+### New Features
+
+- **Project persistence and switching** — Last opened project is auto-restored on app startup using `electron-store` (zero backend changes — `recentProjects` key was already whitelisted). WelcomeView shows a recent projects list with relative timestamps and remove buttons for quick reconnection. TopBar displays the active project name with a switch button that shows a confirmation dialog when validations or reviews are in progress. All downstream stores (issues, reviews, validations) are cleared on project switch (#41)
+
 ## 0.5.0 (2026-02-14)
 
 ### New Features
