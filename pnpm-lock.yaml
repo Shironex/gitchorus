@@ -36,7 +36,7 @@ importers:
         specifier: ^5.5.0
         version: 5.9.3
       typescript-eslint:
-        specifier: ^8.0.0
+        specifier: ^8.56.0
         version: 8.56.0(eslint@9.39.2(jiti@2.6.1))(typescript@5.9.3)
       wait-on:
         specifier: ^9.0.3
