@@ -1,10 +1,12 @@
-import { useEffect } from 'react';
-import { GitBranch, FolderOpen, Loader2, AlertCircle } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { GitBranch, FolderOpen, Loader2, AlertCircle, Clock, X as XIcon } from 'lucide-react';
 import { APP_NAME } from '@gitchorus/shared';
+import type { RecentProject } from '@gitchorus/shared';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { useRepositoryStore } from '@/stores/useRepositoryStore';
 import { useRepositoryConnection } from '@/hooks/useRepositoryConnection';
+import { loadRecentProjects, connectToProject, removeRecentProject } from '@/lib/recentProjects';
 
 interface WelcomeViewProps {
   className?: string;
@@ -12,8 +14,17 @@ interface WelcomeViewProps {
 
 export function WelcomeView({ className }: WelcomeViewProps) {
   const isConnecting = useRepositoryStore(state => state.isConnecting);
+  const isRestoring = useRepositoryStore(state => state.isRestoring);
   const error = useRepositoryStore(state => state.error);
   const { openRepository } = useRepositoryConnection();
+
+  const [recentProjects, setRecentProjects] = useState<RecentProject[]>([]);
+  const isBusy = isConnecting || isRestoring;
+
+  // Load recent projects on mount
+  useEffect(() => {
+    loadRecentProjects().then(setRecentProjects);
+  }, []);
 
   // Keyboard shortcut: Ctrl/Cmd + O to open repository
   useEffect(() => {
@@ -32,6 +43,16 @@ export function WelcomeView({ className }: WelcomeViewProps) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [openRepository]);
+
+  const handleRecentClick = (project: RecentProject) => {
+    connectToProject(project);
+  };
+
+  const handleRemoveRecent = async (e: React.MouseEvent, localPath: string) => {
+    e.stopPropagation();
+    await removeRecentProject(localPath);
+    setRecentProjects(prev => prev.filter(p => p.localPath !== localPath));
+  };
 
   return (
     <div
@@ -82,7 +103,7 @@ export function WelcomeView({ className }: WelcomeViewProps) {
         {/* Open Repository button */}
         <Button
           onClick={openRepository}
-          disabled={isConnecting}
+          disabled={isBusy}
           size="lg"
           className={cn(
             'gap-3 px-8 py-3 rounded-xl text-base',
@@ -91,7 +112,7 @@ export function WelcomeView({ className }: WelcomeViewProps) {
             'transition-all duration-200'
           )}
         >
-          {isConnecting ? (
+          {isBusy ? (
             <>
               <Loader2 size={20} className="animate-spin" />
               <span>Connecting...</span>
@@ -112,7 +133,77 @@ export function WelcomeView({ className }: WelcomeViewProps) {
           </kbd>{' '}
           to open a repository
         </p>
+
+        {/* Recent Projects */}
+        {recentProjects.length > 0 && (
+          <div className="w-full mt-8">
+            <div className="flex items-center gap-2 mb-3">
+              <Clock size={14} className="text-muted-foreground" />
+              <h2 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                Recent Projects
+              </h2>
+            </div>
+            <div className="space-y-2">
+              {recentProjects.map(project => (
+                <button
+                  key={project.localPath}
+                  onClick={() => handleRecentClick(project)}
+                  disabled={isBusy}
+                  className={cn(
+                    'w-full px-4 py-3 rounded-lg border border-border',
+                    'bg-card hover:bg-accent/50',
+                    'text-left transition-colors group',
+                    'disabled:opacity-50 disabled:cursor-not-allowed'
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm text-foreground truncate">{project.name}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 truncate">
+                        {project.localPath}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="text-xs text-muted-foreground">
+                        {formatRelativeDate(project.lastOpened)}
+                      </span>
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        onClick={e => handleRemoveRecent(e, project.localPath)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            handleRemoveRecent(e as unknown as React.MouseEvent, project.localPath);
+                          }
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-0.5 rounded hover:bg-muted transition-opacity"
+                        aria-label={`Remove ${project.name} from recent projects`}
+                      >
+                        <XIcon size={12} className="text-muted-foreground" />
+                      </span>
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
+}
+
+function formatRelativeDate(isoString: string): string {
+  const date = new Date(isoString);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60_000);
+  const diffHours = Math.floor(diffMs / 3_600_000);
+  const diffDays = Math.floor(diffMs / 86_400_000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString();
 }
