@@ -38,7 +38,7 @@ export function AgentActivityStats({
       </div>
       <div className="flex items-center gap-1.5">
         <Clock size={12} />
-        <span className="tabular-nums font-medium text-foreground">
+        <span className="tabular-nums font-medium text-foreground whitespace-nowrap">
           {formatDuration(elapsedSeconds)}
         </span>
       </div>

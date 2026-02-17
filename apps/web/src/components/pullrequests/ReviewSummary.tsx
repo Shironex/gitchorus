@@ -193,7 +193,7 @@ export function ReviewSummary({ result }: ReviewSummaryProps) {
       <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-2">
         <span>Model: {result.model}</span>
         <span>Cost: ${result.costUsd.toFixed(4)}</span>
-        <span>Duration: {formatDuration(Math.round(result.durationMs / 1000))}</span>
+        <span>Duration: {formatDuration(result.durationMs / 1000)}</span>
         {result.multiAgent && <span className="text-primary font-medium">Multi-Agent</span>}
       </div>
     </div>

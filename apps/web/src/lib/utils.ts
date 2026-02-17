@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  * - ≥ 60 min → "1h 5m"
  */
 export function formatDuration(seconds: number): string {
-  if (seconds < 0) return '0s';
+  if (!Number.isFinite(seconds) || seconds < 0) return '0s';
 
   const totalSeconds = Math.round(seconds);
 

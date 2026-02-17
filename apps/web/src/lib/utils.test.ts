@@ -11,6 +11,12 @@ describe('formatDuration', () => {
     expect(formatDuration(-100)).toBe('0s');
   });
 
+  it('returns "0s" for NaN and Infinity', () => {
+    expect(formatDuration(NaN)).toBe('0s');
+    expect(formatDuration(Infinity)).toBe('0s');
+    expect(formatDuration(-Infinity)).toBe('0s');
+  });
+
   it('formats seconds under 60 as Xs', () => {
     expect(formatDuration(1)).toBe('1s');
     expect(formatDuration(5)).toBe('5s');

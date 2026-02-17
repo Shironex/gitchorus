@@ -295,7 +295,7 @@ export function ValidationResults({ result }: ValidationResultsProps) {
       <div className="flex items-center gap-4 text-[10px] text-muted-foreground/60 pt-1 border-t">
         <span className="flex items-center gap-1">
           <Clock size={10} />
-          {formatDuration(Math.round(result.durationMs / 1000))}
+          {formatDuration(result.durationMs / 1000)}
         </span>
         {result.costUsd > 0 && (
           <span className="flex items-center gap-1">
