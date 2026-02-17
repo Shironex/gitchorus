@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## 0.6.1 (2026-02-18)
+
+### Bug Fixes
+
+- **Step count text wrapping** — Fixed step count ("N steps") wrapping to two lines in the AgentActivityStats bar by adding `whitespace-nowrap` (#45)
+- **Shared duration formatter** — Extracted `formatDuration(seconds)` utility that formats durations as `45s`, `2m 15s`, or `1h 5m`, replacing inline formatting across 3 components (#45)
+
+### Maintenance
+
+- **Dependency updates** — Bumped `@anthropic-ai/claude-agent-sdk` 0.2.39→0.2.42, `lucide-react` 0.563.0→0.564.0, `tailwind-merge` 3.4.0→3.4.1, `typescript-eslint` 8.55.0→8.56.0, `electron` 40.4.0→40.4.1, `jsdom` 28.0.0→28.1.0, `wait-on` 9.0.3→9.0.4 (#46)
+
 ## 0.6.0 (2026-02-17)
 
 ### New Features
