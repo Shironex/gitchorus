@@ -10,7 +10,7 @@ import {
   Clipboard,
   Check,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDuration } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { Markdown } from '@/components/ui/markdown';
 import type { ValidationResult, BugValidation, FeatureValidation } from '@gitchorus/shared';
@@ -295,7 +295,7 @@ export function ValidationResults({ result }: ValidationResultsProps) {
       <div className="flex items-center gap-4 text-[10px] text-muted-foreground/60 pt-1 border-t">
         <span className="flex items-center gap-1">
           <Clock size={10} />
-          {Math.round(result.durationMs / 1000)}s
+          {formatDuration(Math.round(result.durationMs / 1000))}
         </span>
         {result.costUsd > 0 && (
           <span className="flex items-center gap-1">
