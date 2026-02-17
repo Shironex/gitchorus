@@ -1,4 +1,5 @@
 import { FileText, Search, Terminal, Clock } from 'lucide-react';
+import { formatDuration } from '@/lib/utils';
 
 interface AgentActivityStatsProps {
   filesRead: number;
@@ -37,10 +38,12 @@ export function AgentActivityStats({
       </div>
       <div className="flex items-center gap-1.5">
         <Clock size={12} />
-        <span className="tabular-nums font-medium text-foreground">{elapsedSeconds}s</span>
+        <span className="tabular-nums font-medium text-foreground whitespace-nowrap">
+          {formatDuration(elapsedSeconds)}
+        </span>
       </div>
       <div className="text-muted-foreground/50">|</div>
-      <span className="tabular-nums">{totalSteps} steps</span>
+      <span className="tabular-nums whitespace-nowrap">{totalSteps} steps</span>
     </div>
   );
 }

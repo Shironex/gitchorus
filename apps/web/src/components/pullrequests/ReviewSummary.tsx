@@ -8,7 +8,7 @@ import {
   ChevronRight,
   Users,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatDuration } from '@/lib/utils';
 import { Markdown } from '@/components/ui/markdown';
 import type { ReviewResult, ReviewSeverity, SubAgentScore } from '@gitchorus/shared';
 import { AGENT_FULL_LABELS } from '@/lib/agent-display';
@@ -193,7 +193,7 @@ export function ReviewSummary({ result }: ReviewSummaryProps) {
       <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-2">
         <span>Model: {result.model}</span>
         <span>Cost: ${result.costUsd.toFixed(4)}</span>
-        <span>Duration: {(result.durationMs / 1000).toFixed(1)}s</span>
+        <span>Duration: {formatDuration(result.durationMs / 1000)}</span>
         {result.multiAgent && <span className="text-primary font-medium">Multi-Agent</span>}
       </div>
     </div>
