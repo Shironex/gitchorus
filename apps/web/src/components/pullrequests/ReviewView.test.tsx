@@ -159,9 +159,8 @@ describe('ReviewView', () => {
       verdict: 'Looks good',
       qualityScore: 8,
       reviewedAt: '2025-01-01T00:00:00Z',
-      providerType: 'claude-code',
-      model: 'claude-sonnet-4-5-20250929',
-      costUsd: 0.01,
+      providerType: 'codex',
+      model: 'gpt-5.2',
       durationMs: 1000,
     };
 
@@ -234,9 +233,8 @@ describe('ReviewView', () => {
       verdict: 'Looks good',
       qualityScore: 8,
       reviewedAt: '2025-01-01T00:00:00Z',
-      providerType: 'claude-code',
-      model: 'claude-sonnet-4-5-20250929',
-      costUsd: 0.01,
+      providerType: 'codex',
+      model: 'gpt-5.2',
       durationMs: 1000,
     };
 
@@ -298,9 +296,8 @@ describe('ReviewView', () => {
         verdict: 'Better now',
         qualityScore: 9,
         reviewedAt: '2025-01-02T00:00:00Z',
-        providerType: 'claude-code',
-        model: 'claude-sonnet-4-5-20250929',
-        costUsd: 0.01,
+        providerType: 'codex',
+        model: 'gpt-5.2',
         durationMs: 1000,
         isReReview: true,
         reviewSequence: 3,
@@ -324,9 +321,8 @@ describe('ReviewView', () => {
         verdict: 'Looks good',
         qualityScore: 8,
         reviewedAt: '2025-01-01T00:00:00Z',
-        providerType: 'claude-code',
-        model: 'claude-sonnet-4-5-20250929',
-        costUsd: 0.01,
+        providerType: 'codex',
+        model: 'gpt-5.2',
         durationMs: 1000,
         reviewSequence: 1,
       };

@@ -7,7 +7,7 @@ const execAsync = promisify(exec);
 /**
  * Supported CLI tools to check for
  */
-export const CLI_TOOLS = ['npm', 'node', 'git', 'pnpm', 'yarn', 'gh'] as const;
+export const CLI_TOOLS = ['npm', 'node', 'git', 'pnpm', 'yarn', 'gh', 'codex'] as const;
 export type CLITool = (typeof CLI_TOOLS)[number];
 
 /**

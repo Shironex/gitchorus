@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import type {
   GhCliStatus,
+  CodexCliStatus,
   UpdateInfo,
   UpdateDownloadProgress,
   UpdateChannel,
@@ -42,6 +43,9 @@ export interface ElectronAPI {
   };
   github: {
     getStatus: () => Promise<GhCliStatus>;
+  };
+  codex: {
+    getStatus: () => Promise<CodexCliStatus>;
   };
   updater: {
     checkForUpdates: () => Promise<{ enabled: boolean; channel: UpdateChannel }>;
@@ -99,6 +103,9 @@ const electronAPI: ElectronAPI = {
   },
   github: {
     getStatus: () => ipcRenderer.invoke('github:get-status') as Promise<GhCliStatus>,
+  },
+  codex: {
+    getStatus: () => ipcRenderer.invoke('codex:get-status') as Promise<CodexCliStatus>,
   },
   updater: {
     checkForUpdates: () => ipcRenderer.invoke('updater:check-for-updates'),

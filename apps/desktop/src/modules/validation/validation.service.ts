@@ -170,10 +170,10 @@ export class ValidationService {
       const repoInfo = await this.githubService.getRepoInfo(projectPath);
       const repoName = repoInfo?.fullName || 'unknown/unknown';
 
-      // Get the Claude provider
-      const provider = this.providerRegistry.getClaude();
+      // Get the Codex provider
+      const provider = this.providerRegistry.getCodex();
       if (!provider) {
-        throw new Error('Claude provider is not available');
+        throw new Error('Codex provider is not available');
       }
 
       // Create abort controller

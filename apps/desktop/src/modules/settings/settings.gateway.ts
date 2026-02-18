@@ -15,11 +15,14 @@ import {
   extractErrorMessage,
   type SettingsGetPayload,
   type SettingsGetResponse,
+  type SettingsModelsPayload,
+  type SettingsModelsResponse,
   type SettingsUpdatePayload,
   type SettingsUpdateResponse,
 } from '@gitchorus/shared';
 import { CORS_CONFIG } from '../shared/cors.config';
 import { SettingsService } from './settings.service';
+import { CodexModelsService } from './codex-models.service';
 
 /**
  * WebSocket gateway for settings events.
@@ -37,7 +40,10 @@ export class SettingsGateway implements OnGatewayInit {
   @WebSocketServer()
   server!: Server;
 
-  constructor(private readonly settingsService: SettingsService) {}
+  constructor(
+    private readonly settingsService: SettingsService,
+    private readonly codexModelsService: CodexModelsService
+  ) {}
 
   afterInit(): void {
     this.logger.log('Initialized');
@@ -85,6 +91,23 @@ export class SettingsGateway implements OnGatewayInit {
       const message = extractErrorMessage(error, 'Unknown error');
       this.logger.error(`Error updating settings: ${message}`);
       return { config: this.settingsService.getConfig(), error: message };
+    }
+  }
+
+  /**
+   * Handle settings model list request.
+   */
+  @SubscribeMessage(SettingsEvents.MODELS)
+  async handleModels(
+    @ConnectedSocket() _client: Socket,
+    @MessageBody() payload: SettingsModelsPayload
+  ): Promise<SettingsModelsResponse> {
+    try {
+      return await this.codexModelsService.getModels(payload?.refresh === true);
+    } catch (error) {
+      const message = extractErrorMessage(error, 'Unknown error');
+      this.logger.error(`Error fetching model list: ${message}`);
+      return { models: [], cachedAt: new Date().toISOString(), error: message };
     }
   }
 }

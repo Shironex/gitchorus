@@ -23,16 +23,6 @@ export type ReviewSeverity = 'critical' | 'major' | 'minor' | 'nit';
 export type ReviewCategory = 'security' | 'logic' | 'performance' | 'style' | 'codebase-fit';
 
 /**
- * Review mode: single agent or multi-agent pipeline
- */
-export type ReviewMode = 'single-agent' | 'multi-agent';
-
-/**
- * Sub-agent types in the multi-agent review pipeline
- */
-export type ReviewAgentType = 'context' | 'code-quality' | 'code-patterns' | 'security-performance';
-
-/**
  * Review status for queue tracking
  */
 export type ReviewStatus = 'idle' | 'queued' | 'running' | 'completed' | 'failed' | 'cancelled';
@@ -63,10 +53,6 @@ export interface ReviewFinding {
   title: string;
   /** For re-reviews: whether this finding is new, persisting, or a regression */
   addressingStatus?: 'new' | 'persisting' | 'regression';
-  /** Which sub-agent produced this finding (multi-agent mode only) */
-  agentSource?: ReviewAgentType;
-  /** Sub-agent confidence in this finding, 0-100 (multi-agent mode only) */
-  agentConfidence?: number;
 }
 
 /**
@@ -81,28 +67,6 @@ export interface AddressedFindingSummary {
   status: 'addressed' | 'partially-addressed' | 'unaddressed' | 'new-issue';
   /** AI explanation of how the finding was addressed or why it wasn't */
   explanation: string;
-}
-
-// ============================================
-// Multi-Agent Types
-// ============================================
-
-/**
- * Score breakdown from a single sub-agent in multi-agent review
- */
-export interface SubAgentScore {
-  /** Which sub-agent produced this score */
-  agent: ReviewAgentType;
-  /** Score 1-10 from this sub-agent */
-  score: number;
-  /** Weight of this score in the overall calculation (0-1) */
-  weight: number;
-  /** Summary from this sub-agent */
-  summary: string;
-  /** Number of findings from this sub-agent */
-  findingCount: number;
-  /** Severity breakdown of findings */
-  severityCounts: Record<ReviewSeverity, number>;
 }
 
 // ============================================
@@ -131,8 +95,6 @@ export interface ReviewResult {
   providerType: ProviderType;
   /** Which model was used */
   model: string;
-  /** Cost in USD */
-  costUsd: number;
   /** Duration in milliseconds */
   durationMs: number;
   /** HEAD commit SHA at time of review (for detecting new commits) */
@@ -149,12 +111,6 @@ export interface ReviewResult {
   addressedFindings?: AddressedFindingSummary[];
   /** Whether this result was imported from a GitHub review rather than run locally */
   isImported?: boolean;
-  /** Whether this review was run in multi-agent mode */
-  multiAgent?: boolean;
-  /** Per-sub-agent score breakdown (multi-agent mode only) */
-  subAgentScores?: SubAgentScore[];
-  /** Context summary from the context sub-agent (multi-agent mode only) */
-  contextSummary?: string;
 }
 
 // ============================================

@@ -1,31 +1,11 @@
-import { SlidersHorizontal, Check, Loader2, AlertTriangle, FlaskConical } from 'lucide-react';
+import { SlidersHorizontal, Check, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
-import type { ReviewDepth, DefaultReviewAction, ReviewMode } from '@gitchorus/shared';
+import type { ReviewDepth, DefaultReviewAction } from '@gitchorus/shared';
 import { REVIEW_DEPTH_CONFIG } from '@gitchorus/shared';
 import { useSettings } from '@/hooks/useSettings';
 
 /** Ordered list of depth options */
 const DEPTH_OPTIONS: ReviewDepth[] = ['quick', 'standard', 'thorough'];
-
-/** Review mode options */
-const REVIEW_MODE_OPTIONS: {
-  value: ReviewMode;
-  label: string;
-  description: string;
-  experimental?: boolean;
-}[] = [
-  {
-    value: 'single-agent',
-    label: 'Single Agent',
-    description: 'One AI agent covers all review categories in a single pass',
-  },
-  {
-    value: 'multi-agent',
-    label: 'Multi-Agent',
-    description: '4 specialized sub-agents review in parallel for deeper analysis',
-    experimental: true,
-  },
-];
 
 /** Review action labels */
 const REVIEW_ACTION_OPTIONS: { value: DefaultReviewAction; label: string; description: string }[] =
@@ -59,7 +39,6 @@ export function ReviewPreferencesSection() {
 
   const validationDepth = config?.validationDepth ?? 'standard';
   const reviewDepth = config?.reviewDepth ?? 'standard';
-  const reviewMode = config?.reviewMode ?? 'single-agent';
   const defaultReviewAction = config?.defaultReviewAction ?? 'COMMENT';
   const autoPush = config?.autoPush ?? false;
 
@@ -157,68 +136,6 @@ export function ReviewPreferencesSection() {
             );
           })}
         </div>
-      </div>
-
-      {/* Review Mode */}
-      <div className="space-y-3">
-        <div>
-          <h3 className="text-sm font-medium text-foreground">Review Mode</h3>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            Choose between single agent or multi-agent review pipeline
-          </p>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {REVIEW_MODE_OPTIONS.map(option => {
-            const isSelected = reviewMode === option.value;
-            return (
-              <button
-                key={option.value}
-                onClick={() => updateConfig({ reviewMode: option.value })}
-                className={clsx(
-                  'text-left rounded-xl border p-3 transition-all duration-200',
-                  isSelected
-                    ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/20'
-                    : 'border-border hover:border-primary/30 hover:bg-muted/50'
-                )}
-              >
-                <div className="flex items-center justify-between mb-1">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-sm font-medium text-foreground">{option.label}</span>
-                    {option.experimental && (
-                      <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-500/15 px-1.5 py-0.5 text-[10px] font-medium text-amber-600 dark:text-amber-400 ring-1 ring-amber-500/20">
-                        <FlaskConical className="w-2.5 h-2.5" />
-                        Experimental
-                      </span>
-                    )}
-                  </div>
-                  {isSelected && <Check className="w-3.5 h-3.5 text-primary" />}
-                </div>
-                <p className="text-xs text-muted-foreground leading-relaxed">
-                  {option.description}
-                </p>
-              </button>
-            );
-          })}
-        </div>
-        {reviewMode === 'multi-agent' && (
-          <div className="space-y-2">
-            <div className="flex items-start gap-2 rounded-lg bg-amber-500/10 border border-amber-500/20 p-3">
-              <FlaskConical className="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-amber-600 dark:text-amber-400">
-                <span className="font-semibold">Experimental feature.</span> Multi-agent review is
-                not fully tested and may produce inconsistent results. Use single-agent mode for
-                reliable reviews.
-              </p>
-            </div>
-            <div className="flex items-start gap-2 rounded-lg bg-muted/50 border border-border/50 p-3">
-              <AlertTriangle className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-              <p className="text-xs text-muted-foreground">
-                Multi-agent reviews use ~2-4x more tokens than single-agent reviews due to
-                specialized sub-agent overhead.
-              </p>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Default Review Action */}

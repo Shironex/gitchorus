@@ -20,9 +20,8 @@ function createMockResult(overrides: Partial<ReviewResult> = {}): ReviewResult {
     verdict: 'Looks good',
     qualityScore: 8,
     reviewedAt: new Date().toISOString(),
-    providerType: 'claude',
-    model: 'claude-sonnet-4-5-20250929',
-    costUsd: 0.01,
+    providerType: 'codex',
+    model: 'gpt-5.2',
     durationMs: 5000,
     ...overrides,
   };
@@ -54,7 +53,7 @@ const mockProvider = {
 };
 
 const mockProviderRegistry = {
-  getClaude: jest.fn().mockReturnValue(mockProvider),
+  getCodex: jest.fn().mockReturnValue(mockProvider),
 };
 
 const mockGithubService = {
@@ -345,7 +344,7 @@ describe('ReviewService', () => {
     });
 
     it('should emit error event when provider is not available', async () => {
-      mockProviderRegistry.getClaude.mockReturnValueOnce(undefined);
+      mockProviderRegistry.getCodex.mockReturnValueOnce(undefined);
 
       service.queueReview(42, '/repo');
       await new Promise(resolve => setTimeout(resolve, 50));

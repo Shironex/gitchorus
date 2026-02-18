@@ -4,7 +4,7 @@ Project context for AI assistants working on GitChorus.
 
 ## Project overview
 
-GitChorus is an Electron desktop app for AI-powered code review and issue validation. It uses the Claude Agent SDK to spawn read-only AI agents that analyze codebases.
+GitChorus is an Electron desktop app for AI-powered code review and issue validation. It uses the Codex SDK to spawn read-only AI agents that analyze codebases.
 
 ## Monorepo structure
 
@@ -44,7 +44,7 @@ pnpm --filter @gitchorus/shared build && pnpm --filter @gitchorus/desktop build
 
 ## Important docs
 
-- **[docs/packaging.md](docs/packaging.md)** — Electron packaging gotchas: asar unpacking, electron-builder schema rules, shell PATH resolution, Claude CLI detection, platform-specific notes
+- **[docs/packaging.md](docs/packaging.md)** — Electron packaging gotchas: asar unpacking, electron-builder schema rules, shell PATH resolution, Codex CLI detection, platform-specific notes
 
 ## Dynamic ports & socket architecture
 
@@ -77,9 +77,9 @@ NestJS listen(0) → OS assigns port → backend-port.ts stores it
 ## Key gotchas
 
 - **electron-builder.json** has strict schema validation — no unknown properties allowed, no `_comment` fields
-- **asarUnpack** is required for `@anthropic-ai/claude-agent-sdk` — the SDK spawns child processes and needs filesystem access to cli.js, WASM files, and ripgrep binaries
+- **asarUnpack** is required for `@openai/codex` platform binaries — Codex runs via a spawned native CLI binary outside `app.asar`
 - **Shell PATH** on macOS/Linux GUI apps is minimal — `shell-path.ts` resolves the full PATH at startup
-- **Claude auth on macOS** uses Keychain, not credential files — detection falls back to checking `oauthAccount` in config
+- **Codex auth** is checked using `codex login status` from the detected CLI binary
 - The AI agent runs in **read-only mode** with `permissionMode: 'bypassPermissions'` — it can only use Read, Grep, Glob, and Bash tools
 - **Backend port is dynamic** — never hardcode port numbers. Use `getBackendPort()` on the main process side and `getSocket()` on the frontend side
 - **Vite dev server** runs on port **15173** (not the default 5173) to avoid conflicts with other projects

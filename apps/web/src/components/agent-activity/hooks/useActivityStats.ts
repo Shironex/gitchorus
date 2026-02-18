@@ -20,11 +20,28 @@ export function useActivityStats(steps: ValidationStep[], isRunning: boolean): A
     let files = 0,
       searches = 0,
       commands = 0;
+
     for (const s of steps) {
+      // New Codex stream shape: counts are inferred from stepType/step.
+      if (s.stepType === 'reading') {
+        files++;
+        continue;
+      }
+      if (s.stepType === 'searching') {
+        searches++;
+        continue;
+      }
+      if (s.step === 'tool-command') {
+        commands++;
+        continue;
+      }
+
+      // Backward compatibility with legacy provider tool names.
       if (s.toolName === 'Read') files++;
       else if (s.toolName === 'Grep' || s.toolName === 'Glob') searches++;
       else if (s.toolName === 'Bash') commands++;
     }
+
     return { filesRead: files, searchesPerformed: searches, commandsRun: commands };
   }, [steps]);
 

@@ -20,13 +20,13 @@ export {
   getGhCliStatus,
 } from './github-detection';
 
-// Claude CLI detection
+// Codex CLI detection
 export {
-  getClaudeConfigDir,
-  getClaudeCredentialPaths,
-  getClaudeCliPaths,
-  findClaudeCli,
-  getClaudeCliVersion,
-  checkClaudeAuth,
-  getClaudeCliStatus,
-} from './claude-detection';
+  getCodexConfigDir,
+  getCodexCliPaths,
+  findCodexCli,
+  getCodexCliVersion,
+  checkCodexAuth,
+  getCodexCliStatus,
+  hasCodexConfigDir,
+} from './codex-detection';

@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import type { ProviderType, ProviderStatus } from '@gitchorus/shared';
 import { createLogger } from '@gitchorus/shared';
-import type { ClaudeAgentProvider } from './claude-agent.provider';
+import type { CodexAgentProvider } from './codex-agent.provider';
 
 const logger = createLogger('ProviderRegistry');
 
 /**
- * Provider-like interface that matches what ClaudeAgentProvider exposes.
+ * Provider-like interface that matches what CodexAgentProvider exposes.
  * We use this instead of BaseProvider directly because NestJS Injectable
  * services cannot implement interfaces with AsyncGenerator methods cleanly.
  */
@@ -41,10 +41,10 @@ export class ProviderRegistry {
   }
 
   /**
-   * Get the Claude agent provider specifically (typed).
+   * Get the Codex agent provider specifically (typed).
    */
-  getClaude(): ClaudeAgentProvider | undefined {
-    return this.providers.get('claude') as ClaudeAgentProvider | undefined;
+  getCodex(): CodexAgentProvider | undefined {
+    return this.providers.get('codex') as CodexAgentProvider | undefined;
   }
 
   /**

@@ -1,14 +1,18 @@
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getSocket } from '@/lib/socket';
 import { emitAsync } from '@/lib/socketHelpers';
 import { useConnectionStore } from '@/stores/useConnectionStore';
 import { useSettingsStore } from '@/stores/useSettingsStore';
 import {
+  DEFAULT_CODEX_MODEL_OPTIONS,
   SettingsEvents,
   createLogger,
+  type CodexModelOption,
   type ReviewConfig,
   type SettingsGetPayload,
   type SettingsGetResponse,
+  type SettingsModelsPayload,
+  type SettingsModelsResponse,
   type SettingsUpdatePayload,
   type SettingsUpdateResponse,
 } from '@gitchorus/shared';
@@ -28,6 +32,9 @@ export function useSettings() {
   const setReviewConfig = useSettingsStore(state => state.setReviewConfig);
   const setReviewConfigLoading = useSettingsStore(state => state.setReviewConfigLoading);
   const fetchedRef = useRef(false);
+  const fetchedModelsRef = useRef(false);
+  const [models, setModels] = useState<CodexModelOption[]>(DEFAULT_CODEX_MODEL_OPTIONS);
+  const [modelsLoading, setModelsLoading] = useState(false);
 
   const fetchConfig = useCallback(async () => {
     setReviewConfigLoading(true);
@@ -66,6 +73,27 @@ export function useSettings() {
     [setReviewConfig]
   );
 
+  const fetchModels = useCallback(async (refresh = false) => {
+    setModelsLoading(true);
+    try {
+      const response = await emitAsync<SettingsModelsPayload, SettingsModelsResponse>(
+        SettingsEvents.MODELS,
+        { refresh }
+      );
+      if (response.error) {
+        logger.error('Error fetching model list:', response.error);
+      }
+      if (Array.isArray(response.models) && response.models.length > 0) {
+        setModels(response.models);
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to fetch model list';
+      logger.error('Failed to fetch model list:', message);
+    } finally {
+      setModelsLoading(false);
+    }
+  }, []);
+
   // Fetch config on first mount (after socket is ready)
   useEffect(() => {
     if (!socketInitialized) return;
@@ -74,6 +102,15 @@ export function useSettings() {
       fetchConfig();
     }
   }, [socketInitialized, config, fetchConfig]);
+
+  // Fetch available models on first mount (after socket is ready)
+  useEffect(() => {
+    if (!socketInitialized) return;
+    if (!fetchedModelsRef.current) {
+      fetchedModelsRef.current = true;
+      fetchModels();
+    }
+  }, [socketInitialized, fetchModels]);
 
   // Listen for external changes (after socket is ready)
   useEffect(() => {
@@ -91,5 +128,5 @@ export function useSettings() {
     };
   }, [socketInitialized, setReviewConfig]);
 
-  return { config, loading, fetchConfig, updateConfig };
+  return { config, loading, models, modelsLoading, fetchConfig, fetchModels, updateConfig };
 }
