@@ -67,36 +67,36 @@ export type ReviewDepth = 'quick' | 'standard' | 'thorough';
 /** Default review action for GitHub push */
 export type DefaultReviewAction = 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
 
-/** Claude model options */
-export type ClaudeModel =
-  | 'claude-haiku-4-5-20251001'
-  | 'claude-sonnet-4-5-20250929'
-  | 'claude-opus-4-6';
+/** Codex model options */
+export type CodexModel = 'gpt-5-mini' | 'gpt-5' | 'gpt-5.2';
 
-/** Display labels for Claude models */
-export const CLAUDE_MODEL_LABELS: Record<ClaudeModel, string> = {
-  'claude-haiku-4-5-20251001': 'Haiku',
-  'claude-sonnet-4-5-20250929': 'Sonnet',
-  'claude-opus-4-6': 'Opus',
+/** Display labels for Codex models */
+export const CODEX_MODEL_LABELS: Record<CodexModel, string> = {
+  'gpt-5-mini': 'GPT-5 Mini',
+  'gpt-5': 'GPT-5',
+  'gpt-5.2': 'GPT-5.2',
 };
 
 /**
  * Map of deprecated model IDs to their current replacements.
  * Used to migrate stored settings from older versions.
  */
-export const DEPRECATED_MODEL_MAP: Record<string, ClaudeModel> = {
-  'claude-haiku-3-5-20241022': 'claude-haiku-4-5-20251001',
-  'claude-opus-4-6-20250528': 'claude-opus-4-6',
+export const DEPRECATED_MODEL_MAP: Record<string, CodexModel> = {
+  'claude-haiku-3-5-20241022': 'gpt-5-mini',
+  'claude-haiku-4-5-20251001': 'gpt-5-mini',
+  'gpt-5.2': 'gpt-5',
+  'claude-opus-4-6-20250528': 'gpt-5.2',
+  'claude-opus-4-6': 'gpt-5.2',
 };
 
 /**
  * Turn multipliers per model to account for capability differences.
  * Smaller models (Haiku) tend to use more tool calls per task.
  */
-export const MODEL_TURN_MULTIPLIERS: Record<ClaudeModel, number> = {
-  'claude-haiku-4-5-20251001': 1.5,
-  'claude-sonnet-4-5-20250929': 1.0,
-  'claude-opus-4-6': 1.0,
+export const MODEL_TURN_MULTIPLIERS: Record<CodexModel, number> = {
+  'gpt-5-mini': 1.5,
+  'gpt-5': 1.0,
+  'gpt-5.2': 1.0,
 };
 
 /** Review depth display labels and descriptions */
@@ -126,8 +126,8 @@ export const REVIEW_DEPTH_CONFIG: Record<
 
 /** Global review configuration persisted in electron-store */
 export interface ReviewConfig {
-  /** Selected Claude model */
-  model: ClaudeModel;
+  /** Selected Codex model */
+  model: CodexModel;
   /** Review depth for issue validation */
   validationDepth: ReviewDepth;
   /** Review depth for PR review */
@@ -136,18 +136,15 @@ export interface ReviewConfig {
   defaultReviewAction: DefaultReviewAction;
   /** Skip preview modal and push directly */
   autoPush: boolean;
-  /** Review mode: single agent or multi-agent pipeline */
-  reviewMode: import('./review').ReviewMode;
 }
 
 /** Default review config */
 export const DEFAULT_REVIEW_CONFIG: ReviewConfig = {
-  model: 'claude-sonnet-4-5-20250929',
+  model: 'gpt-5.2',
   validationDepth: 'standard',
   reviewDepth: 'standard',
   defaultReviewAction: 'COMMENT',
   autoPush: false,
-  reviewMode: 'single-agent',
 };
 
 /**

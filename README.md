@@ -33,7 +33,7 @@
 
 ## About
 
-GitChorus is a desktop application that brings AI-powered code analysis directly to your local repositories. Point it at any GitHub-connected git repo and get structured, evidence-backed issue validation and PR reviews — powered by Claude's AI, running through your existing CLI subscription with zero API keys needed.
+GitChorus is a desktop application that brings AI-powered code analysis directly to your local repositories. Point it at any GitHub-connected git repo and get structured, evidence-backed issue validation and PR reviews — powered by OpenAI Codex, running through your existing Codex CLI authentication with zero API keys needed.
 
 Unlike generic AI chat tools, GitChorus actually reads your codebase. The AI agent navigates your project files, understands your architecture, and produces findings backed by real code references — not hallucinated guesses.
 
@@ -47,7 +47,7 @@ Unlike generic AI chat tools, GitChorus actually reads your codebase. The AI age
 | **GitHub Integration**   | Push validation summaries and review findings to GitHub with one click (inline PR comments included)      |
 | **Review History**       | All validation and review results are persisted locally and survive app restarts                          |
 | **Dashboard**            | Overview of open issues, PRs, quality score trends, and recent activity                                   |
-| **Provider Abstraction** | Claude SDK as default provider, with architecture ready for Codex, Gemini, and other CLI-based providers  |
+| **Provider Abstraction** | Codex SDK as default provider, with architecture ready for other CLI-based providers                      |
 | **Configurable**         | Choose your model, review depth, default review action, and more from project settings                    |
 | **Dark/Light Themes**    | Multiple theme options with syntax-highlighted code blocks via shiki                                      |
 | **Cross-Platform**       | Native support for macOS, Windows, and Linux via Electron                                                 |
@@ -79,9 +79,9 @@ Unlike generic AI chat tools, GitChorus actually reads your codebase. The AI age
 
 - **Node.js** >= 22.0.0
 - **pnpm** >= 9.0.0
-- **Claude CLI** — GitChorus uses your existing Claude CLI subscription (no API keys)
-  - Install: `npm install -g @anthropic-ai/claude-code`
-  - Authenticate: `claude` (follow the prompts)
+- **Codex CLI** — GitChorus uses your existing Codex CLI authentication (no API keys)
+  - Install: `npm install -g @openai/codex`
+  - Authenticate: `codex login`
 
 ## Quick Start
 
@@ -167,7 +167,7 @@ gitchorus/
 
 **Key Design Decisions:**
 
-- **No API keys** — Uses Claude CLI subscription via the Claude Agent SDK, so there's nothing to configure
+- **No API keys** — Uses Codex CLI authentication via the Codex SDK, so there's nothing to configure
 - **Read-only analysis** — The AI agent never writes code or makes changes, only reads and analyzes
 - **Evidence-backed** — Every finding includes actual code references, not generic advice
 - **Local-first** — All history and settings stored locally via electron-store
@@ -180,7 +180,7 @@ gitchorus/
 | Desktop     | Electron 40                                |
 | Backend     | NestJS 10, EventEmitter2                   |
 | Frontend    | React 18, Zustand 5                        |
-| AI Provider | Claude Agent SDK                           |
+| AI Provider | Codex SDK                                  |
 | Styling     | Tailwind CSS 4                             |
 | Markdown    | ReactMarkdown, shiki (syntax highlighting) |
 | Charts      | Recharts                                   |

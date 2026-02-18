@@ -2,7 +2,7 @@
  * AI Provider Abstraction Types
  *
  * Defines the provider layer for AI-powered analysis.
- * Currently supports Claude Agent SDK, extensible for future providers.
+ * Currently supports Codex SDK, extensible for future providers.
  */
 
 import type { Issue } from './github';
@@ -14,7 +14,7 @@ import type { Issue } from './github';
 /**
  * Supported AI provider types
  */
-export type ProviderType = 'claude';
+export type ProviderType = 'codex';
 
 /**
  * Provider availability and authentication status
@@ -91,18 +91,18 @@ export interface BaseProvider {
 }
 
 // ============================================
-// Claude CLI Status
+// Codex CLI Status
 // ============================================
 
 /**
- * Claude CLI detection and authentication status
+ * Codex CLI detection and authentication status
  */
-export interface ClaudeCliStatus {
-  /** Whether the Claude CLI is installed */
+export interface CodexCliStatus {
+  /** Whether the Codex CLI is installed */
   installed: boolean;
-  /** Absolute path to the Claude CLI executable */
+  /** Absolute path to the Codex CLI executable */
   path?: string;
-  /** Claude CLI version string */
+  /** Codex CLI version string */
   version?: string;
   /** How the CLI was found ('path' = in PATH, 'local' = known installation path) */
   method?: 'path' | 'local';

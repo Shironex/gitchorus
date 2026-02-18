@@ -30,9 +30,8 @@ function createMockResult(overrides: Partial<ReviewResult> = {}): ReviewResult {
     verdict: 'Looks good',
     qualityScore: 8,
     reviewedAt: new Date().toISOString(),
-    providerType: 'claude',
-    model: 'claude-sonnet-4-5-20250929',
-    costUsd: 0.01,
+    providerType: 'codex',
+    model: 'gpt-5.2',
     durationMs: 5000,
     ...overrides,
   };

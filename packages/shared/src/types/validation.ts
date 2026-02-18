@@ -144,8 +144,6 @@ export type ValidationResult = (BugValidation | FeatureValidation) & {
   providerType: ProviderType;
   /** Which model was used */
   model: string;
-  /** Cost of this validation in USD */
-  costUsd: number;
   /** Duration of the validation in milliseconds */
   durationMs: number;
 };

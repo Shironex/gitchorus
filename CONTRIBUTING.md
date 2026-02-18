@@ -7,7 +7,7 @@ Thank you for your interest in contributing to GitChorus! This guide will help y
 - **Node.js** >= 22.0.0
 - **pnpm** >= 9.0.0
 - **Git**
-- **Claude CLI** — `npm install -g @anthropic-ai/claude-code` (needed for AI features at runtime)
+- **Codex CLI** — `npm install -g @openai/codex` (needed for AI features at runtime)
 
 ### Platform-specific
 

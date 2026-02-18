@@ -1,17 +1,7 @@
-import { useState } from 'react';
-import {
-  Star,
-  TrendingUp,
-  TrendingDown,
-  Minus,
-  ChevronDown,
-  ChevronRight,
-  Users,
-} from 'lucide-react';
+import { Star, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { cn, formatDuration } from '@/lib/utils';
 import { Markdown } from '@/components/ui/markdown';
-import type { ReviewResult, ReviewSeverity, SubAgentScore } from '@gitchorus/shared';
-import { AGENT_FULL_LABELS } from '@/lib/agent-display';
+import type { ReviewResult, ReviewSeverity } from '@gitchorus/shared';
 
 interface ReviewSummaryProps {
   result: ReviewResult;
@@ -82,67 +72,6 @@ function ScoreDelta({ previous, current }: { previous: number; current: number }
   );
 }
 
-// Agent labels imported from @/lib/agent-display (AGENT_FULL_LABELS)
-
-/**
- * Expandable sub-agent score breakdown for multi-agent reviews.
- */
-function SubAgentScoreBreakdown({ scores }: { scores: SubAgentScore[] }) {
-  const [expanded, setExpanded] = useState(false);
-
-  return (
-    <div className="border-t pt-2">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-full"
-      >
-        <Users size={12} />
-        <span className="font-medium">Multi-Agent Breakdown</span>
-        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-      </button>
-
-      {expanded && (
-        <div className="mt-2 space-y-2">
-          {scores.map(agentScore => (
-            <div key={agentScore.agent} className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground w-28 shrink-0">
-                {AGENT_FULL_LABELS[agentScore.agent] || agentScore.agent}
-              </span>
-              {agentScore.weight > 0 ? (
-                <>
-                  <div className="flex-1 h-1.5 bg-muted rounded-full overflow-hidden">
-                    <div
-                      className={cn(
-                        'h-full rounded-full transition-all',
-                        agentScore.score >= 8
-                          ? 'bg-green-500'
-                          : agentScore.score >= 5
-                            ? 'bg-amber-500'
-                            : 'bg-red-500'
-                      )}
-                      style={{
-                        width: `${Math.min(100, Math.max(0, (agentScore.score / 10) * 100))}%`,
-                      }}
-                    />
-                  </div>
-                  <span className="text-xs font-medium text-foreground w-8 text-right">
-                    {agentScore.score}/10
-                  </span>
-                  <span className="text-[10px] text-muted-foreground w-8">
-                    ({Math.round(agentScore.weight * 100)}%)
-                  </span>
-                </>
-              ) : (
-                <span className="text-[10px] text-muted-foreground italic">Context only</span>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /**
  * Summary section displayed at the top of the review results.
  *
@@ -184,17 +113,10 @@ export function ReviewSummary({ result }: ReviewSummaryProps) {
       {/* Finding count summary */}
       <div className="text-xs text-muted-foreground">{countSummary}</div>
 
-      {/* Sub-agent score breakdown (multi-agent mode only) */}
-      {result.multiAgent && result.subAgentScores && result.subAgentScores.length > 0 && (
-        <SubAgentScoreBreakdown scores={result.subAgentScores} />
-      )}
-
       {/* Metadata */}
       <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-2">
         <span>Model: {result.model}</span>
-        <span>Cost: ${result.costUsd.toFixed(4)}</span>
         <span>Duration: {formatDuration(result.durationMs / 1000)}</span>
-        {result.multiAgent && <span className="text-primary font-medium">Multi-Agent</span>}
       </div>
     </div>
   );

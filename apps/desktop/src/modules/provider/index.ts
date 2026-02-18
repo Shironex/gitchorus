@@ -1,3 +1,3 @@
 export { ProviderModule } from './provider.module';
-export { ClaudeAgentProvider } from './claude-agent.provider';
+export { CodexAgentProvider } from './codex-agent.provider';
 export { ProviderRegistry } from './provider.registry';

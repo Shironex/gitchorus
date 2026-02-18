@@ -116,7 +116,7 @@ export class ReviewService {
 
     if (item.status === 'running') {
       this.logger.info(`Cancelling running review for PR #${prNumber}`);
-      const provider = this.providerRegistry.getClaude();
+      const provider = this.providerRegistry.getCodex();
       if (provider) {
         provider.cancel();
       }
@@ -201,10 +201,10 @@ export class ReviewService {
         this.logger.warn(`Failed to get HEAD SHA for PR #${prNumber}:`, error);
       }
 
-      // Get the Claude provider
-      const provider = this.providerRegistry.getClaude();
+      // Get the Codex provider
+      const provider = this.providerRegistry.getCodex();
       if (!provider) {
-        throw new Error('Claude provider is not available');
+        throw new Error('Codex provider is not available');
       }
 
       // Build review params — enriched with re-review context if available
@@ -259,7 +259,7 @@ export class ReviewService {
         this.reReviewContext.delete(prNumber);
       }
 
-      // Provider handles single-agent vs multi-agent mode selection internally
+      // Provider executes review and streams progress steps
       const generator = provider.reviewAuto(reviewParams);
 
       let result: ReviewResult | undefined;

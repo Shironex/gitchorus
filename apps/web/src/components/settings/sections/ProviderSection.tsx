@@ -1,22 +1,18 @@
 import { Bot, Check, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
-import type { ClaudeModel } from '@gitchorus/shared';
-import { CLAUDE_MODEL_LABELS } from '@gitchorus/shared';
+import type { CodexModel } from '@gitchorus/shared';
+import { CODEX_MODEL_LABELS } from '@gitchorus/shared';
 import { useSettings } from '@/hooks/useSettings';
 
 /** Model descriptions for the selection cards */
-const MODEL_DESCRIPTIONS: Record<ClaudeModel, string> = {
-  'claude-haiku-4-5-20251001': 'Fastest response time, ideal for quick scans',
-  'claude-sonnet-4-5-20250929': 'Best balance of speed and quality',
-  'claude-opus-4-6': 'Most thorough analysis, highest accuracy',
+const MODEL_DESCRIPTIONS: Record<CodexModel, string> = {
+  'gpt-5-mini': 'Fastest and lowest-cost option for quick scans',
+  'gpt-5': 'Balanced speed and quality for everyday reviews',
+  'gpt-5.2': 'Most capable analysis for difficult changes',
 };
 
 /** Ordered list of models for display */
-const MODEL_OPTIONS: ClaudeModel[] = [
-  'claude-haiku-4-5-20251001',
-  'claude-sonnet-4-5-20250929',
-  'claude-opus-4-6',
-];
+const MODEL_OPTIONS: CodexModel[] = ['gpt-5-mini', 'gpt-5', 'gpt-5.2'];
 
 export function ProviderSection() {
   const { config, loading, updateConfig } = useSettings();
@@ -32,7 +28,7 @@ export function ProviderSection() {
     );
   }
 
-  const selectedModel = config?.model ?? 'claude-sonnet-4-5-20250929';
+  const selectedModel = config?.model ?? 'gpt-5.2';
 
   return (
     <div className="space-y-6">
@@ -67,8 +63,8 @@ export function ProviderSection() {
               <Bot className="w-4 h-4 text-primary" />
             </div>
             <div className="flex-1">
-              <h3 className="text-sm font-medium text-foreground">Claude</h3>
-              <p className="text-xs text-muted-foreground">Anthropic Claude via Agent SDK</p>
+              <h3 className="text-sm font-medium text-foreground">Codex</h3>
+              <p className="text-xs text-muted-foreground">OpenAI Codex via Codex SDK</p>
             </div>
             <span className="flex items-center gap-1.5 text-xs font-medium text-primary bg-primary/10 px-2 py-1 rounded-full">
               <Check className="w-3 h-3" />
@@ -98,7 +94,7 @@ export function ProviderSection() {
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="text-sm font-medium text-foreground">
-                      {CLAUDE_MODEL_LABELS[modelId]}
+                      {CODEX_MODEL_LABELS[modelId]}
                     </span>
                     <p className="text-xs text-muted-foreground mt-0.5">
                       {MODEL_DESCRIPTIONS[modelId]}

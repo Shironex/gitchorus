@@ -19,5 +19,5 @@ export { registerGithubCliHandlers, cleanupGithubCliHandlers } from './github-cl
 // Updater handlers
 export { registerUpdaterHandlers, cleanupUpdaterHandlers } from './updater';
 
-// Claude CLI handlers
-export { registerClaudeCliHandlers, cleanupClaudeCliHandlers } from './claude-cli';
+// Codex CLI handlers
+export { registerCodexCliHandlers, cleanupCodexCliHandlers } from './codex-cli';

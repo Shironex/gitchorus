@@ -179,9 +179,8 @@ describe('IssueDetailView', () => {
       issueTitle: 'Test issue',
       repositoryFullName: 'test/repo',
       validatedAt: '2025-01-01T00:00:00Z',
-      providerType: 'claude-code',
-      model: 'claude-sonnet-4-5-20250929',
-      costUsd: 0.01,
+      providerType: 'codex',
+      model: 'gpt-5.2',
       durationMs: 1000,
     };
 

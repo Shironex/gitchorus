@@ -6,7 +6,6 @@ import {
   Lightbulb,
   FileCode,
   Clock,
-  DollarSign,
   Clipboard,
   Check,
 } from 'lucide-react';
@@ -297,11 +296,6 @@ export function ValidationResults({ result }: ValidationResultsProps) {
           <Clock size={10} />
           {formatDuration(result.durationMs / 1000)}
         </span>
-        {result.costUsd > 0 && (
-          <span className="flex items-center gap-1">
-            <DollarSign size={10} />${result.costUsd.toFixed(4)}
-          </span>
-        )}
         <span className="ml-auto">{result.model}</span>
       </div>
     </div>

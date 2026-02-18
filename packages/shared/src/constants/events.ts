@@ -84,7 +84,7 @@ export const ReviewEvents = {
 // ============================================
 export const ProviderEvents = {
   STATUS: 'provider:status',
-  CLAUDE_CLI_STATUS: 'provider:claude-cli-status',
+  CODEX_CLI_STATUS: 'provider:codex-cli-status',
 } as const;
 
 // ============================================
