@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SettingsService } from './settings.service';
 import { SettingsGateway } from './settings.gateway';
+import { CodexModelsService } from './codex-models.service';
 
 /**
  * NestJS module for settings management.
@@ -10,7 +11,7 @@ import { SettingsGateway } from './settings.gateway';
  * Exports SettingsService so other modules can inject it.
  */
 @Module({
-  providers: [SettingsService, SettingsGateway],
+  providers: [SettingsService, SettingsGateway, CodexModelsService],
   exports: [SettingsService],
 })
 export class SettingsModule {}

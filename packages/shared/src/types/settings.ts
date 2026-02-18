@@ -67,24 +67,54 @@ export type ReviewDepth = 'quick' | 'standard' | 'thorough';
 /** Default review action for GitHub push */
 export type DefaultReviewAction = 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT';
 
-/** Codex model options */
-export type CodexModel = 'gpt-5-mini' | 'gpt-5' | 'gpt-5.2';
+/** Built-in Codex model identifiers used as defaults/fallbacks */
+export type KnownCodexModel = 'gpt-5-mini' | 'gpt-5' | 'gpt-5.2';
+
+/** Codex model ID (runtime-discovered values are also allowed) */
+export type CodexModel = string;
+
+/** Model option surfaced to the UI */
+export interface CodexModelOption {
+  id: string;
+  label: string;
+  description?: string;
+  isDefault?: boolean;
+}
 
 /** Display labels for Codex models */
-export const CODEX_MODEL_LABELS: Record<CodexModel, string> = {
+export const CODEX_MODEL_LABELS: Record<KnownCodexModel, string> = {
   'gpt-5-mini': 'GPT-5 Mini',
   'gpt-5': 'GPT-5',
   'gpt-5.2': 'GPT-5.2',
 };
 
+/** Default model options used as fallback when dynamic model discovery is unavailable */
+export const DEFAULT_CODEX_MODEL_OPTIONS: CodexModelOption[] = [
+  {
+    id: 'gpt-5-mini',
+    label: CODEX_MODEL_LABELS['gpt-5-mini'],
+    description: 'Fastest and lowest-cost option for quick scans',
+  },
+  {
+    id: 'gpt-5',
+    label: CODEX_MODEL_LABELS['gpt-5'],
+    description: 'Balanced speed and quality for everyday reviews',
+  },
+  {
+    id: 'gpt-5.2',
+    label: CODEX_MODEL_LABELS['gpt-5.2'],
+    description: 'Most capable analysis for difficult changes',
+    isDefault: true,
+  },
+];
+
 /**
  * Map of deprecated model IDs to their current replacements.
  * Used to migrate stored settings from older versions.
  */
-export const DEPRECATED_MODEL_MAP: Record<string, CodexModel> = {
+export const DEPRECATED_MODEL_MAP: Record<string, string> = {
   'claude-haiku-3-5-20241022': 'gpt-5-mini',
   'claude-haiku-4-5-20251001': 'gpt-5-mini',
-  'gpt-5.2': 'gpt-5',
   'claude-opus-4-6-20250528': 'gpt-5.2',
   'claude-opus-4-6': 'gpt-5.2',
 };
@@ -93,7 +123,7 @@ export const DEPRECATED_MODEL_MAP: Record<string, CodexModel> = {
  * Turn multipliers per model to account for capability differences.
  * Smaller models (Haiku) tend to use more tool calls per task.
  */
-export const MODEL_TURN_MULTIPLIERS: Record<CodexModel, number> = {
+export const MODEL_TURN_MULTIPLIERS: Record<string, number> = {
   'gpt-5-mini': 1.5,
   'gpt-5': 1.0,
   'gpt-5.2': 1.0,

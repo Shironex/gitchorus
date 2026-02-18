@@ -93,6 +93,7 @@ export const ProviderEvents = {
 export const SettingsEvents = {
   GET: 'settings:get',
   UPDATE: 'settings:update',
+  MODELS: 'settings:models',
   CHANGED: 'settings:changed',
 } as const;
 

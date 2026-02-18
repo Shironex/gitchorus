@@ -2,8 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { app } from 'electron';
 import { existsSync } from 'fs';
 import * as path from 'path';
-import { Codex } from '@openai/codex-sdk';
-import type { ThreadItem } from '@openai/codex-sdk';
+import type { Codex as CodexClient, ThreadItem, ThreadOptions } from '@openai/codex-sdk';
 import type {
   ProviderStatus,
   ValidationParams,
@@ -16,7 +15,6 @@ import type {
   Logger,
 } from '@gitchorus/shared';
 import { createLogger, REVIEW_DEPTH_CONFIG, MODEL_TURN_MULTIPLIERS } from '@gitchorus/shared';
-import type { CodexModel } from '@gitchorus/shared';
 import { getCodexCliStatus } from '../../main/utils';
 import { SettingsService } from '../settings';
 
@@ -67,6 +65,22 @@ const CODEX_PLATFORM_PACKAGES: Record<string, string> = {
   'aarch64-pc-windows-msvc': '@openai/codex-win32-arm64',
   'x86_64-pc-windows-msvc': '@openai/codex-win32-x64',
 };
+
+type CodexSdkModule = typeof import('@openai/codex-sdk');
+
+let cachedCodexSdkModulePromise: Promise<CodexSdkModule> | null = null;
+
+// Load ESM-only @openai/codex-sdk from a CommonJS Electron main process.
+const dynamicImport = new Function('specifier', 'return import(specifier)') as (
+  specifier: string
+) => Promise<CodexSdkModule>;
+
+async function loadCodexSdkModule(): Promise<CodexSdkModule> {
+  if (!cachedCodexSdkModulePromise) {
+    cachedCodexSdkModulePromise = dynamicImport('@openai/codex-sdk');
+  }
+  return cachedCodexSdkModulePromise;
+}
 
 /**
  * JSON schema for structured validation output.
@@ -202,7 +216,7 @@ const RE_REVIEW_OUTPUT_SCHEMA = {
  * Apply model-specific turn multiplier for prompt guidance.
  */
 function applyModelMultiplier(baseTurns: number, model: string): number {
-  const multiplier = MODEL_TURN_MULTIPLIERS[model as CodexModel] ?? 1.0;
+  const multiplier = MODEL_TURN_MULTIPLIERS[model] ?? 1.0;
   return Math.min(Math.ceil(baseTurns * multiplier), MAX_ALLOWED_TURNS);
 }
 
@@ -212,7 +226,7 @@ function truncate(str: string, maxLen: number): string {
 }
 
 function buildValidationSystemPrompt(model: string, maxTurns: number): string {
-  const multiplier = MODEL_TURN_MULTIPLIERS[model as CodexModel] ?? 1.0;
+  const multiplier = MODEL_TURN_MULTIPLIERS[model] ?? 1.0;
   const isSmallModel = multiplier > 1.0;
 
   const efficiencyGuidance = isSmallModel
@@ -253,7 +267,7 @@ Validate this issue against the current codebase and return structured output on
 }
 
 function buildReviewSystemPrompt(model: string, maxTurns: number): string {
-  const multiplier = MODEL_TURN_MULTIPLIERS[model as CodexModel] ?? 1.0;
+  const multiplier = MODEL_TURN_MULTIPLIERS[model] ?? 1.0;
   const isSmallModel = multiplier > 1.0;
 
   const efficiencyGuidance = isSmallModel
@@ -295,7 +309,7 @@ Review this pull request and return structured output only.`;
 }
 
 function buildReReviewSystemPrompt(model: string, maxTurns: number): string {
-  const multiplier = MODEL_TURN_MULTIPLIERS[model as CodexModel] ?? 1.0;
+  const multiplier = MODEL_TURN_MULTIPLIERS[model] ?? 1.0;
   const isSmallModel = multiplier > 1.0;
 
   const efficiencyGuidance = isSmallModel
@@ -536,16 +550,14 @@ export class CodexAgentProvider {
     return candidate;
   }
 
-  private createCodexClient(): Codex {
+  private async createCodexClient(): Promise<CodexClient> {
+    const { Codex } = await loadCodexSdkModule();
     const bundledPath = this.getBundledCodexPath();
     return bundledPath ? new Codex({ codexPathOverride: bundledPath }) : new Codex();
   }
 
-  private getThreadOptions(
-    model: string,
-    repoPath: string
-  ): import('@openai/codex-sdk').ThreadOptions {
-    const threadOptions: import('@openai/codex-sdk').ThreadOptions = {
+  private getThreadOptions(model: string, repoPath: string): ThreadOptions {
+    const threadOptions: ThreadOptions = {
       model,
       sandboxMode: 'read-only',
       workingDirectory: repoPath,
@@ -566,7 +578,7 @@ export class CodexAgentProvider {
     abortController: AbortController;
     logger: Logger;
   }): AsyncGenerator<ValidationStep, Record<string, unknown>> {
-    const codex = this.createCodexClient();
+    const codex = await this.createCodexClient();
     const thread = codex.startThread(this.getThreadOptions(args.model, args.repoPath));
 
     const { events } = await thread.runStreamed(buildPrompt(args.systemPrompt, args.userPrompt), {

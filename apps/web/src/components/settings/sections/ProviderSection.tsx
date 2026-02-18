@@ -1,21 +1,10 @@
 import { Bot, Check, Loader2 } from 'lucide-react';
 import { clsx } from 'clsx';
-import type { CodexModel } from '@gitchorus/shared';
-import { CODEX_MODEL_LABELS } from '@gitchorus/shared';
+import { DEFAULT_CODEX_MODEL_OPTIONS } from '@gitchorus/shared';
 import { useSettings } from '@/hooks/useSettings';
 
-/** Model descriptions for the selection cards */
-const MODEL_DESCRIPTIONS: Record<CodexModel, string> = {
-  'gpt-5-mini': 'Fastest and lowest-cost option for quick scans',
-  'gpt-5': 'Balanced speed and quality for everyday reviews',
-  'gpt-5.2': 'Most capable analysis for difficult changes',
-};
-
-/** Ordered list of models for display */
-const MODEL_OPTIONS: CodexModel[] = ['gpt-5-mini', 'gpt-5', 'gpt-5.2'];
-
 export function ProviderSection() {
-  const { config, loading, updateConfig } = useSettings();
+  const { config, loading, updateConfig, models } = useSettings();
 
   if (loading && !config) {
     return (
@@ -29,6 +18,10 @@ export function ProviderSection() {
   }
 
   const selectedModel = config?.model ?? 'gpt-5.2';
+  const baseModels = models.length > 0 ? models : DEFAULT_CODEX_MODEL_OPTIONS;
+  const modelOptions = baseModels.some(model => model.id === selectedModel)
+    ? baseModels
+    : [{ id: selectedModel, label: selectedModel }, ...baseModels];
 
   return (
     <div className="space-y-6">
@@ -78,12 +71,12 @@ export function ProviderSection() {
       <div className="space-y-4">
         <h3 className="text-sm font-medium text-foreground">Model</h3>
         <div className="space-y-2">
-          {MODEL_OPTIONS.map(modelId => {
-            const isSelected = selectedModel === modelId;
+          {modelOptions.map(model => {
+            const isSelected = selectedModel === model.id;
             return (
               <button
-                key={modelId}
-                onClick={() => updateConfig({ model: modelId })}
+                key={model.id}
+                onClick={() => updateConfig({ model: model.id })}
                 className={clsx(
                   'w-full text-left rounded-xl border p-4 transition-all duration-200',
                   isSelected
@@ -93,12 +86,10 @@ export function ProviderSection() {
               >
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-medium text-foreground">
-                      {CODEX_MODEL_LABELS[modelId]}
-                    </span>
-                    <p className="text-xs text-muted-foreground mt-0.5">
-                      {MODEL_DESCRIPTIONS[modelId]}
-                    </p>
+                    <span className="text-sm font-medium text-foreground">{model.label}</span>
+                    {model.description ? (
+                      <p className="text-xs text-muted-foreground mt-0.5">{model.description}</p>
+                    ) : null}
                   </div>
                   {isSelected && <Check className="w-4 h-4 text-primary flex-shrink-0" />}
                 </div>

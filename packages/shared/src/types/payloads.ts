@@ -682,3 +682,16 @@ export interface SettingsUpdateResponse {
   config: import('./settings').ReviewConfig;
   error?: string;
 }
+
+/** Payload to fetch available Codex models */
+export interface SettingsModelsPayload {
+  /** Force refresh from Codex app-server, bypassing cache */
+  refresh?: boolean;
+}
+
+/** Response with available Codex models */
+export interface SettingsModelsResponse {
+  models: import('./settings').CodexModelOption[];
+  cachedAt: string;
+  error?: string;
+}
