@@ -115,6 +115,9 @@ export const DEFAULT_CODEX_MODEL_OPTIONS: CodexModelOption[] = [
 export const DEPRECATED_MODEL_MAP: Record<string, string> = {
   'claude-haiku-3-5-20241022': 'gpt-5-mini',
   'claude-haiku-4-5-20251001': 'gpt-5-mini',
+  'claude-sonnet-4-20250514': 'gpt-5',
+  'claude-sonnet-4-5': 'gpt-5',
+  'claude-sonnet-4-5-20250929': 'gpt-5',
   'claude-opus-4-6-20250528': 'gpt-5.2',
   'claude-opus-4-6': 'gpt-5.2',
 };

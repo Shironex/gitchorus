@@ -60,14 +60,14 @@ export class CodexModelsService {
     try {
       const detection = await findCodexCli();
       if (!detection.cliPath) {
-        logger.debug('Codex CLI not found, returning fallback model list');
-        return this.setFallbackCache();
+        logger.debug('Codex CLI not found, returning cached/fallback model list');
+        return this.cache ?? this.setFallbackCache();
       }
 
       const discovered = await this.fetchModelsFromAppServer(detection.cliPath);
       if (discovered.length === 0) {
-        logger.warn('Codex app-server returned no models, using fallback list');
-        return this.setFallbackCache();
+        logger.warn('Codex app-server returned no models, using cached/fallback list');
+        return this.cache ?? this.setFallbackCache();
       }
 
       const next: CachedModels = {

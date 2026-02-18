@@ -139,9 +139,17 @@ const BASE_FINDING_ITEM_PROPERTIES = {
   file: { type: 'string' },
   line: { type: 'number' },
   codeSnippet: { type: 'string' },
-  explanation: { type: 'string' },
-  suggestedFix: { type: 'string' },
-  title: { type: 'string' },
+  explanation: {
+    type: 'string',
+    description:
+      'Detailed explanation including root cause, impact, and why this severity/category applies.',
+  },
+  suggestedFix: {
+    type: 'string',
+    description:
+      'Concrete code-level fix direction with exact files/behaviors to change and at least one verification step.',
+  },
+  title: { type: 'string', description: 'Short, specific issue title.' },
 } as const;
 
 const BASE_FINDING_REQUIRED = [
@@ -171,7 +179,11 @@ const REVIEW_OUTPUT_SCHEMA = {
         required: [...BASE_FINDING_REQUIRED],
       },
     },
-    verdict: { type: 'string' },
+    verdict: {
+      type: 'string',
+      description:
+        'Executive summary in 3-5 sentences covering merge readiness, top risks, and positive aspects.',
+    },
     qualityScore: { type: 'number', minimum: 1, maximum: 10 },
   },
   required: ['findings', 'verdict', 'qualityScore'],
@@ -196,7 +208,11 @@ const RE_REVIEW_OUTPUT_SCHEMA = {
         required: [...BASE_FINDING_REQUIRED, 'addressingStatus'],
       },
     },
-    verdict: { type: 'string' },
+    verdict: {
+      type: 'string',
+      description:
+        'Executive summary in 3-5 sentences describing quality delta, residual risks, and merge recommendation.',
+    },
     qualityScore: { type: 'number', minimum: 1, maximum: 10 },
     addressedFindings: {
       type: 'array',
@@ -292,7 +308,13 @@ Rules:
 - Use only evidence from the codebase and provided diff.
 - Use read-only commands only.
 - Do not invent issues; return no findings if code is solid.
-- line must refer to the NEW version location in the diff context.${efficiencyGuidance}`;
+- line must refer to the NEW version location in the diff context.
+- Prefer fewer high-confidence findings with strong evidence over many shallow findings.
+
+Formatting:
+- verdict: 3-5 sentences with merge readiness, top risk areas, and notable positives.
+- explanation: include root cause and practical impact.
+- suggestedFix: include concrete patch direction and at least one verification step.${efficiencyGuidance}`;
 }
 
 function buildReviewPrompt(params: ReviewParams): string {
@@ -334,7 +356,12 @@ Task:
 Rules:
 - Evidence only, no speculation.
 - Use read-only commands only.
-- Score progression should reflect real improvement/regression.${efficiencyGuidance}`;
+- Score progression should reflect real improvement/regression.
+
+Formatting:
+- verdict: 3-5 sentences summarizing quality delta and current merge readiness.
+- addressedFindings.explanation: specific evidence for why each prior issue is addressed or still pending.
+- For new findings, explanation/suggestedFix should be as detailed as an initial review.${efficiencyGuidance}`;
 }
 
 function buildReReviewPrompt(params: ReviewParams): string {
