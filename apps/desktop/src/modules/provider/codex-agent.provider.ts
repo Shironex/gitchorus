@@ -87,6 +87,7 @@ async function loadCodexSdkModule(): Promise<CodexSdkModule> {
  */
 const VALIDATION_OUTPUT_SCHEMA = {
   type: 'object' as const,
+  additionalProperties: false,
   properties: {
     issueType: { type: 'string', enum: ['bug', 'feature'] },
     verdict: { type: 'string', enum: ['confirmed', 'likely', 'uncertain', 'unlikely', 'invalid'] },
@@ -95,6 +96,7 @@ const VALIDATION_OUTPUT_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           path: { type: 'string' },
           reason: { type: 'string' },
@@ -158,11 +160,13 @@ const BASE_FINDING_REQUIRED = [
  */
 const REVIEW_OUTPUT_SCHEMA = {
   type: 'object' as const,
+  additionalProperties: false,
   properties: {
     findings: {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         properties: { ...BASE_FINDING_ITEM_PROPERTIES },
         required: [...BASE_FINDING_REQUIRED],
       },
@@ -178,11 +182,13 @@ const REVIEW_OUTPUT_SCHEMA = {
  */
 const RE_REVIEW_OUTPUT_SCHEMA = {
   type: 'object' as const,
+  additionalProperties: false,
   properties: {
     findings: {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           ...BASE_FINDING_ITEM_PROPERTIES,
           addressingStatus: { type: 'string', enum: ['new', 'persisting', 'regression'] },
@@ -196,6 +202,7 @@ const RE_REVIEW_OUTPUT_SCHEMA = {
       type: 'array',
       items: {
         type: 'object',
+        additionalProperties: false,
         properties: {
           title: { type: 'string' },
           severity: { type: 'string', enum: ['critical', 'major', 'minor', 'nit'] },
