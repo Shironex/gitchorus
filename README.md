@@ -15,7 +15,7 @@
 >
 > **GitChorus is no longer actively maintained and this repository is now read-only.**
 >
-> GitChorus relies on the [Claude Agent SDK](https://github.com/anthropics/claude-code-sdk), which is essentially a wrapper around Claude Code and uses your personal Claude credentials (Max plan subscription) to function. Anthropic has not provided clear guidance on whether using their SDK in third-party applications like this is permitted under the Max plan terms of service.
+> GitChorus relies on the [Claude Agent SDK](https://platform.claude.com/docs/en/agent-sdk/overview), which is essentially a wrapper around Claude Code and uses your personal Claude credentials (Max plan subscription) to function. Anthropic has not provided clear guidance on whether using their SDK in third-party applications like this is permitted under the Max plan terms of service.
 >
 > While Anthropic has acknowledged this concern [on X](https://x.com) and stated they are "working on it," the [legal and compliance documentation](https://code.claude.com/docs/en/legal-and-compliance) has remained unchanged for over a month with no concrete resolution.
 >
