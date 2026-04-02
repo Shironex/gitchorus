@@ -5,30 +5,42 @@
   <h1>GitChorus</h1>
   <p><strong>AI-powered code review and issue validation for your repositories</strong></p>
 
-[![GitHub Release](https://img.shields.io/github/v/release/Shironex/gitchorus?style=flat&color=blue)](https://github.com/Shironex/gitchorus/releases/latest)
-[![Downloads](https://img.shields.io/github/downloads/Shironex/gitchorus/total?style=flat&color=green)](https://github.com/Shironex/gitchorus/releases/latest)
-[![Electron](https://img.shields.io/badge/Electron-40.2-47848F?logo=electron&logoColor=white)](https://www.electronjs.org/)
-[![React](https://img.shields.io/badge/React-18.3-61DAFB?logo=react&logoColor=white)](https://react.dev/)
-[![NestJS](https://img.shields.io/badge/NestJS-10.4-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![OS](https://img.shields.io/badge/OS-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)](https://github.com/Shironex/gitchorus)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-**[Download Latest Release](https://github.com/Shironex/gitchorus/releases/latest)** | [macOS](https://github.com/Shironex/gitchorus/releases/latest) | [Windows](https://github.com/Shironex/gitchorus/releases/latest) | [Linux](https://github.com/Shironex/gitchorus/releases/latest)
-
 </div>
+
+> [!CAUTION]
+>
+> ## Project Discontinued (April 2026)
+>
+> **GitChorus is no longer actively maintained and this repository is now read-only.**
+>
+> GitChorus relies on the [Claude Agent SDK](https://github.com/anthropics/claude-code-sdk), which is essentially a wrapper around Claude Code and uses your personal Claude credentials (Max plan subscription) to function. Anthropic has not provided clear guidance on whether using their SDK in third-party applications like this is permitted under the Max plan terms of service.
+>
+> While Anthropic has acknowledged this concern [on X](https://x.com) and stated they are "working on it," the [legal and compliance documentation](https://code.claude.com/docs/en/legal-and-compliance) has remained unchanged for over a month with no concrete resolution.
+>
+> **I don't want to risk users' accounts and subscriptions over an ambiguous policy**, so I've made the difficult decision to discontinue this project until the situation is fully resolved.
+>
+> ### What this means
+>
+> - **No new releases** will be published
+> - **No issues or PRs** will be reviewed or merged
+> - **Existing releases** remain available but are unsupported
+> - The repository is **archived** (read-only)
+>
+> ### Future
+>
+> If Anthropic clarifies their SDK usage policy in a way that explicitly permits applications like GitChorus, or if an alternative provider SDK (such as OpenAI Codex CLI) becomes viable, this project may be revived. Until then, the code remains available under the MIT license for reference purposes.
+>
+> Thank you to everyone who used, contributed to, and supported GitChorus. It was a project I loved building and that genuinely improved my workflow. Hopefully it can come back one day.
 
 ## Table of Contents
 
 - [About](#about)
 - [Features](#features)
 - [How It Works](#how-it-works)
-- [Requirements](#requirements)
-- [Quick Start](#quick-start)
-- [Development](#development)
 - [Architecture](#architecture)
 - [Tech Stack](#tech-stack)
-- [Contributing](#contributing)
 - [License](#license)
 
 ## About
@@ -74,62 +86,6 @@ Unlike generic AI chat tools, GitChorus actually reads your codebase. The AI age
    - Suggested fixes
    - Category tags (security, logic, performance, style, codebase-fit)
 4. Select findings and push as a proper GitHub PR review with inline comments
-
-## Requirements
-
-- **Node.js** >= 22.0.0
-- **pnpm** >= 9.0.0
-- **Claude CLI** — GitChorus uses your existing Claude CLI subscription (no API keys)
-  - Install: `npm install -g @anthropic-ai/claude-code`
-  - Authenticate: `claude` (follow the prompts)
-
-## Quick Start
-
-```bash
-# Clone the repository
-git clone https://github.com/Shironex/gitchorus.git
-cd gitchorus
-
-# Install dependencies
-pnpm install
-
-# Start development
-pnpm dev
-
-# Build for production
-pnpm build
-
-# Package for distribution
-pnpm package          # Current platform
-pnpm package:win      # Windows
-pnpm package:mac      # macOS
-pnpm package:linux    # Linux
-```
-
-## Development
-
-```bash
-# Run tests
-pnpm test
-
-# Run tests with coverage
-pnpm test:cov
-
-# Type checking
-pnpm typecheck
-
-# Lint code
-pnpm lint
-
-# Format code
-pnpm format
-
-# Check formatting
-pnpm format:check
-
-# Dev mode has debug logging enabled by default
-pnpm dev
-```
 
 ## Architecture
 
@@ -187,14 +143,6 @@ gitchorus/
 | Build       | Vite, esbuild                              |
 | IPC         | Socket.io                                  |
 | Persistence | electron-store                             |
-
-## Contributing
-
-Contributions are welcome! Please read the [Contributing Guide](CONTRIBUTING.md) before submitting a pull request.
-
-- [Submit an issue](https://github.com/Shironex/gitchorus/issues) for bugs or feature requests
-- Open a pull request with improvements
-- Share feedback and suggestions
 
 ## License
 
